@@ -1,0 +1,5 @@
+{
+  "name": "2D Room Planner",
+  "description": "A professional 2D room planning tool with calibration, room drawing, and furniture placement.",
+  "requestFramePermissions": []
+}
