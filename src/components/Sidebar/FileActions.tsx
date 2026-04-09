@@ -1,0 +1,98 @@
+import React, { useRef } from 'react';
+import { Download, Upload, Image as ImageIcon } from 'lucide-react';
+
+interface FileActionsProps {
+  onSave: () => void;
+  onLoad: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  backgroundImage: string | null;
+  backgroundOpacity: number;
+  setBackgroundOpacity: (opacity: number) => void;
+  removeBackgroundImage: () => void;
+  hideGlobalActions?: boolean;
+}
+
+export const FileActions: React.FC<FileActionsProps> = ({
+  onSave,
+  onLoad,
+  onImageUpload,
+  backgroundImage,
+  backgroundOpacity,
+  setBackgroundOpacity,
+  removeBackgroundImage,
+  hideGlobalActions,
+}) => {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const loadInputRef = useRef<HTMLInputElement>(null);
+
+  return (
+    <div className="p-4 space-y-2">
+      {!hideGlobalActions && (
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            onClick={onSave}
+            className="flex items-center justify-center gap-2 px-3 py-2 bg-slate-100 text-slate-700 rounded-xl text-[10px] font-bold hover:bg-slate-200 transition-colors uppercase tracking-wider"
+          >
+            <Download size={14} />
+            Save
+          </button>
+          <button
+            onClick={() => loadInputRef.current?.click()}
+            className="flex items-center justify-center gap-2 px-3 py-2 bg-slate-100 text-slate-700 rounded-xl text-[10px] font-bold hover:bg-slate-200 transition-colors uppercase tracking-wider"
+          >
+            <Upload size={14} />
+            Load
+          </button>
+          <input
+            ref={loadInputRef}
+            type="file"
+            accept=".json"
+            onChange={onLoad}
+            className="hidden"
+          />
+        </div>
+      )}
+
+      <div className="relative">
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={onImageUpload}
+          className="hidden"
+        />
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-indigo-600 text-white rounded-2xl shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all group"
+        >
+          <ImageIcon size={18} className="group-hover:scale-110 transition-transform" />
+          <span className="text-sm font-medium">{backgroundImage ? 'Change Image' : 'Upload Blueprint'}</span>
+        </button>
+
+        {backgroundImage && (
+          <div className="px-3 py-4 space-y-2">
+            <div className="flex justify-between items-center">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Opacity</span>
+              <span className="text-[10px] font-mono font-bold text-slate-600">{Math.round(backgroundOpacity * 100)}%</span>
+            </div>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.01"
+              value={backgroundOpacity}
+              onChange={(e) => setBackgroundOpacity(parseFloat(e.target.value))}
+              className="w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+            />
+            <button 
+              onClick={removeBackgroundImage}
+              className="text-[10px] font-bold text-red-500 uppercase tracking-widest hover:text-red-600 transition-colors"
+            >
+              Remove Image
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};

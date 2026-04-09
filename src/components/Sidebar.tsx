@@ -1,7 +1,11 @@
 import React from 'react';
-import { MousePointer2, Pencil, Square, Ruler, Image as ImageIcon, Download, Upload, RotateCcw, X, Undo2 } from 'lucide-react';
+import { MousePointer2, Pencil, Square, Ruler, Undo2 } from 'lucide-react';
 import { useStore } from '../store';
 import { cn } from '../lib/utils';
+import { ToolButton } from './Sidebar/ToolButton';
+import { PropertyEditor } from './Sidebar/PropertyEditor';
+import { SettingsPanel } from './Sidebar/SettingsPanel';
+import { FileActions } from './Sidebar/FileActions';
 
 const tools = [
   { id: 'select', icon: MousePointer2, label: 'Select (V)' },
@@ -9,12 +13,16 @@ const tools = [
   { id: 'add-box', icon: Square, label: 'Add Box (B)' },
   { id: 'draw-furniture', icon: Pencil, label: 'Draw Object (F)' },
   { id: 'calibrate', icon: Ruler, label: 'Calibrate (C)' },
+  { id: 'measure', icon: Ruler, label: 'Measure (M)' },
+  { id: 'dimension', icon: Ruler, label: 'Dimension (D)' },
 ] as const;
 
 export const Sidebar: React.FC = () => {
   const { 
     mode, 
     setMode, 
+    activeLayer,
+    setActiveLayer,
     resetView, 
     setBackgroundImage, 
     backgroundOpacity, 
@@ -26,6 +34,10 @@ export const Sidebar: React.FC = () => {
     furniture,
     updateFurniture,
     rooms,
+    dimensions,
+    selectedDimensionId,
+    setSelectedDimensionId,
+    deleteDimension,
     loadState,
     undo,
     history,
@@ -40,14 +52,13 @@ export const Sidebar: React.FC = () => {
 
   const selectedFurniture = furniture.find(f => f.id === selectedId);
   const selectedRoom = rooms.find(r => r.id === selectedRoomId);
-
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
-  const loadInputRef = React.useRef<HTMLInputElement>(null);
+  const selectedDimension = dimensions.find(d => d.id === selectedDimensionId);
 
   const handleSave = () => {
     const data = {
       rooms,
       furniture,
+      dimensions,
       pixelsPerCm,
       version: '1.0'
     };
@@ -75,7 +86,6 @@ export const Sidebar: React.FC = () => {
       }
     };
     reader.readAsText(file);
-    // Reset input
     e.target.value = '';
   };
 
@@ -99,202 +109,77 @@ export const Sidebar: React.FC = () => {
           </div>
           RoomPlanner
         </h1>
-        <p className="text-xs text-slate-500 mt-1 font-medium uppercase tracking-wider">2D Design Tool</p>
       </div>
 
-      <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-2 mb-2">Tools</div>
-        {tools.map((tool) => (
-          <button
-            key={tool.id}
-            onClick={() => setMode(tool.id)}
-            className={cn(
-              "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group",
-              mode === tool.id 
-                ? "bg-indigo-50 text-indigo-700 shadow-sm ring-1 ring-indigo-200" 
-                : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-            )}
-          >
-            <tool.icon size={18} className={cn(
-              "transition-colors",
-              mode === tool.id ? "text-indigo-600" : "text-slate-400 group-hover:text-slate-600"
-            )} />
-            <span className="text-sm font-medium">{tool.label}</span>
-          </button>
-        ))}
-
-        <div className="pt-6 pb-2">
-          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-2 mb-2">Background</div>
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleImageUpload}
-            accept="image/*"
-            className="hidden"
-          />
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-all group"
-          >
-            <ImageIcon size={18} className="text-slate-400 group-hover:text-slate-600" />
-            <span className="text-sm font-medium">{backgroundImage ? 'Change Image' : 'Upload Blueprint'}</span>
-          </button>
-
-          {backgroundImage && (
-            <div className="px-3 py-4 space-y-2">
-              <div className="flex justify-between items-center">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Opacity</span>
-                <span className="text-[10px] font-mono font-bold text-slate-600">{Math.round(backgroundOpacity * 100)}%</span>
-              </div>
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.01"
-                value={backgroundOpacity}
-                onChange={(e) => setBackgroundOpacity(parseFloat(e.target.value))}
-                className="w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-indigo-600"
-              />
-              <button 
-                onClick={() => setBackgroundImage(null)}
-                className="text-[10px] font-bold text-red-500 uppercase tracking-widest hover:text-red-600 transition-colors"
+      <nav className="flex-1 overflow-y-auto px-4 py-2 space-y-6">
+        <div className="flex gap-4">
+          <div className="flex flex-col bg-slate-100 p-1 rounded-xl gap-1 w-24">
+            <div className="text-[8px] font-bold text-slate-400 uppercase tracking-widest px-1 mb-1 text-center">Layer</div>
+            {(['blueprint', 'room', 'furniture', 'annotation'] as const).map((layer) => (
+              <button
+                key={layer}
+                onClick={() => setActiveLayer(layer)}
+                className={cn(
+                  "py-2 text-[9px] font-bold uppercase tracking-wider rounded-lg transition-all",
+                  activeLayer === layer
+                    ? "bg-white text-indigo-600 shadow-sm"
+                    : "text-slate-500 hover:text-slate-700"
+                )}
               >
-                Remove Image
+                {layer}
               </button>
+            ))}
+          </div>
+
+          <div className="flex-1">
+            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-2 mb-2">Tools</div>
+            <div className="space-y-1">
+              {tools
+                .filter(tool => {
+                  if (tool.id === 'select') return true;
+                  if (activeLayer === 'blueprint') return tool.id === 'calibrate';
+                  if (activeLayer === 'room') return tool.id === 'draw-room';
+                  if (activeLayer === 'furniture') return tool.id === 'add-box' || tool.id === 'draw-furniture';
+                  if (activeLayer === 'annotation') return tool.id === 'measure' || tool.id === 'dimension';
+                  return false;
+                })
+                .map((tool) => (
+                  <ToolButton
+                    key={tool.id}
+                    id={tool.id}
+                    icon={tool.icon}
+                    label={tool.label}
+                    isActive={mode === tool.id}
+                    onClick={() => setMode(tool.id as any)}
+                  />
+                ))}
             </div>
-          )}
-        </div>
-
-        <div className="pt-4 pb-2">
-          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-2 mb-2">Settings</div>
-          <div className="space-y-2 px-2">
-            <label className="flex items-center gap-3 cursor-pointer group">
-              <div className="relative">
-                <input
-                  type="checkbox"
-                  checked={orthoMode}
-                  onChange={(e) => setOrthoMode(e.target.checked)}
-                  className="sr-only"
-                />
-                <div className={cn(
-                  "w-8 h-4 rounded-full transition-colors",
-                  orthoMode ? "bg-indigo-600" : "bg-slate-200"
-                )} />
-                <div className={cn(
-                  "absolute top-0.5 left-0.5 w-3 h-3 bg-white rounded-full transition-transform",
-                  orthoMode ? "translate-x-4" : "translate-x-0"
-                )} />
-              </div>
-              <span className="text-sm font-medium text-slate-600 group-hover:text-slate-900">Ortho Mode (O)</span>
-            </label>
-
-            <label className="flex items-center gap-3 cursor-pointer group">
-              <div className="relative">
-                <input
-                  type="checkbox"
-                  checked={snapToGrid}
-                  onChange={(e) => setSnapToGrid(e.target.checked)}
-                  className="sr-only"
-                />
-                <div className={cn(
-                  "w-8 h-4 rounded-full transition-colors",
-                  snapToGrid ? "bg-indigo-600" : "bg-slate-200"
-                )} />
-                <div className={cn(
-                  "absolute top-0.5 left-0.5 w-3 h-3 bg-white rounded-full transition-transform",
-                  snapToGrid ? "translate-x-4" : "translate-x-0"
-                )} />
-              </div>
-              <span className="text-sm font-medium text-slate-600 group-hover:text-slate-900">Snap to Grid (S)</span>
-            </label>
           </div>
         </div>
 
-        <div className="pt-4 pb-2">
-          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-2 mb-2">View</div>
-          <button
-            onClick={resetView}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-all group"
-          >
-            <RotateCcw size={18} className="text-slate-400 group-hover:text-slate-600" />
-            <span className="text-sm font-medium">Reset View</span>
-          </button>
-        </div>
+        <SettingsPanel
+          orthoMode={orthoMode}
+          setOrthoMode={setOrthoMode}
+          snapToGrid={snapToGrid}
+          setSnapToGrid={setSnapToGrid}
+          resetView={resetView}
+        />
       </nav>
 
       <div className="p-4 border-t border-slate-100 space-y-4 bg-slate-50/50">
-        <button
-          onClick={undo}
-          disabled={history.length === 0}
-          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-white text-slate-700 border border-slate-200 rounded-xl text-xs font-bold hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <Undo2 size={14} />
-          Undo ({history.length})
-        </button>
-
-        {selectedFurniture && (
-          <div className="space-y-4 mb-4 p-4 bg-white rounded-2xl border border-slate-200 shadow-sm">
-            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Object Properties</div>
-            
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Name</label>
-              <input
-                type="text"
-                value={selectedFurniture.name}
-                onFocus={saveHistory}
-                onChange={(e) => updateFurniture(selectedFurniture.id, { name: e.target.value })}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Width (cm)</label>
-                <input
-                  type="number"
-                  value={Math.round(selectedFurniture.width / pixelsPerCm)}
-                  onFocus={saveHistory}
-                  onChange={(e) => updateFurniture(selectedFurniture.id, { width: parseFloat(e.target.value) * pixelsPerCm })}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Height (cm)</label>
-                <input
-                  type="number"
-                  value={Math.round(selectedFurniture.height / pixelsPerCm)}
-                  onFocus={saveHistory}
-                  onChange={(e) => updateFurniture(selectedFurniture.id, { height: parseFloat(e.target.value) * pixelsPerCm })}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                />
-              </div>
-            </div>
-
-            <button
-              onClick={deleteSelected}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-red-50 text-red-600 rounded-xl text-[10px] font-bold hover:bg-red-100 transition-colors border border-red-100 uppercase tracking-wider"
-            >
-              <X size={12} />
-              Delete Object
-            </button>
-          </div>
-        )}
-
-        {selectedRoom && (
-          <div className="space-y-4 mb-4 p-4 bg-white rounded-2xl border border-slate-200 shadow-sm">
-            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Room Properties</div>
-            <div className="text-[10px] text-slate-500">ID: {selectedRoom.id}</div>
-            <button
-              onClick={() => deleteRoom(selectedRoom.id)}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-red-50 text-red-600 rounded-xl text-[10px] font-bold hover:bg-red-100 transition-colors border border-red-100 uppercase tracking-wider"
-            >
-              <X size={12} />
-              Delete Room
-            </button>
-          </div>
-        )}
+        <PropertyEditor
+          selectedFurniture={selectedFurniture}
+          selectedRoom={selectedRoom}
+          selectedDimension={selectedDimension}
+          pixelsPerCm={pixelsPerCm}
+          updateFurniture={updateFurniture}
+          deleteFurniture={deleteSelected}
+          deleteRoom={deleteRoom}
+          deleteDimension={deleteDimension}
+          saveHistory={saveHistory}
+        />
         
-        {!selectedFurniture && !selectedRoom && (
+        {!selectedFurniture && !selectedRoom && !selectedDimension && (
           <div className="px-2 mb-2 flex justify-between items-center">
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Calibration</span>
             <span className="text-[10px] font-mono font-bold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded">
@@ -302,29 +187,19 @@ export const Sidebar: React.FC = () => {
             </span>
           </div>
         )}
-        <div className="grid grid-cols-2 gap-2">
-          <button 
-            onClick={handleSave}
-            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-900 text-white rounded-xl text-xs font-semibold hover:bg-slate-800 transition-colors shadow-lg shadow-slate-200"
-          >
-            <Download size={14} />
-            Save
-          </button>
-          <button 
-            onClick={() => loadInputRef.current?.click()}
-            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white text-slate-900 border border-slate-200 rounded-xl text-xs font-semibold hover:bg-slate-50 transition-colors"
-          >
-            <Upload size={14} />
-            Load
-          </button>
-          <input
-            type="file"
-            ref={loadInputRef}
-            onChange={handleLoad}
-            accept=".json"
-            className="hidden"
+
+        {activeLayer === 'blueprint' && (
+          <FileActions
+            onSave={handleSave}
+            onLoad={handleLoad}
+            onImageUpload={handleImageUpload}
+            backgroundImage={backgroundImage}
+            backgroundOpacity={backgroundOpacity}
+            setBackgroundOpacity={setBackgroundOpacity}
+            removeBackgroundImage={() => setBackgroundImage(null)}
+            hideGlobalActions={true}
           />
-        </div>
+        )}
       </div>
     </aside>
   );

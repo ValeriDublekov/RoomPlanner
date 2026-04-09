@@ -1,127 +1,15 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { Stage, Layer, Rect, Circle, Image as KonvaImage, Line, Group, Text, Transformer } from 'react-konva';
-import { useStore, FurnitureObject } from '../store';
+import { Stage, Layer, Image as KonvaImage, Transformer, Line, Text } from 'react-konva';
+import { useStore } from '../store';
 import Konva from 'konva';
 import useImage from 'use-image';
-
-const FurnitureItem: React.FC<{ 
-  shape: FurnitureObject; 
-  isSelected: boolean; 
-  onSelect: () => void;
-  onChange: (newAttrs: Partial<FurnitureObject>) => void;
-  onStartChange: () => void;
-  scale: number;
-  pixelsPerCm: number;
-}> = ({ shape, isSelected, onSelect, onChange, onStartChange, scale, pixelsPerCm }) => {
-  const shapeRef = useRef<Konva.Group>(null);
-  const trRef = useRef<Konva.Transformer>(null);
-
-  useEffect(() => {
-    if (isSelected && trRef.current && shapeRef.current) {
-      trRef.current.nodes([shapeRef.current]);
-      trRef.current.getLayer()?.batchDraw();
-    }
-  }, [isSelected]);
-
-  const handleTransformEnd = () => {
-    const node = shapeRef.current;
-    if (!node) return;
-
-    const newAttrs: Partial<FurnitureObject> = {
-      x: node.x(),
-      y: node.y(),
-      rotation: node.rotation(),
-      width: node.width() * node.scaleX(),
-      height: node.height() * node.scaleY(),
-    };
-    
-    // Reset scale to 1 and apply to width/height
-    node.scaleX(1);
-    node.scaleY(1);
-    
-    onChange(newAttrs);
-  };
-
-  return (
-    <React.Fragment>
-      <Group
-        ref={shapeRef}
-        x={shape.x}
-        y={shape.y}
-        width={shape.width}
-        height={shape.height}
-        rotation={shape.rotation}
-        draggable={isSelected}
-        onClick={onSelect}
-        onTap={onSelect}
-        onDragStart={onStartChange}
-        onDragEnd={(e) => {
-          onChange({
-            x: e.target.x(),
-            y: e.target.y(),
-          });
-        }}
-        onTransformStart={onStartChange}
-        onTransformEnd={handleTransformEnd}
-      >
-        {shape.type === 'box' ? (
-          <Rect
-            width={shape.width}
-            height={shape.height}
-            fill="#f8fafc"
-            stroke={isSelected ? "#4f46e5" : "#cbd5e1"}
-            strokeWidth={2 / scale}
-            cornerRadius={4 / scale}
-            shadowBlur={isSelected ? 10 / scale : 0}
-            shadowColor="#4f46e5"
-            shadowOpacity={0.2}
-          />
-        ) : (
-          <Line
-            points={shape.points?.flatMap(p => [p.x, p.y]) || []}
-            closed={true}
-            fill="#f8fafc"
-            stroke={isSelected ? "#4f46e5" : "#cbd5e1"}
-            strokeWidth={2 / scale}
-            shadowBlur={isSelected ? 10 / scale : 0}
-            shadowColor="#4f46e5"
-            shadowOpacity={0.2}
-          />
-        )}
-        
-        {/* Dimensions Text */}
-        <Text
-          text={`${shape.name}\n${(shape.width / pixelsPerCm).toFixed(0)} x ${(shape.height / pixelsPerCm).toFixed(0)} cm`}
-          width={shape.width}
-          height={shape.height}
-          align="center"
-          verticalAlign="middle"
-          fontSize={10 / scale}
-          fill="#64748b"
-          fontStyle="bold"
-          listening={false}
-        />
-      </Group>
-      {isSelected && (
-        <Transformer
-          ref={trRef}
-          rotateEnabled={true}
-          enabledAnchors={['top-left', 'top-center', 'top-right', 'middle-right', 'middle-left', 'bottom-left', 'bottom-center', 'bottom-right']}
-          boundBoxFunc={(oldBox, newBox) => {
-            if (newBox.width < 5 || newBox.height < 5) {
-              return oldBox;
-            }
-            return newBox;
-          }}
-          anchorSize={8 / scale}
-          borderStroke="#4f46e5"
-          anchorStroke="#4f46e5"
-          anchorFill="white"
-        />
-      )}
-    </React.Fragment>
-  );
-};
+import { X, Download, Upload, Undo2 } from 'lucide-react';
+import { getDistance, getOrthoPoint, getSnappedPosition } from '../lib/geometry';
+import { FurnitureItem } from './Canvas/FurnitureItem';
+import { RoomItem } from './Canvas/RoomItem';
+import { DimensionItem } from './Canvas/DimensionItem';
+import { DrawingLayer } from './Canvas/DrawingLayer';
+import { GridLayer } from './Canvas/GridLayer';
 
 export const Canvas: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -133,14 +21,17 @@ export const Canvas: React.FC = () => {
     scale, setScale, 
     position, setPosition, 
     mode, setMode,
+    activeLayer, setActiveLayer,
     backgroundImage, backgroundOpacity,
+    backgroundPosition, backgroundScale, backgroundRotation, setBackgroundTransform,
     calibrationPoints, setCalibrationPoints,
     setPixelsPerCm,
     roomPoints, addRoomPoint, closeRoom, rooms,
     dimensionInput, setDimensionInput,
-    pixelsPerCm,
     furniture, addFurniture, updateFurniture, selectedId, setSelectedId,
     selectedRoomId, setSelectedRoomId, deleteRoom,
+    measurePoints, addMeasurePoint, lastMeasurement, resetMeasurement,
+    dimensions: savedDimensions, deleteDimension, selectedDimensionId, setSelectedDimensionId,
     undo, history,
     orthoMode, setOrthoMode,
     snapToGrid, setSnapToGrid,
@@ -149,6 +40,15 @@ export const Canvas: React.FC = () => {
 
   const [bgImage] = useImage(backgroundImage || '');
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const bgRef = useRef<Konva.Image>(null);
+  const bgTrRef = useRef<Konva.Transformer>(null);
+
+  useEffect(() => {
+    if (activeLayer === 'blueprint' && bgTrRef.current && bgRef.current) {
+      bgTrRef.current.nodes([bgRef.current]);
+      bgTrRef.current.getLayer()?.batchDraw();
+    }
+  }, [activeLayer, bgImage]);
 
   // Handle container resize
   useEffect(() => {
@@ -170,21 +70,18 @@ export const Canvas: React.FC = () => {
   // Keyboard listeners
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Don't trigger shortcuts if user is typing in an input (like furniture name)
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
         return;
       }
 
       if (e.key === 'Control') setIsCtrlPressed(true);
       
-      // Arrow Key Navigation
       const panStep = 20;
       if (e.key === 'ArrowUp') { moveView(0, panStep); return; }
       if (e.key === 'ArrowDown') { moveView(0, -panStep); return; }
       if (e.key === 'ArrowLeft') { moveView(panStep, 0); return; }
       if (e.key === 'ArrowRight') { moveView(-panStep, 0); return; }
 
-      // Dimension Input
       if ((mode === 'draw-room' || mode === 'draw-furniture') && roomPoints.length > 0) {
         if (e.key >= '0' && e.key <= '9' || e.key === '.') {
           setDimensionInput(dimensionInput + e.key);
@@ -210,7 +107,6 @@ export const Canvas: React.FC = () => {
         return;
       }
 
-      // Mode Shortcuts
       if (!e.ctrlKey && !e.metaKey) {
         switch (e.key.toLowerCase()) {
           case 'v': setMode('select'); break;
@@ -218,26 +114,26 @@ export const Canvas: React.FC = () => {
           case 'b': setMode('add-box'); break;
           case 'f': setMode('draw-furniture'); break;
           case 'c': setMode('calibrate'); break;
+          case 'm': setMode('measure'); break;
+          case 'd': setMode('dimension'); break;
           case 'o': setOrthoMode(!orthoMode); break;
           case 's': setSnapToGrid(!snapToGrid); break;
         }
       }
 
-      // Delete
       if (e.key === 'Delete' || e.key === 'Backspace') {
         if (!dimensionInput) {
           if (selectedId) useStore.getState().deleteSelected();
           if (selectedRoomId) deleteRoom(selectedRoomId);
+          if (selectedDimensionId) deleteDimension(selectedDimensionId);
         }
       }
 
-      // Undo
       if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
         e.preventDefault();
         undo();
       }
 
-      // Copy/Paste
       if (e.ctrlKey || e.metaKey) {
         if (e.key.toLowerCase() === 'c') {
           useStore.getState().copySelected();
@@ -257,14 +153,14 @@ export const Canvas: React.FC = () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [mode, roomPoints, dimensionInput, selectedId, selectedRoomId]);
+  }, [mode, roomPoints, dimensionInput, selectedId, selectedRoomId, orthoMode, snapToGrid]);
 
   const handleDimensionSubmit = () => {
     const cm = parseFloat(dimensionInput);
+    const pixelsPerCm = useStore.getState().pixelsPerCm;
     if (isNaN(cm) || cm <= 0 || roomPoints.length === 0) return;
 
     const lastPoint = roomPoints[roomPoints.length - 1];
-    // Ignore grid snapping when submitting a precise dimension
     const currentMouse = getSnappedMousePos(true);
     
     const dx = currentMouse.x - lastPoint.x;
@@ -285,72 +181,32 @@ export const Canvas: React.FC = () => {
 
   const getSnappedMousePos = useCallback((forceIgnoreGrid = false) => {
     let pos = { ...mousePos };
+    const pixelsPerCm = useStore.getState().pixelsPerCm;
 
-    // 1. Snap to Grid/Objects
     if (snapToGrid && !forceIgnoreGrid) {
       const snapThreshold = 10 / scale;
-      let snapped = false;
-
-      // Snap to existing room points
-      for (const room of rooms) {
-        for (const p of room.points) {
-          const d = Math.sqrt(Math.pow(pos.x - p.x, 2) + Math.pow(pos.y - p.y, 2));
-          if (d < snapThreshold) {
-            pos = { ...p };
-            snapped = true;
-            break;
-          }
-        }
-        if (snapped) break;
-      }
-
-      // Snap to furniture corners
-      if (!snapped) {
-        for (const f of furniture) {
-          const corners = [
-            { x: f.x, y: f.y },
-            { x: f.x + f.width, y: f.y },
-            { x: f.x, y: f.y + f.height },
-            { x: f.x + f.width, y: f.y + f.height },
-          ];
-          for (const p of corners) {
-            const d = Math.sqrt(Math.pow(pos.x - p.x, 2) + Math.pow(pos.y - p.y, 2));
-            if (d < snapThreshold) {
-              pos = { ...p };
-              snapped = true;
-              break;
-            }
-          }
-          if (snapped) break;
-        }
-      }
-
-      // Snap to grid (10cm increments)
-      if (!snapped) {
+      const snapped = getSnappedPosition(pos, rooms, furniture, snapThreshold);
+      
+      if (snapped.x !== pos.x || snapped.y !== pos.y) {
+        pos = snapped;
+      } else {
         const gridPx = 10 * pixelsPerCm;
         pos.x = Math.round(pos.x / gridPx) * gridPx;
         pos.y = Math.round(pos.y / gridPx) * gridPx;
       }
     }
 
-    // 2. Ortho Mode (overrides grid/object snap if active)
     const isOrthoActive = orthoMode || isCtrlPressed;
-    if ((mode === 'draw-room' || mode === 'draw-furniture') && isOrthoActive && roomPoints.length > 0) {
-      const lastPoint = roomPoints[roomPoints.length - 1];
-      const dx = Math.abs(pos.x - lastPoint.x);
-      const dy = Math.abs(pos.y - lastPoint.y);
-      
-      if (dx > dy) {
-        pos = { x: pos.x, y: lastPoint.y };
-      } else {
-        pos = { x: lastPoint.x, y: pos.y };
+    if ((mode === 'draw-room' || mode === 'draw-furniture' || mode === 'measure' || mode === 'dimension') && isOrthoActive && (roomPoints.length > 0 || measurePoints.length > 0)) {
+      const lastPoint = mode === 'measure' || mode === 'dimension' ? measurePoints[0] : roomPoints[roomPoints.length - 1];
+      if (lastPoint) {
+        pos = getOrthoPoint(lastPoint, pos);
       }
     }
 
     return pos;
-  }, [mousePos, isCtrlPressed, orthoMode, snapToGrid, mode, roomPoints, rooms, furniture, scale, pixelsPerCm]);
+  }, [mousePos, isCtrlPressed, orthoMode, snapToGrid, mode, roomPoints, measurePoints, rooms, furniture, scale]);
 
-  // Handle Zoom
   const handleWheel = (e: Konva.KonvaEventObject<WheelEvent>) => {
     e.evt.preventDefault();
     const stage = stageRef.current;
@@ -386,9 +242,8 @@ export const Canvas: React.FC = () => {
     };
   };
 
-  // Handle Clicks
   const handleClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
-    if (e.evt.button !== 0) return; // Only left click
+    if (e.evt.button !== 0) return;
     
     const stage = stageRef.current;
     if (!stage) return;
@@ -401,23 +256,24 @@ export const Canvas: React.FC = () => {
       } else if (calibrationPoints.length === 1) {
         const p1 = calibrationPoints[0];
         const p2 = relPos;
-        const dist = Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
+        const dist = getDistance(p1, p2);
         useStore.getState().setTempCalibrationDist(dist);
         setCalibrationPoints(null);
       }
+    } else if (mode === 'measure' || mode === 'dimension') {
+      addMeasurePoint(relPos);
     } else if (mode === 'draw-room' || mode === 'draw-furniture') {
       if (roomPoints.length >= 3) {
         const startPoint = roomPoints[0];
-        const dist = Math.sqrt(Math.pow(relPos.x - startPoint.x, 2) + Math.pow(relPos.y - startPoint.y, 2));
         const threshold = 15 / scale;
-        
-        if (dist < threshold) {
+        if (getDistance(relPos, startPoint) < threshold) {
           closeRoom();
           return;
         }
       }
       addRoomPoint(relPos);
     } else if (mode === 'add-box') {
+      const pixelsPerCm = useStore.getState().pixelsPerCm;
       const boxSize = 50 * pixelsPerCm;
       addFurniture({
         type: 'box',
@@ -433,6 +289,7 @@ export const Canvas: React.FC = () => {
       if (e.target === stage) {
         setSelectedId(null);
         setSelectedRoomId(null);
+        setSelectedDimensionId(null);
       }
     }
   };
@@ -450,12 +307,9 @@ export const Canvas: React.FC = () => {
     if (relPos) setMousePos(relPos);
   };
 
-  // Handle Panning
   const handleMouseDown = (e: Konva.KonvaEventObject<MouseEvent>) => {
-    if (e.evt.button === 1) {
-      const stage = stageRef.current;
-      if (stage) stage.container().style.cursor = 'grabbing';
-    }
+    const stage = stageRef.current;
+    if (stage) stage.container().style.cursor = 'grabbing';
   };
 
   const handleMouseUp = () => {
@@ -470,169 +324,272 @@ export const Canvas: React.FC = () => {
   };
 
   const snappedMouse = getSnappedMousePos();
+  const pixelsPerCmVal = useStore.getState().pixelsPerCm;
 
   return (
-    <div ref={containerRef} className="flex-1 bg-slate-50 relative overflow-hidden">
-      {/* Grid Background */}
-      <div 
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          backgroundImage: `
-            linear-gradient(to right, rgba(0,0,0,0.05) 1px, transparent 1px),
-            linear-gradient(to bottom, rgba(0,0,0,0.05) 1px, transparent 1px),
-            linear-gradient(to right, rgba(0,0,0,0.1) 1px, transparent 1px),
-            linear-gradient(to bottom, rgba(0,0,0,0.1) 1px, transparent 1px)
-          `,
-          backgroundSize: `
-            ${10 * scale}px ${10 * scale}px,
-            ${10 * scale}px ${10 * scale}px,
-            ${50 * scale}px ${50 * scale}px,
-            ${50 * scale}px ${50 * scale}px
-          `,
-          backgroundPosition: `${position.x}px ${position.y}px`
-        }}
-      />
-      
-      <Stage
-        ref={stageRef}
-        width={dimensions.width}
-        height={dimensions.height}
-        scaleX={scale}
-        scaleY={scale}
-        x={position.x}
-        y={position.y}
-        onWheel={handleWheel}
-        onMouseDown={handleMouseDown}
-        onMouseUp={handleMouseUp}
-        onDragEnd={handleDragEnd}
-        onClick={handleClick}
-        onDblClick={handleDblClick}
-        onMouseMove={handleMouseMove}
-        draggable={mode === 'select' && !selectedId}
-        style={{ cursor: (mode === 'calibrate' || mode === 'draw-room' || mode === 'draw-furniture') ? 'crosshair' : 'default' }}
-      >
-        <Layer>
-          {/* Background Image */}
-          {bgImage && (
-            <KonvaImage
-              image={bgImage}
-              opacity={backgroundOpacity}
-              listening={false}
-            />
-          )}
+    <div ref={containerRef} className="flex-1 bg-slate-50 relative overflow-hidden flex flex-col">
+      {/* Top Header Bar */}
+      <div className="h-12 bg-white border-b border-slate-200 flex items-center justify-between px-6 z-20 shadow-sm">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+            <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">Canvas Ready</span>
+          </div>
+          <div className="h-4 w-px bg-slate-200" />
+          <div className="flex items-center gap-1">
+            <button
+              onClick={undo}
+              disabled={history.length === 0}
+              className="p-1.5 text-slate-500 hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-30"
+              title={`Undo (${history.length})`}
+            >
+              <Undo2 size={16} />
+            </button>
+          </div>
+        </div>
 
-          {/* Completed Rooms */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => {
+              const data = { rooms, furniture, dimensions: savedDimensions, pixelsPerCm: pixelsPerCmVal, version: '1.0' };
+              const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+              const url = URL.createObjectURL(blob);
+              const link = document.createElement('a');
+              link.href = url;
+              link.download = 'room-plan.json';
+              link.click();
+              URL.revokeObjectURL(url);
+            }}
+            className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 text-slate-700 rounded-lg text-[10px] font-bold hover:bg-slate-200 transition-colors uppercase tracking-wider"
+          >
+            <Download size={14} />
+            Save
+          </button>
+          <button
+            onClick={() => {
+              const input = document.createElement('input');
+              input.type = 'file';
+              input.accept = '.json';
+              input.onchange = (e: any) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                  try {
+                    const json = JSON.parse(event.target?.result as string);
+                    useStore.getState().loadState(json);
+                  } catch (err) {
+                    console.error('Failed to load:', err);
+                  }
+                };
+                reader.readAsText(file);
+              };
+              input.click();
+            }}
+            className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 text-slate-700 rounded-lg text-[10px] font-bold hover:bg-slate-200 transition-colors uppercase tracking-wider"
+          >
+            <Upload size={14} />
+            Load
+          </button>
+        </div>
+      </div>
+
+      <div className="flex-1 relative">
+        <GridLayer scale={scale} position={position} />
+        
+        <Stage
+          ref={stageRef}
+          width={dimensions.width}
+          height={dimensions.height}
+          scaleX={scale}
+          scaleY={scale}
+          x={position.x}
+          y={position.y}
+          onWheel={handleWheel}
+          onMouseDown={handleMouseDown}
+          onMouseUp={handleMouseUp}
+          onDragEnd={handleDragEnd}
+          onClick={handleClick}
+          onDblClick={handleDblClick}
+          onMouseMove={handleMouseMove}
+          draggable={mode === 'select' && !selectedId && !selectedRoomId && !selectedDimensionId}
+          style={{ cursor: (mode === 'calibrate' || mode === 'draw-room' || mode === 'draw-furniture') ? 'crosshair' : 'default' }}
+        >
+        {/* Layer 1: Background / Blueprint */}
+        <Layer id="background-layer">
+          {bgImage && (
+            <>
+              <KonvaImage
+                ref={bgRef}
+                image={bgImage}
+                x={backgroundPosition.x}
+                y={backgroundPosition.y}
+                scaleX={backgroundScale}
+                scaleY={backgroundScale}
+                rotation={backgroundRotation}
+                opacity={backgroundOpacity}
+                draggable={activeLayer === 'blueprint'}
+                onDragEnd={(e) => {
+                  setBackgroundTransform({ x: e.target.x(), y: e.target.y() });
+                }}
+                onTransformEnd={() => {
+                  const node = bgRef.current;
+                  if (node) {
+                    setBackgroundTransform({
+                      x: node.x(),
+                      y: node.y(),
+                      scale: node.scaleX(),
+                      rotation: node.rotation(),
+                    });
+                  }
+                }}
+              />
+              {activeLayer === 'blueprint' && (
+                <Transformer
+                  ref={bgTrRef}
+                  rotateEnabled={true}
+                  enabledAnchors={['top-left', 'top-right', 'bottom-left', 'bottom-right']}
+                  boundBoxFunc={(oldBox, newBox) => {
+                    if (newBox.width < 5 || newBox.height < 5) return oldBox;
+                    return newBox;
+                  }}
+                />
+              )}
+            </>
+          )}
+        </Layer>
+
+        {/* Layer 2: Static Room Shapes (Locked unless active) */}
+        <Layer id="room-layer">
           {rooms.map((room) => (
-            <Line
+            <RoomItem
               key={room.id}
-              points={room.points.flatMap(p => [p.x, p.y])}
-              closed={true}
-              fill={selectedRoomId === room.id ? "#818cf8" : "#f1f5f9"}
-              opacity={selectedRoomId === room.id ? 0.3 : 0.5}
-              stroke={selectedRoomId === room.id ? "#4f46e5" : "#94a3b8"}
-              strokeWidth={selectedRoomId === room.id ? 3 / scale : 2 / scale}
-              onClick={() => setSelectedRoomId(room.id)}
-              onTap={() => setSelectedRoomId(room.id)}
+              room={room}
+              isSelected={selectedRoomId === room.id}
+              onSelect={() => setSelectedRoomId(room.id)}
+              scale={scale}
+              isLocked={activeLayer !== 'room'}
             />
           ))}
+        </Layer>
 
-          {/* Furniture Layer */}
+        {/* Layer 3: Furniture Objects */}
+        <Layer id="furniture-layer">
           {furniture.map((item) => (
             <FurnitureItem
               key={item.id}
               shape={item}
               isSelected={item.id === selectedId}
-              onSelect={() => setSelectedId(item.id)}
+              onSelect={() => {
+                if (activeLayer === 'furniture') {
+                  setSelectedId(item.id);
+                }
+              }}
               onStartChange={saveHistory}
               onChange={(newAttrs) => updateFurniture(item.id, newAttrs)}
               scale={scale}
-              pixelsPerCm={pixelsPerCm}
+              pixelsPerCm={pixelsPerCmVal}
+              isLocked={activeLayer !== 'furniture'}
             />
           ))}
+        </Layer>
 
-          {/* Current Drawing (Room or Furniture) */}
-          {(mode === 'draw-room' || mode === 'draw-furniture') && roomPoints.length > 0 && (
-            <Group>
-              <Line
-                points={[...roomPoints.flatMap(p => [p.x, p.y]), snappedMouse.x, snappedMouse.y]}
-                stroke="#6366f1"
-                strokeWidth={2 / scale}
-                lineJoin="round"
-                lineCap="round"
-              />
-              {roomPoints.map((p, i) => (
-                <Circle 
-                  key={i} 
-                  x={p.x} 
-                  y={p.y} 
-                  radius={i === 0 ? 6 / scale : 3 / scale} 
-                  fill="#4f46e5"
-                  stroke={i === 0 ? "white" : "none"}
-                  strokeWidth={i === 0 ? 2 / scale : 0}
-                />
-              ))}
-              {/* Live Distance Label */}
-              <Text
-                x={snappedMouse.x + 10 / scale}
-                y={snappedMouse.y + 10 / scale}
-                text={`${(Math.sqrt(Math.pow(snappedMouse.x - roomPoints[roomPoints.length - 1].x, 2) + Math.pow(snappedMouse.y - roomPoints[roomPoints.length - 1].y, 2)) / pixelsPerCm).toFixed(1)} cm`}
-                fontSize={12 / scale}
-                fill="#4f46e5"
-                fontStyle="bold"
-              />
-            </Group>
-          )}
-
-          {/* Calibration Preview */}
-          {mode === 'calibrate' && calibrationPoints && calibrationPoints.length === 1 && (
+        {/* Layer 4: Annotations (Future dimensions) */}
+        <Layer id="annotation-layer">
+          {savedDimensions.map((dim) => (
+            <DimensionItem
+              key={dim.id}
+              dimension={dim}
+              pixelsPerCm={pixelsPerCmVal}
+              scale={scale}
+              isSelected={selectedDimensionId === dim.id}
+              onSelect={() => {
+                if (activeLayer === 'annotation') {
+                  setSelectedDimensionId(dim.id);
+                  setMode('select');
+                }
+              }}
+            />
+          ))}
+          {(mode === 'measure' || mode === 'dimension') && measurePoints.length === 1 && (
             <>
               <Line
-                points={[calibrationPoints[0].x, calibrationPoints[0].y, mousePos.x, mousePos.y]}
-                stroke="#6366f1"
+                points={[measurePoints[0].x, measurePoints[0].y, snappedMouse.x, snappedMouse.y]}
+                stroke={mode === 'measure' ? "#f43f5e" : "#6366f1"}
                 strokeWidth={2 / scale}
                 dash={[5 / scale, 5 / scale]}
               />
-              <Circle x={calibrationPoints[0].x} y={calibrationPoints[0].y} radius={4 / scale} fill="#6366f1" />
+              <Text
+                text={`${(getDistance(measurePoints[0], snappedMouse) / pixelsPerCmVal).toFixed(1)} cm`}
+                x={(measurePoints[0].x + snappedMouse.x) / 2}
+                y={(measurePoints[0].y + snappedMouse.y) / 2 - 20 / scale}
+                fontSize={14 / scale}
+                fill={mode === 'measure' ? "#f43f5e" : "#6366f1"}
+                fontStyle="bold"
+                align="center"
+              />
             </>
           )}
         </Layer>
+
+        {/* Layer 5: Interactive / UI Elements (Active drawing) */}
+        <Layer id="interaction-layer">
+          <DrawingLayer
+            mode={mode}
+            roomPoints={roomPoints}
+            snappedMouse={snappedMouse}
+            mousePos={mousePos}
+            calibrationPoints={calibrationPoints}
+            scale={scale}
+            pixelsPerCm={pixelsPerCmVal}
+          />
+        </Layer>
       </Stage>
 
-      {/* Dimension Input Overlay */}
-      {(mode === 'draw-room' || mode === 'draw-furniture') && dimensionInput && (
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
-          <div className="bg-slate-900 text-white px-6 py-3 rounded-2xl shadow-2xl flex flex-col items-center gap-1 border border-slate-700">
-            <div className="flex items-center gap-2 mb-1">
+      {/* Overlays */}
+      <div className="absolute bottom-6 left-6 flex flex-col gap-2 pointer-events-none">
+        {lastMeasurement !== null && (
+          <div className="bg-rose-500 text-white px-4 py-3 rounded-2xl shadow-2xl border border-white/10 flex flex-col gap-1 animate-in slide-in-from-bottom-4 pointer-events-auto">
+            <div className="flex items-center justify-between gap-8">
+              <span className="text-[10px] font-bold text-rose-100 uppercase tracking-widest">Last Measurement</span>
+              <button 
+                onClick={resetMeasurement}
+                className="hover:bg-rose-600 p-0.5 rounded transition-colors"
+              >
+                <X size={12} />
+              </button>
+            </div>
+            <div className="flex items-baseline gap-1">
+              <span className="text-2xl font-mono font-bold tracking-tighter">{(lastMeasurement / pixelsPerCmVal).toFixed(1)}</span>
+              <span className="text-xs font-bold text-rose-200">cm</span>
+            </div>
+          </div>
+        )}
+
+        {dimensionInput && (
+          <div className="bg-slate-900 text-white px-4 py-3 rounded-2xl shadow-2xl border border-white/10 flex flex-col gap-1 animate-in slide-in-from-bottom-4">
+            <div className="flex items-center justify-between gap-8">
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Length</span>
               <div className={`px-1.5 py-0.5 rounded text-[8px] font-bold uppercase ${(orthoMode || isCtrlPressed) ? 'bg-indigo-500 text-white' : 'bg-slate-700 text-slate-400'}`}>
                 Ortho: {(orthoMode || isCtrlPressed) ? 'ON' : 'OFF'}
               </div>
             </div>
             <div className="flex items-baseline gap-1">
-              <span className="text-2xl font-mono font-bold">{dimensionInput}</span>
-              <span className="text-sm font-bold text-slate-400">cm</span>
+              <span className="text-2xl font-mono font-bold tracking-tighter">{dimensionInput}</span>
+              <span className="text-xs font-bold text-slate-500">cm</span>
             </div>
-            <span className="text-[10px] text-slate-500 mt-1 italic">Press Enter to confirm</span>
-          </div>
-        </div>
-      )}
-
-      {/* Zoom & Mode Indicators */}
-      <div className="absolute bottom-6 right-6 flex flex-col items-end gap-2">
-        {(mode === 'draw-room' || mode === 'draw-furniture') && (
-          <div className="bg-indigo-600 text-white px-4 py-2 rounded-xl shadow-lg text-xs font-bold">
-            {roomPoints.length === 0 ? 'Click to start drawing' : 'Double-click to close'}
-            <div className="text-[10px] opacity-70 font-medium mt-0.5">Ortho: {(orthoMode || isCtrlPressed) ? 'ON' : 'OFF'} | Snap: {snapToGrid ? 'ON' : 'OFF'}</div>
+            <div className="text-[10px] text-slate-500 font-medium">Press Enter to confirm</div>
           </div>
         )}
-        {mode === 'add-box' && (
-          <div className="bg-indigo-600 text-white px-4 py-2 rounded-xl shadow-lg text-xs font-bold">
-            Click anywhere to place a 50x50cm box
+        
+        <div className="bg-white/80 backdrop-blur-md border border-slate-200 px-4 py-2.5 rounded-2xl shadow-sm">
+          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">Canvas</div>
+          <div className="text-xs font-bold text-slate-700 leading-none">
+            {Math.round(scale * 100)}% Zoom
           </div>
-        )}
-        <div className="bg-white/80 backdrop-blur-md px-3 py-1.5 rounded-full border border-slate-200 shadow-sm text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-          Zoom: {Math.round(scale * 100)}%
+          <div className="text-[10px] opacity-70 font-medium mt-0.5">Ortho: {(orthoMode || isCtrlPressed) ? 'ON' : 'OFF'} | Snap: {snapToGrid ? 'ON' : 'OFF'}</div>
         </div>
+      </div>
       </div>
     </div>
   );

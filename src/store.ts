@@ -1,38 +1,22 @@
 import { create } from 'zustand';
-
-export interface Vector2d {
-  x: number;
-  y: number;
-}
-
-export interface RoomObject {
-  id: string;
-  points: Vector2d[];
-}
-
-export interface FurnitureObject {
-  id: string;
-  type: 'box' | 'polygon';
-  name: string;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  rotation: number;
-  points?: Vector2d[];
-}
+import { Vector2d, RoomObject, FurnitureObject, DimensionObject, AppMode, HistoryEntry, LayerType } from './types';
+import { getDistance, scalePoints } from './lib/geometry';
 
 export interface AppState {
   scale: number;
   position: Vector2d;
   
-  // App Mode
-  mode: 'select' | 'draw-room' | 'draw-furniture' | 'calibrate' | 'add-box';
+  // App Mode & Layers
+  mode: AppMode;
+  activeLayer: LayerType;
   
   // Data
   pixelsPerCm: number;
   backgroundImage: string | null;
   backgroundOpacity: number;
+  backgroundPosition: Vector2d;
+  backgroundScale: number;
+  backgroundRotation: number;
   calibrationPoints: Vector2d[] | null;
   tempCalibrationDist: number | null;
   
@@ -51,16 +35,26 @@ export interface AppState {
   selectedId: string | null;
   clipboard: FurnitureObject | null;
   
+  // Measurement
+  measurePoints: Vector2d[];
+  lastMeasurement: number | null;
+  
+  // Dimensions
+  dimensions: DimensionObject[];
+  selectedDimensionId: string | null;
+  
   // History
-  history: { rooms: RoomObject[]; furniture: FurnitureObject[] }[];
+  history: HistoryEntry[];
   
   // Actions
   setScale: (scale: number) => void;
   setPosition: (position: Vector2d) => void;
-  setMode: (mode: AppState['mode']) => void;
+  setMode: (mode: AppMode) => void;
+  setActiveLayer: (layer: LayerType) => void;
   setPixelsPerCm: (ratio: number) => void;
   setBackgroundImage: (image: string | null) => void;
   setBackgroundOpacity: (opacity: number) => void;
+  setBackgroundTransform: (transform: { x?: number, y?: number, scale?: number, rotation?: number }) => void;
   setCalibrationPoints: (points: Vector2d[] | null) => void;
   setTempCalibrationDist: (dist: number | null) => void;
   setOrthoMode: (enabled: boolean) => void;
@@ -80,6 +74,15 @@ export interface AppState {
   deleteSelected: () => void;
   copySelected: () => void;
   paste: () => void;
+
+  // Measurement Actions
+  addMeasurePoint: (point: Vector2d) => void;
+  resetMeasurement: () => void;
+
+  // Dimension Actions
+  addDimension: (p1: Vector2d, p2: Vector2d) => void;
+  deleteDimension: (id: string) => void;
+  setSelectedDimensionId: (id: string | null) => void;
   
   // Global Actions
   undo: () => void;
@@ -97,9 +100,13 @@ export const useStore = create<AppState>((set) => ({
   scale: 1,
   position: { x: 0, y: 0 },
   mode: 'select',
+  activeLayer: 'furniture',
   pixelsPerCm: 1,
   backgroundImage: null,
   backgroundOpacity: 0.5,
+  backgroundPosition: { x: 0, y: 0 },
+  backgroundScale: 1,
+  backgroundRotation: 0,
   calibrationPoints: null,
   tempCalibrationDist: null,
   orthoMode: false,
@@ -111,21 +118,78 @@ export const useStore = create<AppState>((set) => ({
   furniture: [],
   selectedId: null,
   clipboard: null,
+  measurePoints: [],
+  lastMeasurement: null,
+  dimensions: [],
+  selectedDimensionId: null,
   history: [],
 
   setScale: (scale) => set({ scale }),
   setPosition: (position) => set({ position }),
-  setMode: (mode) => set({ mode, roomPoints: [], dimensionInput: '', selectedId: null, selectedRoomId: null }),
+  setMode: (mode) => set({ mode, roomPoints: [], measurePoints: [], dimensionInput: '', selectedId: null, selectedRoomId: null, selectedDimensionId: null }),
+  setActiveLayer: (activeLayer) => set({ activeLayer, selectedId: null, selectedRoomId: null, selectedDimensionId: null }),
   setPixelsPerCm: (pixelsPerCm) => set({ pixelsPerCm }),
   setBackgroundImage: (backgroundImage) => set({ backgroundImage }),
   setBackgroundOpacity: (backgroundOpacity) => set({ backgroundOpacity }),
+  setBackgroundTransform: (transform) => set((state) => ({
+    backgroundPosition: {
+      x: transform.x ?? state.backgroundPosition.x,
+      y: transform.y ?? state.backgroundPosition.y,
+    },
+    backgroundScale: transform.scale ?? state.backgroundScale,
+    backgroundRotation: transform.rotation ?? state.backgroundRotation,
+  })),
   setCalibrationPoints: (calibrationPoints) => set({ calibrationPoints }),
   setTempCalibrationDist: (tempCalibrationDist) => set({ tempCalibrationDist }),
   setOrthoMode: (orthoMode) => set({ orthoMode }),
   setSnapToGrid: (snapToGrid) => set({ snapToGrid }),
 
+  addMeasurePoint: (point) => set((state) => {
+    if (state.measurePoints.length === 0) {
+      return { measurePoints: [point], lastMeasurement: null };
+    } else {
+      const p1 = state.measurePoints[0];
+      const dist = getDistance(p1, point);
+      
+      if (state.mode === 'dimension') {
+        const historyEntry = { rooms: state.rooms, furniture: state.furniture, dimensions: state.dimensions };
+        const newDimension: DimensionObject = {
+          id: Math.random().toString(36).substr(2, 9),
+          p1,
+          p2: point
+        };
+        return { 
+          measurePoints: [], 
+          lastMeasurement: dist,
+          dimensions: [...state.dimensions, newDimension],
+          history: [...state.history, historyEntry].slice(-50)
+        };
+      }
+
+      return { measurePoints: [], lastMeasurement: dist };
+    }
+  }),
+  resetMeasurement: () => set({ measurePoints: [], lastMeasurement: null }),
+
+  addDimension: (p1, p2) => set((state) => {
+    const historyEntry = { rooms: state.rooms, furniture: state.furniture, dimensions: state.dimensions };
+    return {
+      dimensions: [...state.dimensions, { id: Math.random().toString(36).substr(2, 9), p1, p2 }],
+      history: [...state.history, historyEntry].slice(-50)
+    };
+  }),
+  deleteDimension: (id) => set((state) => {
+    const historyEntry = { rooms: state.rooms, furniture: state.furniture, dimensions: state.dimensions };
+    return {
+      dimensions: state.dimensions.filter(d => d.id !== id),
+      selectedDimensionId: null,
+      history: [...state.history, historyEntry].slice(-50)
+    };
+  }),
+  setSelectedDimensionId: (selectedDimensionId) => set({ selectedDimensionId }),
+
   saveHistory: () => set((state) => ({
-    history: [...state.history, { rooms: state.rooms, furniture: state.furniture }].slice(-50)
+    history: [...state.history, { rooms: state.rooms, furniture: state.furniture, dimensions: state.dimensions }].slice(-50)
   })),
 
   undo: () => set((state) => {
@@ -134,9 +198,11 @@ export const useStore = create<AppState>((set) => ({
     return {
       rooms: previous.rooms,
       furniture: previous.furniture,
+      dimensions: previous.dimensions,
       history: state.history.slice(0, -1),
       selectedId: null,
-      selectedRoomId: null
+      selectedRoomId: null,
+      selectedDimensionId: null
     };
   }),
 
@@ -147,13 +213,13 @@ export const useStore = create<AppState>((set) => ({
     const uniquePoints = state.roomPoints.filter((p, i, arr) => {
       if (i === 0) return true;
       const prev = arr[i - 1];
-      const dist = Math.sqrt(Math.pow(p.x - prev.x, 2) + Math.pow(p.y - prev.y, 2));
+      const dist = getDistance(p, prev);
       return dist > 0.1;
     });
 
     if (uniquePoints.length < 3) return { roomPoints: [], dimensionInput: '' };
 
-    const historyEntry = { rooms: state.rooms, furniture: state.furniture };
+    const historyEntry = { rooms: state.rooms, furniture: state.furniture, dimensions: state.dimensions };
 
     if (state.mode === 'draw-furniture') {
       const xs = uniquePoints.map(p => p.x);
@@ -200,7 +266,7 @@ export const useStore = create<AppState>((set) => ({
   setDimensionInput: (dimensionInput) => set({ dimensionInput }),
   setSelectedRoomId: (selectedRoomId) => set({ selectedRoomId }),
   deleteRoom: (id) => set((state) => {
-    const historyEntry = { rooms: state.rooms, furniture: state.furniture };
+    const historyEntry = { rooms: state.rooms, furniture: state.furniture, dimensions: state.dimensions };
     return {
       rooms: state.rooms.filter(r => r.id !== id),
       selectedRoomId: null,
@@ -209,7 +275,7 @@ export const useStore = create<AppState>((set) => ({
   }),
 
   addFurniture: (item) => set((state) => {
-    const historyEntry = { rooms: state.rooms, furniture: state.furniture };
+    const historyEntry = { rooms: state.rooms, furniture: state.furniture, dimensions: state.dimensions };
     return {
       furniture: [...state.furniture, { ...item, id: Math.random().toString(36).substr(2, 9) }],
       history: [...state.history, historyEntry].slice(-50)
@@ -226,10 +292,7 @@ export const useStore = create<AppState>((set) => ({
         const scaleX = updates.width !== undefined ? updates.width / f.width : 1;
         const scaleY = updates.height !== undefined ? updates.height / f.height : 1;
         
-        updated.points = f.points.map(p => ({
-          x: p.x * scaleX,
-          y: p.y * scaleY
-        }));
+        updated.points = scalePoints(f.points, scaleX, scaleY);
       }
       
       return updated;
@@ -241,20 +304,40 @@ export const useStore = create<AppState>((set) => ({
   }),
   setSelectedId: (selectedId) => set({ selectedId }),
   deleteSelected: () => set((state) => {
-    if (!state.selectedId) return state;
-    const historyEntry = { rooms: state.rooms, furniture: state.furniture };
-    return {
-      furniture: state.furniture.filter(f => f.id !== state.selectedId),
-      selectedId: null,
-      history: [...state.history, historyEntry].slice(-50)
-    };
+    const historyEntry = { rooms: state.rooms, furniture: state.furniture, dimensions: state.dimensions };
+    
+    if (state.activeLayer === 'furniture' && state.selectedId) {
+      return {
+        furniture: state.furniture.filter(f => f.id !== state.selectedId),
+        selectedId: null,
+        history: [...state.history, historyEntry].slice(-50)
+      };
+    }
+    
+    if (state.activeLayer === 'room' && state.selectedRoomId) {
+      return {
+        rooms: state.rooms.filter(r => r.id !== state.selectedRoomId),
+        selectedRoomId: null,
+        history: [...state.history, historyEntry].slice(-50)
+      };
+    }
+
+    if (state.activeLayer === 'annotation' && state.selectedDimensionId) {
+      return {
+        dimensions: state.dimensions.filter(d => d.id !== state.selectedDimensionId),
+        selectedDimensionId: null,
+        history: [...state.history, historyEntry].slice(-50)
+      };
+    }
+
+    return state;
   }),
   copySelected: () => set((state) => ({
     clipboard: state.furniture.find(f => f.id === state.selectedId) || null
   })),
   paste: () => set((state) => {
     if (!state.clipboard) return state;
-    const historyEntry = { rooms: state.rooms, furniture: state.furniture };
+    const historyEntry = { rooms: state.rooms, furniture: state.furniture, dimensions: state.dimensions };
     const newId = Math.random().toString(36).substr(2, 9);
     const newItem = {
       ...state.clipboard,
@@ -287,11 +370,13 @@ export const useStore = create<AppState>((set) => ({
     return {
       rooms: loadedRooms,
       furniture: Array.isArray(data.furniture) ? data.furniture : state.furniture,
+      dimensions: Array.isArray(data.dimensions) ? data.dimensions : [],
       pixelsPerCm: typeof data.pixelsPerCm === 'number' ? data.pixelsPerCm : state.pixelsPerCm,
       scale: 1,
       position: { x: 0, y: 0 },
       selectedId: null,
       selectedRoomId: null,
+      selectedDimensionId: null,
       roomPoints: [],
       dimensionInput: '',
       history: []
