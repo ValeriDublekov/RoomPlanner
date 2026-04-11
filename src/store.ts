@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Vector2d, RoomObject, FurnitureObject, DimensionObject, AppMode, HistoryEntry, LayerType } from './types';
+import { Vector2d, RoomObject, FurnitureObject, DimensionObject, AppMode, HistoryEntry, LayerType, EdgeMap, WallAttachment } from './types';
 import { getDistance, scalePoints } from './lib/geometry';
 
 export interface AppState {
@@ -11,8 +11,10 @@ export interface AppState {
   activeLayer: LayerType;
   
   // Data
+  projectName: string;
   pixelsPerCm: number;
   backgroundImage: string | null;
+  backgroundVisible: boolean;
   backgroundOpacity: number;
   backgroundPosition: Vector2d;
   backgroundScale: number;
@@ -23,11 +25,17 @@ export interface AppState {
   // Settings
   orthoMode: boolean;
   snapToGrid: boolean;
+  snapToImage: boolean;
+  gridVisible: boolean;
+  edgeMap: EdgeMap | null;
+  wallThickness: number; // in cm
   
   // Room Drawing
   roomPoints: Vector2d[];
   rooms: RoomObject[];
+  wallAttachments: WallAttachment[];
   selectedRoomId: string | null;
+  selectedAttachmentId: string | null;
   dimensionInput: string;
   
   // Furniture
@@ -52,13 +60,19 @@ export interface AppState {
   setMode: (mode: AppMode) => void;
   setActiveLayer: (layer: LayerType) => void;
   setPixelsPerCm: (ratio: number) => void;
+  setProjectName: (name: string) => void;
   setBackgroundImage: (image: string | null) => void;
+  setBackgroundVisible: (visible: boolean) => void;
   setBackgroundOpacity: (opacity: number) => void;
   setBackgroundTransform: (transform: { x?: number, y?: number, scale?: number, rotation?: number }) => void;
   setCalibrationPoints: (points: Vector2d[] | null) => void;
   setTempCalibrationDist: (dist: number | null) => void;
   setOrthoMode: (enabled: boolean) => void;
   setSnapToGrid: (enabled: boolean) => void;
+  setSnapToImage: (enabled: boolean) => void;
+  setGridVisible: (visible: boolean) => void;
+  setEdgeMap: (map: EdgeMap | null) => void;
+  setWallThickness: (thickness: number) => void;
   
   // Room Actions
   addRoomPoint: (point: Vector2d) => void;
@@ -66,6 +80,10 @@ export interface AppState {
   setDimensionInput: (input: string) => void;
   setSelectedRoomId: (id: string | null) => void;
   deleteRoom: (id: string) => void;
+  setSelectedAttachmentId: (id: string | null) => void;
+  addWallAttachment: (attachment: Omit<WallAttachment, 'id'>) => void;
+  updateWallAttachment: (id: string, updates: Partial<WallAttachment>) => void;
+  deleteWallAttachment: (id: string) => void;
 
   // Furniture Actions
   addFurniture: (item: Omit<FurnitureObject, 'id'>) => void;
@@ -74,6 +92,10 @@ export interface AppState {
   deleteSelected: () => void;
   copySelected: () => void;
   paste: () => void;
+  bringToFront: (id: string) => void;
+  sendToBack: (id: string) => void;
+  bringForward: (id: string) => void;
+  sendBackward: (id: string) => void;
 
   // Measurement Actions
   addMeasurePoint: (point: Vector2d) => void;
@@ -91,18 +113,26 @@ export interface AppState {
   
   // Persistence
   loadState: (data: any) => void;
+  saveProject: () => Promise<void>;
   
+  // 3D Preview
+  show3d: boolean;
+  setShow3d: (show: boolean) => void;
+
   // Helpers
   resetView: () => void;
+  newProject: () => void;
 }
 
-export const useStore = create<AppState>((set) => ({
+export const useStore = create<AppState>((set, get) => ({
   scale: 1,
   position: { x: 0, y: 0 },
   mode: 'select',
   activeLayer: 'furniture',
+  projectName: 'New Project',
   pixelsPerCm: 1,
   backgroundImage: null,
+  backgroundVisible: true,
   backgroundOpacity: 0.5,
   backgroundPosition: { x: 0, y: 0 },
   backgroundScale: 1,
@@ -111,9 +141,15 @@ export const useStore = create<AppState>((set) => ({
   tempCalibrationDist: null,
   orthoMode: false,
   snapToGrid: true,
+  snapToImage: true,
+  gridVisible: true,
+  edgeMap: null,
+  wallThickness: 20,
   roomPoints: [],
   rooms: [],
+  wallAttachments: [],
   selectedRoomId: null,
+  selectedAttachmentId: null,
   dimensionInput: '',
   furniture: [],
   selectedId: null,
@@ -123,13 +159,16 @@ export const useStore = create<AppState>((set) => ({
   dimensions: [],
   selectedDimensionId: null,
   history: [],
+  show3d: false,
 
   setScale: (scale) => set({ scale }),
   setPosition: (position) => set({ position }),
   setMode: (mode) => set({ mode, roomPoints: [], measurePoints: [], dimensionInput: '', selectedId: null, selectedRoomId: null, selectedDimensionId: null }),
   setActiveLayer: (activeLayer) => set({ activeLayer, selectedId: null, selectedRoomId: null, selectedDimensionId: null }),
   setPixelsPerCm: (pixelsPerCm) => set({ pixelsPerCm }),
+  setProjectName: (projectName) => set({ projectName }),
   setBackgroundImage: (backgroundImage) => set({ backgroundImage }),
+  setBackgroundVisible: (backgroundVisible) => set({ backgroundVisible }),
   setBackgroundOpacity: (backgroundOpacity) => set({ backgroundOpacity }),
   setBackgroundTransform: (transform) => set((state) => ({
     backgroundPosition: {
@@ -143,6 +182,10 @@ export const useStore = create<AppState>((set) => ({
   setTempCalibrationDist: (tempCalibrationDist) => set({ tempCalibrationDist }),
   setOrthoMode: (orthoMode) => set({ orthoMode }),
   setSnapToGrid: (snapToGrid) => set({ snapToGrid }),
+  setSnapToImage: (snapToImage) => set({ snapToImage }),
+  setGridVisible: (gridVisible) => set({ gridVisible }),
+  setEdgeMap: (edgeMap) => set({ edgeMap }),
+  setWallThickness: (wallThickness) => set({ wallThickness }),
 
   addMeasurePoint: (point) => set((state) => {
     if (state.measurePoints.length === 0) {
@@ -187,9 +230,13 @@ export const useStore = create<AppState>((set) => ({
     };
   }),
   setSelectedDimensionId: (selectedDimensionId) => set({ selectedDimensionId }),
-
   saveHistory: () => set((state) => ({
-    history: [...state.history, { rooms: state.rooms, furniture: state.furniture, dimensions: state.dimensions }].slice(-50)
+    history: [...state.history, { 
+      rooms: state.rooms, 
+      furniture: state.furniture, 
+      dimensions: state.dimensions,
+      wallAttachments: state.wallAttachments 
+    } as any].slice(-50)
   })),
 
   undo: () => set((state) => {
@@ -199,10 +246,12 @@ export const useStore = create<AppState>((set) => ({
       rooms: previous.rooms,
       furniture: previous.furniture,
       dimensions: previous.dimensions,
+      wallAttachments: (previous as any).wallAttachments || state.wallAttachments,
       history: state.history.slice(0, -1),
       selectedId: null,
       selectedRoomId: null,
-      selectedDimensionId: null
+      selectedDimensionId: null,
+      selectedAttachmentId: null
     };
   }),
 
@@ -266,11 +315,31 @@ export const useStore = create<AppState>((set) => ({
   setDimensionInput: (dimensionInput) => set({ dimensionInput }),
   setSelectedRoomId: (selectedRoomId) => set({ selectedRoomId }),
   deleteRoom: (id) => set((state) => {
-    const historyEntry = { rooms: state.rooms, furniture: state.furniture, dimensions: state.dimensions };
+    state.saveHistory();
     return {
       rooms: state.rooms.filter(r => r.id !== id),
-      selectedRoomId: null,
-      history: [...state.history, historyEntry].slice(-50)
+      wallAttachments: state.wallAttachments.filter(a => a.roomId !== id),
+      selectedRoomId: null
+    };
+  }),
+  setSelectedAttachmentId: (selectedAttachmentId) => set({ selectedAttachmentId }),
+  addWallAttachment: (attachment) => set((state) => {
+    state.saveHistory();
+    const newAttachment = { 
+      ...attachment, 
+      id: Math.random().toString(36).substr(2, 9),
+      flipY: true // Default to outside wall
+    };
+    return { wallAttachments: [...state.wallAttachments, newAttachment] };
+  }),
+  updateWallAttachment: (id, updates) => set((state) => ({
+    wallAttachments: state.wallAttachments.map(a => a.id === id ? { ...a, ...updates } : a)
+  })),
+  deleteWallAttachment: (id) => set((state) => {
+    state.saveHistory();
+    return {
+      wallAttachments: state.wallAttachments.filter(a => a.id !== id),
+      selectedAttachmentId: null
     };
   }),
 
@@ -352,6 +421,39 @@ export const useStore = create<AppState>((set) => ({
     };
   }),
 
+  bringToFront: (id) => set((state) => {
+    const item = state.furniture.find(f => f.id === id);
+    if (!item) return state;
+    state.saveHistory();
+    return {
+      furniture: [...state.furniture.filter(f => f.id !== id), item]
+    };
+  }),
+  sendToBack: (id) => set((state) => {
+    const item = state.furniture.find(f => f.id === id);
+    if (!item) return state;
+    state.saveHistory();
+    return {
+      furniture: [item, ...state.furniture.filter(f => f.id !== id)]
+    };
+  }),
+  bringForward: (id) => set((state) => {
+    const index = state.furniture.findIndex(f => f.id === id);
+    if (index === -1 || index === state.furniture.length - 1) return state;
+    state.saveHistory();
+    const newFurniture = [...state.furniture];
+    [newFurniture[index], newFurniture[index + 1]] = [newFurniture[index + 1], newFurniture[index]];
+    return { furniture: newFurniture };
+  }),
+  sendBackward: (id) => set((state) => {
+    const index = state.furniture.findIndex(f => f.id === id);
+    if (index === -1 || index === 0) return state;
+    state.saveHistory();
+    const newFurniture = [...state.furniture];
+    [newFurniture[index], newFurniture[index - 1]] = [newFurniture[index - 1], newFurniture[index]];
+    return { furniture: newFurniture };
+  }),
+
   moveView: (dx, dy) => set((state) => ({
     position: { x: state.position.x + dx, y: state.position.y + dy }
   })),
@@ -371,7 +473,17 @@ export const useStore = create<AppState>((set) => ({
       rooms: loadedRooms,
       furniture: Array.isArray(data.furniture) ? data.furniture : state.furniture,
       dimensions: Array.isArray(data.dimensions) ? data.dimensions : [],
+      wallAttachments: Array.isArray(data.wallAttachments) 
+        ? data.wallAttachments.map((a: any) => ({ ...a, flipY: a.flipY ?? true })) 
+        : [],
       pixelsPerCm: typeof data.pixelsPerCm === 'number' ? data.pixelsPerCm : state.pixelsPerCm,
+      projectName: typeof data.projectName === 'string' ? data.projectName : state.projectName,
+      backgroundImage: typeof data.backgroundImage === 'string' ? data.backgroundImage : null,
+      backgroundPosition: data.backgroundPosition || { x: 0, y: 0 },
+      backgroundScale: typeof data.backgroundScale === 'number' ? data.backgroundScale : 1,
+      backgroundRotation: typeof data.backgroundRotation === 'number' ? data.backgroundRotation : 0,
+      backgroundOpacity: typeof data.backgroundOpacity === 'number' ? data.backgroundOpacity : 0.5,
+      backgroundVisible: typeof data.backgroundVisible === 'boolean' ? data.backgroundVisible : true,
       scale: 1,
       position: { x: 0, y: 0 },
       selectedId: null,
@@ -383,5 +495,84 @@ export const useStore = create<AppState>((set) => ({
     };
   }),
 
+  saveProject: async () => {
+    const state = get();
+    const data = {
+      projectName: state.projectName,
+      rooms: state.rooms,
+      furniture: state.furniture,
+      dimensions: state.dimensions,
+      wallAttachments: state.wallAttachments,
+      pixelsPerCm: state.pixelsPerCm,
+      backgroundImage: state.backgroundImage,
+      backgroundPosition: state.backgroundPosition,
+      backgroundScale: state.backgroundScale,
+      backgroundRotation: state.backgroundRotation,
+      backgroundOpacity: state.backgroundOpacity,
+      backgroundVisible: state.backgroundVisible,
+      version: '1.0'
+    };
+    
+    const jsonString = JSON.stringify(data, null, 2);
+    // Sanitize filename but allow Unicode (Cyrillic etc)
+    const sanitizedName = state.projectName.trim() || 'room-plan';
+    const fileName = `${sanitizedName.replace(/[<>:"/\\|?*\x00-\x1F]/g, '_')}.json`;
+
+    // Try modern File System Access API
+    if ('showSaveFilePicker' in window) {
+      try {
+        const handle = await (window as any).showSaveFilePicker({
+          suggestedName: fileName,
+          types: [{
+            description: 'Room Plan JSON',
+            accept: { 'application/json': ['.json'] },
+          }],
+        });
+        const writable = await handle.createWritable();
+        await writable.write(jsonString);
+        await writable.close();
+        return;
+      } catch (err: any) {
+        if (err.name === 'AbortError') return;
+        console.error('File Picker failed, falling back to download link', err);
+      }
+    }
+
+    // Fallback to classic download
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    link.click();
+    URL.revokeObjectURL(url);
+  },
+
+  setShow3d: (show3d) => set({ show3d }),
+
   resetView: () => set({ scale: 1, position: { x: 0, y: 0 } }),
+
+  newProject: () => set({
+    rooms: [],
+    furniture: [],
+    dimensions: [],
+    wallAttachments: [],
+    backgroundImage: null,
+    projectName: 'New Project',
+    pixelsPerCm: 1,
+    history: [],
+    selectedId: null,
+    selectedRoomId: null,
+    selectedDimensionId: null,
+    selectedAttachmentId: null,
+    roomPoints: [],
+    calibrationPoints: null,
+    tempCalibrationDist: null,
+    measurePoints: [],
+    lastMeasurement: null,
+    scale: 1,
+    position: { x: 0, y: 0 },
+    activeLayer: 'blueprint',
+    mode: 'select'
+  }),
 }));

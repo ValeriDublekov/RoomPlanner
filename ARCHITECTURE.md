@@ -13,13 +13,18 @@ The application is structured into logical modules to ensure maintainability and
       GridLayer.tsx       # Renders the background grid div
       RoomItem.tsx        # Renders completed room polygons
     /Sidebar
+      CatalogModal.tsx    # Modal for browsing and customizing furniture items
       FileActions.tsx     # Save/Load and background image controls
       PropertyEditor.tsx  # Editor for selected furniture or rooms
-      SettingsPanel.tsx   # Global settings (Ortho, Snap, View Reset)
       ToolButton.tsx      # Reusable button for the tool navigation
-    CalibrationModal.tsx  # Modal for setting the scale (pixels per cm)
-    Canvas.tsx            # Main Canvas container, stage, and event handling
-    Sidebar.tsx           # Main Sidebar container and navigation
+    Canvas.tsx            # Main Canvas container and event handling
+    CanvasHeader.tsx      # Top bar with global actions
+    SubHeader.tsx         # Horizontal bar for layer selection and settings
+    Sidebar.tsx           # Compact sidebar for tools and property editing
+    UserManualModal.tsx   # Modal for displaying the user guide
+  /hooks
+    useKeyboardShortcuts.ts # Extracted keyboard event logic
+    useMouseSnapping.ts     # Extracted coordinate snapping logic
   /lib
     geometry.ts           # Math, geometry, and coordinate formatting utilities
     utils.ts              # UI utility functions (e.g., tailwind-merge)
@@ -42,7 +47,7 @@ Defined in `src/types.ts`:
 
 The global state is managed in `src/store.ts`. Key state slices include:
 
-- **View State**: `scale`, `position` (panning).
+- **View State**: `scale`, `position` (panning), `gridVisible`.
 - **App Mode & Layers**: `mode`, `activeLayer` (blueprint, room, furniture).
 - **Calibration**: `pixelsPerCm` (the core scale factor).
 - **Data**: `rooms`, `furniture`, `dimensions`, `roomPoints` (active drawing).
@@ -59,6 +64,10 @@ The Konva Stage is organized into logical layers to optimize rendering and inter
 4. **AnnotationLayer**: Used for dimension lines, labels, and the measurement tool preview. Active tools: `select`, `measure`, `dimension`.
 5. **InteractionLayer**: Renders active drawing elements (room points, calibration lines).
 
-## Locking Mechanism
+## Key Features
 
-Rooms are treated as static architectural elements once drawn. They cannot be selected, dragged, or modified using the selection tools. This ensures that the user can focus on placing furniture without accidentally moving the walls.
+- **Edge-Aware Snapping**: Uses edge detection on the blueprint image to allow precise tracing of existing walls.
+- **Real-Time Distances**: Furniture objects display their distance to the nearest walls while being dragged.
+- **Ortho Mode**: Constrains drawing to 90-degree angles for professional architectural accuracy.
+- **Multi-Layer Interaction**: Users can switch between layers to focus on specific tasks (e.g., drawing walls vs. placing furniture).
+- **Project Persistence**: Full Save/Load support via JSON files.
