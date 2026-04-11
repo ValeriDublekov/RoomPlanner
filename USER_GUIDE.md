@@ -18,14 +18,25 @@ Welcome to RoomPlanner! This guide will help you understand the workflow and fea
     *   **Move**: Drag doors and windows along the wall. Distances to nearest perpendicular walls will be shown.
 
 ### 3. Furniture Layer
-*   **Add Box (B)**: Quickly add a rectangular object.
-*   **Draw Object (F)**: Draw custom-shaped furniture or areas.
+*   **Catalog**: Use the Catalog to add standard furniture items.
+*   **CAD Symbols**: Many items feature detailed CAD symbols (like pillows on beds) that scale automatically to your chosen dimensions.
+*   **3D Height**: Every furniture item has a **Height (3D)** property in the sidebar. Set this to define how tall the object appears in the 3D preview (e.g., 50cm for a bed, 220cm for a wardrobe).
 *   **Manipulate**: Select an object to move, rotate, or resize it using the handles.
-*   **Draggable**: You can click and drag any object immediately to move it.
+    *   **Ortho Snapping**: If Ortho Mode is active, rotation will snap to 90-degree increments.
 
 ### 4. Annotation Layer
 *   **Measure (M)**: Click two points to see the distance between them.
 *   **Dimension (D)**: Create permanent dimension lines for your plan.
+
+### 5. 3D Preview
+*   **Toggle 3D**: Click the **3D Preview (Box icon)** in the header to switch to a high-fidelity 3D view.
+*   **Dollhouse View**: The 3D mode uses a "Dollhouse" perspective with walls cut at 210cm for better visibility.
+*   **Wall Openings**: Doors and windows placed in 2D create real architectural openings in the 3D walls.
+*   **Controls**:
+    *   **Left Click**: Rotate the camera.
+    *   **Right Click**: Pan the view.
+    *   **Scroll**: Zoom in and out.
+*   **Back to 2D**: Click the "Back to 2D" button in the 3D header to return to drafting mode.
 
 ## Navigation & Shortcuts
 

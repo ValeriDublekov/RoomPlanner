@@ -1,8 +1,9 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState, useMemo } from 'react';
 import { Line, Group } from 'react-konva';
 import { RoomObject } from '../../types';
 import { useStore } from '../../store';
 import Konva from 'konva';
+import { FLOOR_TEXTURES } from '../../constants';
 
 interface RoomItemProps {
   room: RoomObject;
@@ -21,20 +22,47 @@ export const RoomItem: React.FC<RoomItemProps> = ({
 }) => {
   const wallThicknessCm = useStore((state) => state.wallThickness);
   const pixelsPerCm = useStore((state) => state.pixelsPerCm);
+  const setSelectedWallIndex = useStore((state) => state.setSelectedWallIndex);
+  const selectedWallIndex = useStore((state) => state.selectedWallIndex);
   const wallThicknessPx = wallThicknessCm * pixelsPerCm;
   const groupRef = useRef<Konva.Group>(null);
+  const [textureImage, setTextureImage] = useState<HTMLImageElement | null>(null);
 
   const points = room.points.flatMap((p) => [p.x, p.y]);
+
+  useEffect(() => {
+    if (room.floorTexture && room.floorTexture !== 'none') {
+      const tex = FLOOR_TEXTURES.find(t => t.id === room.floorTexture);
+      if (tex && tex.url) {
+        const img = new window.Image();
+        img.src = tex.url;
+        img.onload = () => setTextureImage(img);
+      } else {
+        setTextureImage(null);
+      }
+    } else {
+      setTextureImage(null);
+    }
+  }, [room.floorTexture]);
 
   // Cache the group to make globalCompositeOperation work correctly within the group's local context
   useEffect(() => {
     const group = groupRef.current;
     if (group) {
-      // Clear cache first to allow re-caching with new dimensions/points
       group.clearCache();
       group.cache();
     }
   }, [points, wallThicknessPx, isSelected, scale]);
+
+  const wallSegments = useMemo(() => {
+    const segments = [];
+    for (let i = 0; i < room.points.length; i++) {
+      const p1 = room.points[i];
+      const p2 = room.points[(i + 1) % room.points.length];
+      segments.push([p1.x, p1.y, p2.x, p2.y]);
+    }
+    return segments;
+  }, [room.points]);
 
   return (
     <Group 
@@ -42,11 +70,21 @@ export const RoomItem: React.FC<RoomItemProps> = ({
       onTap={onSelect} 
       listening={!isLocked}
     >
+      {/* 1. Inner Room Area (The "Floor") - Draw first */}
+      <Line
+        points={points}
+        closed={true}
+        fill={isSelected ? "#818cf8" : (room.floorColor || "#f1f5f9")}
+        fillPatternImage={textureImage || undefined}
+        fillPatternRepeat="repeat"
+        fillPatternScale={{ x: 0.5, y: 0.5 }}
+        opacity={isSelected ? 0.4 : 1}
+        lineJoin="miter"
+      />
+
       {/* 
-        Wall Group: 
-        We draw a thick centered stroke, then "cut out" the inner part 
-        using destination-out. This ensures the wall only exists OUTSIDE 
-         the drawn points.
+        2. Wall Group: 
+        Drawn after floor so it covers the floor edges if there's any overlap.
       */}
       <Group ref={groupRef}>
         {/* The Wall Stroke */}
@@ -69,16 +107,24 @@ export const RoomItem: React.FC<RoomItemProps> = ({
         />
       </Group>
 
-      {/* Inner Room Area (The "Floor") */}
-      <Line
-        points={points}
-        closed={true}
-        fill={isSelected ? "#818cf8" : "#f1f5f9"}
-        opacity={isSelected ? 0.4 : 0.7}
-        stroke={isSelected ? "#4f46e5" : "#94a3b8"}
-        strokeWidth={1 / scale}
-        lineJoin="miter"
-      />
+      {/* 3. Wall Selection Overlays (Invisible but clickable) */}
+      {isSelected && wallSegments.map((seg, idx) => (
+        <Line
+          key={idx}
+          points={seg}
+          stroke={selectedWallIndex === idx ? "#4f46e5" : "transparent"}
+          strokeWidth={wallThicknessPx}
+          hitStrokeWidth={wallThicknessPx * 2}
+          onClick={(e) => {
+            e.cancelBubble = true;
+            setSelectedWallIndex(idx);
+          }}
+          onTap={(e) => {
+            e.cancelBubble = true;
+            setSelectedWallIndex(idx);
+          }}
+        />
+      ))}
     </Group>
   );
 };

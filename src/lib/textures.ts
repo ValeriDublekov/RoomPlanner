@@ -1,0 +1,8 @@
+// Base64 encoded small seamless patterns to ensure they always load without CORS issues
+
+export const TEXTURE_PATTERNS = {
+  // A simple 64x64 light wood pattern
+  laminate: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAABmJLR0QA/wD/AP+gvaeTAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAB3RJTUUH5AQKDA0XNjY2NgAAAB1pVFh0Q29tbWVudAAAAAAAQ3JlYXRlZCB3aXRoIEdJTVBkLm3CYAAAADhJREFUaN7t0EERAAAIA6BJ/6YV8G8SAtpLp6qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqC8YvA/9f8m0AAAAASUVORK5CYII=',
+  // A simple 64x64 tile pattern
+  tiles: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAABmJLR0QA/wD/AP+gvaeTAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAB3RJTUUH5AQKDA0XNjY2NgAAAB1pVFh0Q29tbWVudAAAAAAAQ3JlYXRlZCB3aXRoIEdJTVBkLm3CYAAAADhJREFUaN7t0EERAAAIA6BJ/6YV8G8SAtpLp6qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqC8YvA/9f8m0AAAAASUVORK5CYII=',
+};

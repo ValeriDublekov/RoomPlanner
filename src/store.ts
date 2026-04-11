@@ -35,6 +35,7 @@ export interface AppState {
   rooms: RoomObject[];
   wallAttachments: WallAttachment[];
   selectedRoomId: string | null;
+  selectedWallIndex: number | null;
   selectedAttachmentId: string | null;
   dimensionInput: string;
   
@@ -79,6 +80,8 @@ export interface AppState {
   closeRoom: () => void;
   setDimensionInput: (input: string) => void;
   setSelectedRoomId: (id: string | null) => void;
+  setSelectedWallIndex: (index: number | null) => void;
+  updateRoom: (id: string, updates: Partial<RoomObject>) => void;
   deleteRoom: (id: string) => void;
   setSelectedAttachmentId: (id: string | null) => void;
   addWallAttachment: (attachment: Omit<WallAttachment, 'id'>) => void;
@@ -149,6 +152,7 @@ export const useStore = create<AppState>((set, get) => ({
   rooms: [],
   wallAttachments: [],
   selectedRoomId: null,
+  selectedWallIndex: null,
   selectedAttachmentId: null,
   dimensionInput: '',
   furniture: [],
@@ -313,7 +317,17 @@ export const useStore = create<AppState>((set, get) => ({
     };
   }),
   setDimensionInput: (dimensionInput) => set({ dimensionInput }),
-  setSelectedRoomId: (selectedRoomId) => set({ selectedRoomId }),
+  setSelectedRoomId: (selectedRoomId) => set({ 
+    selectedRoomId,
+    selectedWallIndex: null,
+    selectedAttachmentId: null,
+    selectedId: null,
+    selectedDimensionId: null
+  }),
+  setSelectedWallIndex: (selectedWallIndex) => set({ selectedWallIndex }),
+  updateRoom: (id, updates) => set((state) => ({
+    rooms: state.rooms.map(r => r.id === id ? { ...r, ...updates } : r)
+  })),
   deleteRoom: (id) => set((state) => {
     state.saveHistory();
     return {

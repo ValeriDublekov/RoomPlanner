@@ -37,7 +37,9 @@ export const Sidebar: React.FC = () => {
     deleteDimension,
     loadState,
     selectedRoomId,
+    selectedWallIndex,
     deleteRoom,
+    updateRoom,
     wallAttachments,
     selectedAttachmentId,
     setSelectedAttachmentId,
@@ -151,10 +153,12 @@ export const Sidebar: React.FC = () => {
         <PropertyEditor
           selectedFurniture={selectedFurniture}
           selectedRoom={selectedRoom}
+          selectedWallIndex={selectedWallIndex}
           selectedDimension={selectedDimension}
           selectedAttachment={selectedAttachment}
           pixelsPerCm={pixelsPerCm}
           updateFurniture={updateFurniture}
+          updateRoom={updateRoom}
           deleteFurniture={deleteSelected}
           deleteRoom={deleteRoom}
           deleteDimension={deleteDimension}

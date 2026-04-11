@@ -1,26 +1,55 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, Suspense } from 'react';
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls, PerspectiveCamera, Environment, ContactShadows } from '@react-three/drei';
+import { OrbitControls, PerspectiveCamera, Environment, ContactShadows, useTexture } from '@react-three/drei';
 import * as THREE from 'three';
 import { useStore } from '../store';
 import { FurnitureObject, RoomObject, WallAttachment } from '../types';
+import { FLOOR_TEXTURES } from '../constants';
 
-const WallSegments = ({ room, pixelsPerCm, wallThickness, attachments }: { room: RoomObject, pixelsPerCm: number, wallThickness: number, attachments: WallAttachment[] }) => {
-  const wallHeight = 210; // Dollhouse height
-
+const Floor = ({ room, pixelsPerCm }: { room: RoomObject, pixelsPerCm: number }) => {
   const floorShape = useMemo(() => {
     const s = new THREE.Shape();
     if (room.points.length === 0) return s;
-    s.moveTo(room.points[0].x / pixelsPerCm, room.points[0].y / pixelsPerCm);
+    // Mirror Y to match Three.js coordinate system after -PI/2 rotation around X
+    // Konva Y is down, Three.js Z is towards camera. 
+    // After -PI/2 rotation, Shape Y becomes World Z.
+    // So we use -p.y to make positive 2D Y map to positive 3D Z.
+    s.moveTo(room.points[0].x / pixelsPerCm, -room.points[0].y / pixelsPerCm);
     for (let i = 1; i < room.points.length; i++) {
-      s.lineTo(room.points[i].x / pixelsPerCm, room.points[i].y / pixelsPerCm);
+      s.lineTo(room.points[i].x / pixelsPerCm, -room.points[i].y / pixelsPerCm);
     }
     s.closePath();
     return s;
   }, [room.points, pixelsPerCm]);
 
+  const textureData = FLOOR_TEXTURES.find(t => t.id === room.floorTexture);
+  const texture = textureData?.url ? useTexture(textureData.url) : null;
+
+  if (texture) {
+    texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+    texture.repeat.set(0.05, 0.05); // Adjust based on scale
+  }
+
+  return (
+    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
+      <shapeGeometry args={[floorShape]} />
+      <meshStandardMaterial 
+        color={texture ? (room.floorColor || "#ffffff") : (room.floorColor || "#e2e8f0")} 
+        map={texture} 
+        roughness={0.9} 
+        side={THREE.DoubleSide} 
+        polygonOffset
+        polygonOffsetFactor={-1}
+      />
+    </mesh>
+  );
+};
+
+const WallSegments = ({ room, pixelsPerCm, wallThickness, attachments }: { room: RoomObject, pixelsPerCm: number, wallThickness: number, attachments: WallAttachment[] }) => {
+  const wallHeight = 210; // Dollhouse height
+
   const segments = useMemo(() => {
-    const segs: { type: 'wall' | 'glass', length: number, angle: number, midX: number, midZ: number, height: number, y: number }[] = [];
+    const segs: { type: 'wall' | 'glass', length: number, angle: number, midX: number, midZ: number, height: number, y: number, color: string }[] = [];
     
     for (let i = 0; i < room.points.length; i++) {
       const p1 = room.points[i];
@@ -35,10 +64,12 @@ const WallSegments = ({ room, pixelsPerCm, wallThickness, attachments }: { room:
         .filter(a => a.roomId === room.id && a.wallSegmentIndex === i)
         .sort((a, b) => a.positionAlongWall - b.positionAlongWall);
 
+      const segmentColor = room.wallColors?.[i] || room.defaultWallColor || "#f0f0f0";
+
       if (segmentAttachments.length === 0) {
         const midX = (p1.x + p2.x) / (2 * pixelsPerCm);
         const midZ = (p1.y + p2.y) / (2 * pixelsPerCm);
-        segs.push({ type: 'wall', length: totalLength, angle, midX, midZ, height: wallHeight, y: wallHeight / 2 });
+        segs.push({ type: 'wall', length: totalLength, angle, midX, midZ, height: wallHeight, y: wallHeight / 2, color: segmentColor });
       } else {
         let currentPos = 0;
         segmentAttachments.forEach(att => {
@@ -53,10 +84,9 @@ const WallSegments = ({ room, pixelsPerCm, wallThickness, attachments }: { room:
             const partMidPos = currentPos + partLength / 2;
             const midX = (p1.x / pixelsPerCm) + Math.cos(angle) * partMidPos;
             const midZ = (p1.y / pixelsPerCm) + Math.sin(angle) * partMidPos;
-            segs.push({ type: 'wall', length: partLength, angle, midX, midZ, height: wallHeight, y: wallHeight / 2 });
+            segs.push({ type: 'wall', length: partLength, angle, midX, midZ, height: wallHeight, y: wallHeight / 2, color: segmentColor });
           }
 
-          // Header above attachment - REMOVED for dollhouse view as requested
           // Sill below window
           const sillHeight = att.type === 'door' ? 0 : 90;
           const openingHeight = att.type === 'door' ? 210 : 120;
@@ -64,14 +94,14 @@ const WallSegments = ({ room, pixelsPerCm, wallThickness, attachments }: { room:
           if (att.type === 'window' && sillHeight > 0) {
             const midX = (p1.x / pixelsPerCm) + Math.cos(angle) * attCenterPos;
             const midZ = (p1.y / pixelsPerCm) + Math.sin(angle) * attCenterPos;
-            segs.push({ type: 'wall', length: attWidth, angle, midX, midZ, height: sillHeight, y: sillHeight / 2 });
+            segs.push({ type: 'wall', length: attWidth, angle, midX, midZ, height: sillHeight, y: sillHeight / 2, color: segmentColor });
           }
 
           // Glass for window
           if (att.type === 'window') {
             const midX = (p1.x / pixelsPerCm) + Math.cos(angle) * attCenterPos;
             const midZ = (p1.y / pixelsPerCm) + Math.sin(angle) * attCenterPos;
-            segs.push({ type: 'glass', length: attWidth, angle, midX, midZ, height: Math.min(openingHeight, wallHeight - sillHeight), y: sillHeight + Math.min(openingHeight, wallHeight - sillHeight) / 2 });
+            segs.push({ type: 'glass', length: attWidth, angle, midX, midZ, height: Math.min(openingHeight, wallHeight - sillHeight), y: sillHeight + Math.min(openingHeight, wallHeight - sillHeight) / 2, color: '#93c5fd' });
           }
 
           currentPos = attEndPos;
@@ -83,30 +113,16 @@ const WallSegments = ({ room, pixelsPerCm, wallThickness, attachments }: { room:
           const partMidPos = currentPos + partLength / 2;
           const midX = (p1.x / pixelsPerCm) + Math.cos(angle) * partMidPos;
           const midZ = (p1.y / pixelsPerCm) + Math.sin(angle) * partMidPos;
-          segs.push({ type: 'wall', length: partLength, angle, midX, midZ, height: wallHeight, y: wallHeight / 2 });
+          segs.push({ type: 'wall', length: partLength, angle, midX, midZ, height: wallHeight, y: wallHeight / 2, color: segmentColor });
         }
       }
     }
     return segs;
-  }, [room.points, pixelsPerCm, attachments]);
-
-  // Materials for wall boxes: [right, left, top, bottom, front, back]
-  const wallMaterials = useMemo(() => [
-    new THREE.MeshStandardMaterial({ color: "#f0f0f0", roughness: 1 }), // right
-    new THREE.MeshStandardMaterial({ color: "#f0f0f0", roughness: 1 }), // left
-    new THREE.MeshStandardMaterial({ color: "#cccccc", roughness: 1 }), // top (cutaway cap)
-    new THREE.MeshStandardMaterial({ color: "#f0f0f0", roughness: 1 }), // bottom
-    new THREE.MeshStandardMaterial({ color: "#f0f0f0", roughness: 1 }), // front
-    new THREE.MeshStandardMaterial({ color: "#f0f0f0", roughness: 1 }), // back
-  ], []);
+  }, [room.points, pixelsPerCm, attachments, room.wallColors, room.defaultWallColor]);
 
   return (
     <group>
-      {/* Floor */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
-        <shapeGeometry args={[floorShape]} />
-        <meshStandardMaterial color="#e2e8f0" roughness={0.9} side={THREE.DoubleSide} />
-      </mesh>
+      <Floor room={room} pixelsPerCm={pixelsPerCm} />
 
       {/* Walls and Glass */}
       {segments.map((seg, i) => (
@@ -116,10 +132,11 @@ const WallSegments = ({ room, pixelsPerCm, wallThickness, attachments }: { room:
           rotation={[0, -seg.angle, 0]}
           castShadow={seg.type === 'wall'}
           receiveShadow
-          material={seg.type === 'wall' ? wallMaterials : undefined}
         >
           <boxGeometry args={[seg.length, seg.height, wallThickness / pixelsPerCm]} />
-          {seg.type === 'glass' && (
+          {seg.type === 'wall' ? (
+            <meshStandardMaterial color={seg.color} roughness={1} />
+          ) : (
             <meshStandardMaterial color="#93c5fd" transparent opacity={0.4} roughness={0.1} metalness={0.5} />
           )}
         </mesh>
@@ -187,8 +204,15 @@ export const ThreeDPreview: React.FC = () => {
       </div>
 
       <div className="flex-1 relative">
-        <Canvas shadows camera={{ position: [center.x + 400, 400, center.z + 400], fov: 45 }}>
-          <OrbitControls target={center} />
+        <Canvas 
+          shadows
+          camera={{ position: [center.x + 400, 400, center.z + 400], fov: 45 }}
+          onCreated={({ gl }) => {
+            gl.setClearColor('#0f172a');
+            gl.shadowMap.type = THREE.PCFShadowMap;
+          }}
+        >
+          <OrbitControls target={center} makeDefault />
           
           <ambientLight intensity={0.5} />
           <directionalLight 
@@ -205,29 +229,31 @@ export const ThreeDPreview: React.FC = () => {
           />
           <Environment preset="city" />
 
-          <group>
-            {/* Base Floor Plane */}
-            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[center.x, -0.2, center.z]} receiveShadow>
-              <planeGeometry args={[10000, 10000]} />
-              <meshStandardMaterial color="#f8fafc" roughness={1} />
-            </mesh>
+          <Suspense fallback={null}>
+            <group>
+              {/* Base Floor Plane */}
+              <mesh rotation={[-Math.PI / 2, 0, 0]} position={[center.x, -0.2, center.z]} receiveShadow>
+                <planeGeometry args={[10000, 10000]} />
+                <meshStandardMaterial color="#f8fafc" roughness={1} />
+              </mesh>
 
-            {/* Walls and Floors */}
-            {rooms.map(room => (
-              <WallSegments 
-                key={room.id} 
-                room={room} 
-                pixelsPerCm={pixelsPerCm} 
-                wallThickness={wallThickness} 
-                attachments={wallAttachments}
-              />
-            ))}
+              {/* Walls and Floors */}
+              {rooms.map(room => (
+                <WallSegments 
+                  key={room.id} 
+                  room={room} 
+                  pixelsPerCm={pixelsPerCm} 
+                  wallThickness={wallThickness} 
+                  attachments={wallAttachments}
+                />
+              ))}
 
-            {/* Furniture */}
-            {furniture.map(item => (
-              <Furniture key={item.id} item={item} pixelsPerCm={pixelsPerCm} />
-            ))}
-          </group>
+              {/* Furniture */}
+              {furniture.map(item => (
+                <Furniture key={item.id} item={item} pixelsPerCm={pixelsPerCm} />
+              ))}
+            </group>
+          </Suspense>
 
           <ContactShadows 
             position={[center.x, 0, center.z]} 

@@ -6,6 +6,10 @@ export interface Vector2d {
 export interface RoomObject {
   id: string;
   points: Vector2d[];
+  floorTexture?: string;
+  floorColor?: string;
+  wallColors?: string[]; // Array of colors for each segment
+  defaultWallColor?: string;
 }
 
 export interface FurnitureObject {
