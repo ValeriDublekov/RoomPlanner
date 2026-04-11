@@ -6,6 +6,106 @@ import { useStore } from '../store';
 import { FurnitureObject, RoomObject, WallAttachment } from '../types';
 import { FLOOR_TEXTURES } from '../constants';
 
+const Bed3D = ({ width, depth, height, color }: { width: number, depth: number, height: number, color: string }) => {
+  const frameHeight = height * 0.3;
+  const mattressHeight = height * 0.5;
+  const mattressInset = 5; // 5cm inset
+  
+  return (
+    <group>
+      {/* Base Frame */}
+      <mesh position={[width / 2, frameHeight / 2, depth / 2]} castShadow receiveShadow>
+        <boxGeometry args={[width, frameHeight, depth]} />
+        <meshStandardMaterial color="#8B4513" roughness={0.8} />
+      </mesh>
+      
+      {/* Mattress */}
+      <mesh position={[width / 2, frameHeight + mattressHeight / 2, depth / 2]} castShadow receiveShadow>
+        <boxGeometry args={[width - mattressInset, mattressHeight, depth - mattressInset]} />
+        <meshStandardMaterial color="#ffffff" roughness={0.9} />
+      </mesh>
+      
+      {/* Pillows */}
+      <mesh position={[width * 0.25, frameHeight + mattressHeight + 2, depth * 0.15]} castShadow receiveShadow>
+        <boxGeometry args={[width * 0.3, 5, depth * 0.2]} />
+        <meshStandardMaterial color="#f8fafc" roughness={1} />
+      </mesh>
+      <mesh position={[width * 0.75, frameHeight + mattressHeight + 2, depth * 0.15]} castShadow receiveShadow>
+        <boxGeometry args={[width * 0.3, 5, depth * 0.2]} />
+        <meshStandardMaterial color="#f8fafc" roughness={1} />
+      </mesh>
+    </group>
+  );
+};
+
+const Desk3D = ({ width, depth, height, color }: { width: number, depth: number, height: number, color: string }) => {
+  const topThickness = 4; // 4cm
+  const legRadius = 2; // 2cm
+  
+  return (
+    <group>
+      {/* Desktop */}
+      <mesh position={[width / 2, height - topThickness / 2, depth / 2]} castShadow receiveShadow>
+        <boxGeometry args={[width, topThickness, depth]} />
+        <meshStandardMaterial color={color} roughness={0.7} />
+      </mesh>
+      
+      {/* Legs */}
+      {[
+        [legRadius, legRadius],
+        [width - legRadius, legRadius],
+        [legRadius, depth - legRadius],
+        [width - legRadius, depth - legRadius]
+      ].map((pos, i) => (
+        <mesh key={i} position={[pos[0], (height - topThickness) / 2, pos[1]]} castShadow receiveShadow>
+          <cylinderGeometry args={[legRadius, legRadius, height - topThickness, 16]} />
+          <meshStandardMaterial color="#334155" roughness={0.5} />
+        </mesh>
+      ))}
+    </group>
+  );
+};
+
+const Wardrobe3D = ({ width, depth, height, color }: { width: number, depth: number, height: number, color: string }) => {
+  const numDoors = width < 100 ? 2 : 3;
+  const doorWidth = (width - 2) / numDoors;
+  const handleRadius = 1;
+  const handleHeight = 15;
+  
+  return (
+    <group>
+      {/* Carcass */}
+      <mesh position={[width / 2, height / 2, depth / 2]} castShadow receiveShadow>
+        <boxGeometry args={[width, height, depth]} />
+        <meshStandardMaterial color={color} roughness={0.8} />
+      </mesh>
+      
+      {/* Doors */}
+      {Array.from({ length: numDoors }).map((_, i) => (
+        <group key={i} position={[i * doorWidth + doorWidth / 2 + 1, height / 2, depth + 0.5]}>
+          <mesh castShadow receiveShadow>
+            <boxGeometry args={[doorWidth - 0.5, height - 2, 1]} />
+            <meshStandardMaterial color={color} roughness={0.7} metalness={0.1} />
+          </mesh>
+          
+          {/* Handle */}
+          <mesh position={[i % 2 === 0 ? doorWidth / 3 : -doorWidth / 3, 0, 1]} castShadow receiveShadow>
+            <cylinderGeometry args={[handleRadius, handleRadius, handleHeight, 8]} />
+            <meshStandardMaterial color="#94a3b8" metalness={0.8} roughness={0.2} />
+          </mesh>
+        </group>
+      ))}
+    </group>
+  );
+};
+
+const GenericFurniture3D = ({ width, depth, height, color }: { width: number, depth: number, height: number, color: string }) => (
+  <mesh position={[width / 2, height / 2, depth / 2]} castShadow receiveShadow>
+    <boxGeometry args={[width, height, depth]} />
+    <meshStandardMaterial color={color} roughness={0.8} />
+  </mesh>
+);
+
 const Floor = ({ room, pixelsPerCm }: { room: RoomObject, pixelsPerCm: number }) => {
   const floorShape = useMemo(() => {
     const s = new THREE.Shape();
@@ -31,15 +131,13 @@ const Floor = ({ room, pixelsPerCm }: { room: RoomObject, pixelsPerCm: number })
   }
 
   return (
-    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
+    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.1, 0]} receiveShadow>
       <shapeGeometry args={[floorShape]} />
       <meshStandardMaterial 
         color={texture ? (room.floorColor || "#ffffff") : (room.floorColor || "#e2e8f0")} 
         map={texture} 
         roughness={0.9} 
         side={THREE.DoubleSide} 
-        polygonOffset
-        polygonOffsetFactor={-1}
       />
     </mesh>
   );
@@ -154,16 +252,24 @@ const Furniture = ({ item, pixelsPerCm }: { item: FurnitureObject, pixelsPerCm: 
   // Three.js rotation is in radians, counter-clockwise
   const rotationRad = -(item.rotation * Math.PI) / 180;
 
+  const renderFurniture = () => {
+    const props = { width, depth, height, color: item.color || "#f8fafc" };
+    
+    switch (item.furnitureType) {
+      case 'bed':
+        return <Bed3D {...props} />;
+      case 'desk':
+        return <Desk3D {...props} />;
+      case 'wardrobe':
+        return <Wardrobe3D {...props} />;
+      default:
+        return <GenericFurniture3D {...props} />;
+    }
+  };
+
   return (
     <group position={[item.x / pixelsPerCm, 0, item.y / pixelsPerCm]} rotation={[0, rotationRad, 0]}>
-      <mesh 
-        position={[width / 2, height / 2, depth / 2]}
-        castShadow
-        receiveShadow
-      >
-        <boxGeometry args={[width, height, depth]} />
-        <meshStandardMaterial color={item.color || "#f8fafc"} roughness={0.8} />
-      </mesh>
+      {renderFurniture()}
     </group>
   );
 };
@@ -206,7 +312,7 @@ export const ThreeDPreview: React.FC = () => {
       <div className="flex-1 relative">
         <Canvas 
           shadows
-          camera={{ position: [center.x + 400, 400, center.z + 400], fov: 45 }}
+          camera={{ position: [center.x + 400, 400, center.z + 400], fov: 45, near: 1, far: 10000 }}
           onCreated={({ gl }) => {
             gl.setClearColor('#0f172a');
             gl.shadowMap.type = THREE.PCFShadowMap;
@@ -219,6 +325,7 @@ export const ThreeDPreview: React.FC = () => {
             castShadow 
             intensity={1.5} 
             position={[center.x + 1000, 2000, center.z + 1000]} 
+            shadow-bias={-0.0001}
             shadow-mapSize={[2048, 2048]}
             shadow-camera-left={-2000}
             shadow-camera-right={2000}

@@ -15,6 +15,7 @@ export interface RoomObject {
 export interface FurnitureObject {
   id: string;
   type: 'box' | 'polygon' | 'circle';
+  furnitureType?: 'bed' | 'desk' | 'wardrobe' | 'generic';
   name: string;
   x: number;
   y: number;
@@ -30,7 +31,8 @@ export interface FurnitureObject {
 export interface CatalogItem {
   id: string;
   name: string;
-  category: 'Bedroom' | 'Living Room' | 'Kitchen' | 'Bathroom';
+  furnitureType?: 'bed' | 'desk' | 'wardrobe' | 'generic';
+  category: 'Bedroom' | 'Living Room' | 'Kitchen' | 'Bathroom' | 'Office';
   type: 'rectangle' | 'circle';
   width: number; // in cm
   depth: number; // in cm

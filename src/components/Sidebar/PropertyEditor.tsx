@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, FlipHorizontal, FlipVertical, ArrowUpToLine, ArrowDownToLine, ChevronUp, ChevronDown } from 'lucide-react';
+import { X, FlipHorizontal, FlipVertical, ArrowUpToLine, ArrowDownToLine, ChevronUp, ChevronDown, RotateCcw, RotateCw } from 'lucide-react';
 import { FurnitureObject, RoomObject, DimensionObject, WallAttachment } from '../../types';
 import { cn } from '../../lib/utils';
 import { FLOOR_TEXTURES } from '../../constants';
@@ -64,6 +64,21 @@ export const PropertyEditor: React.FC<PropertyEditorProps> = ({
             />
           </div>
 
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Furniture Type</label>
+            <select
+              value={selectedFurniture.furnitureType || 'generic'}
+              onFocus={saveHistory}
+              onChange={(e) => updateFurniture(selectedFurniture.id, { furnitureType: e.target.value as any })}
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+            >
+              <option value="generic">Generic Box</option>
+              <option value="bed">Bed</option>
+              <option value="desk">Desk</option>
+              <option value="wardrobe">Wardrobe</option>
+            </select>
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Width (cm)</label>
@@ -118,6 +133,49 @@ export const PropertyEditor: React.FC<PropertyEditorProps> = ({
                 onChange={(e) => updateFurniture(selectedFurniture.id, { color: e.target.value })}
                 className="w-6 h-6 rounded-full border-none p-0 overflow-hidden cursor-pointer"
               />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <div className="flex justify-between items-center ml-1">
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Rotation</label>
+              <button 
+                onClick={() => { saveHistory(); updateFurniture(selectedFurniture.id, { rotation: 0 }); }}
+                className="text-[9px] text-indigo-500 hover:text-indigo-600 font-bold uppercase tracking-tighter"
+              >
+                Reset (0°)
+              </button>
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="number"
+                value={Math.round(selectedFurniture.rotation)}
+                onFocus={saveHistory}
+                onChange={(e) => updateFurniture(selectedFurniture.id, { rotation: parseFloat(e.target.value) || 0 })}
+                className="w-20 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+              />
+              <div className="flex-1 grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => {
+                    saveHistory();
+                    updateFurniture(selectedFurniture.id, { rotation: (selectedFurniture.rotation - 90) % 360 });
+                  }}
+                  className="flex items-center justify-center gap-2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl hover:bg-slate-100 transition-all text-slate-600 text-[10px] font-bold uppercase tracking-wider"
+                  title="Rotate -90°"
+                >
+                  <RotateCcw size={14} />
+                </button>
+                <button
+                  onClick={() => {
+                    saveHistory();
+                    updateFurniture(selectedFurniture.id, { rotation: (selectedFurniture.rotation + 90) % 360 });
+                  }}
+                  className="flex items-center justify-center gap-2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl hover:bg-slate-100 transition-all text-slate-600 text-[10px] font-bold uppercase tracking-wider"
+                  title="Rotate +90°"
+                >
+                  <RotateCw size={14} />
+                </button>
+              </div>
             </div>
           </div>
 

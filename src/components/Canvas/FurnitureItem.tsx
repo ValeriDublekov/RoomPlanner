@@ -333,6 +333,73 @@ export const FurnitureItem: React.FC<FurnitureItemProps> = ({
           fontStyle="bold"
           listening={false}
         />
+
+        {/* Quick Rotation Buttons (Only when selected) */}
+        {isSelected && (
+          <Group y={-30 / scale} x={shape.width / 2 - 25 / scale}>
+            <Group 
+              onClick={(e) => {
+                e.cancelBubble = true;
+                onStartChange();
+                onChange({ rotation: (shape.rotation - 90) % 360 });
+              }}
+              onTap={(e) => {
+                e.cancelBubble = true;
+                onStartChange();
+                onChange({ rotation: (shape.rotation - 90) % 360 });
+              }}
+            >
+              <Ellipse
+                radiusX={10 / scale}
+                radiusY={10 / scale}
+                fill="white"
+                stroke="#4f46e5"
+                strokeWidth={1 / scale}
+                shadowBlur={5 / scale}
+                shadowOpacity={0.1}
+              />
+              <Text
+                text="↺"
+                fontSize={14 / scale}
+                fill="#4f46e5"
+                x={-6 / scale}
+                y={-8 / scale}
+                fontStyle="bold"
+              />
+            </Group>
+            <Group 
+              x={30 / scale}
+              onClick={(e) => {
+                e.cancelBubble = true;
+                onStartChange();
+                onChange({ rotation: (shape.rotation + 90) % 360 });
+              }}
+              onTap={(e) => {
+                e.cancelBubble = true;
+                onStartChange();
+                onChange({ rotation: (shape.rotation + 90) % 360 });
+              }}
+            >
+              <Ellipse
+                radiusX={10 / scale}
+                radiusY={10 / scale}
+                fill="white"
+                stroke="#4f46e5"
+                strokeWidth={1 / scale}
+                shadowBlur={5 / scale}
+                shadowOpacity={0.1}
+              />
+              <Text
+                text="↻"
+                fontSize={14 / scale}
+                fill="#4f46e5"
+                x={-6 / scale}
+                y={-8 / scale}
+                fontStyle="bold"
+              />
+            </Group>
+          </Group>
+        )}
       </Group>
       {isSelected && (
         <Transformer
