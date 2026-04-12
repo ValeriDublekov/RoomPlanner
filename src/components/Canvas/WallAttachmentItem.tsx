@@ -89,19 +89,15 @@ export const WallAttachmentItem: React.FC<WallAttachmentItemProps> = ({
   };
 
   const handleDragMove = (e: Konva.KonvaEventObject<DragEvent>) => {
-    const stage = e.target.getStage();
-    if (!stage) return;
-
-    const pos = stage.getPointerPosition();
-    if (!pos) return;
-
-    // Convert absolute pointer to relative
+    const node = e.target;
+    
+    // Use node's current position (which is already snapped by dragBoundFunc)
     const relPos = {
-      x: (pos.x - stage.x()) / stage.scaleX(),
-      y: (pos.y - stage.y()) / stage.scaleY()
+      x: node.x(),
+      y: node.y()
     };
 
-    // Project onto wall segment
+    // Project onto wall segment to get t
     const dx = p2.x - p1.x;
     const dy = p2.y - p1.y;
     const l2 = dx * dx + dy * dy;
@@ -133,15 +129,11 @@ export const WallAttachmentItem: React.FC<WallAttachmentItemProps> = ({
 
   const handleDragEnd = (e: Konva.KonvaEventObject<DragEvent>) => {
     setIsDragging(false);
-    const stage = e.target.getStage();
-    if (!stage) return;
-
-    const pos = stage.getPointerPosition();
-    if (!pos) return;
+    const node = e.target;
 
     const relPos = {
-      x: (pos.x - stage.x()) / stage.scaleX(),
-      y: (pos.y - stage.y()) / stage.scaleY()
+      x: node.x(),
+      y: node.y()
     };
 
     const dx = p2.x - p1.x;
@@ -279,10 +271,8 @@ export const WallAttachmentItem: React.FC<WallAttachmentItemProps> = ({
         }}
         width={widthPx}
         height={thicknessPx}
-        // Align the attachment to the wall line. 
-        // Since walls are drawn on the outside, we default to offsetY=0 or offsetY=thicknessPx
         offsetX={widthPx / 2}
-        offsetY={attachment.flipY ? thicknessPx : 0}
+        offsetY={thicknessPx / 2}
       >
         {/* 
           The "Cutter" Rectangle 

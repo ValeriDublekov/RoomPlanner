@@ -9,3 +9,11 @@ export const FLOOR_TEXTURES = [
   { id: 'tiles', name: 'Ceramic Tiles', url: TILES_BASE64 },
   { id: 'concrete', name: 'Polished Concrete', url: CONCRETE_BASE64 },
 ];
+
+export const WOOD_COLORS = [
+  { id: 'light-oak', name: 'Light Oak', color: '#E5C494' },
+  { id: 'natural-pine', name: 'Natural Pine', color: '#F2D2A9' },
+  { id: 'walnut', name: 'Walnut', color: '#5D4037' },
+  { id: 'dark-wenge', name: 'Dark Wenge', color: '#2D1E17' },
+  { id: 'beech', name: 'Beech', color: '#D2B48C' },
+];

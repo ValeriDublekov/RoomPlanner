@@ -5,6 +5,7 @@ interface ModelProps {
   depth: number;
   height: number;
   color: string;
+  secondaryColor?: string;
 }
 
 export const Bed3D: React.FC<ModelProps> = ({ width, depth, height, color }) => {
@@ -67,11 +68,12 @@ export const Desk3D: React.FC<ModelProps> = ({ width, depth, height, color }) =>
   );
 };
 
-export const Wardrobe3D: React.FC<ModelProps> = ({ width, depth, height, color }) => {
+export const Wardrobe3D: React.FC<ModelProps> = ({ width, depth, height, color, secondaryColor }) => {
   const numDoors = width < 100 ? 2 : 3;
   const doorWidth = (width - 2) / numDoors;
   const handleRadius = 1;
   const handleHeight = 15;
+  const doorColor = secondaryColor || color;
   
   return (
     <group>
@@ -86,7 +88,7 @@ export const Wardrobe3D: React.FC<ModelProps> = ({ width, depth, height, color }
         <group key={i} position={[i * doorWidth + doorWidth / 2 + 1, height / 2, depth + 0.5]}>
           <mesh castShadow receiveShadow>
             <boxGeometry args={[doorWidth - 0.5, height - 2, 1]} />
-            <meshStandardMaterial color={color} roughness={0.7} metalness={0.1} />
+            <meshStandardMaterial color={doorColor} roughness={0.7} metalness={0.1} />
           </mesh>
           
           {/* Handle */}
@@ -100,9 +102,10 @@ export const Wardrobe3D: React.FC<ModelProps> = ({ width, depth, height, color }
   );
 };
 
-export const Dresser3D: React.FC<ModelProps> = ({ width, depth, height, color }) => {
+export const Dresser3D: React.FC<ModelProps> = ({ width, depth, height, color, secondaryColor }) => {
   const numDrawers = height < 90 ? 3 : 4;
   const drawerHeight = (height - 4) / numDrawers;
+  const drawerColor = secondaryColor || color;
   
   return (
     <group>
@@ -117,7 +120,7 @@ export const Dresser3D: React.FC<ModelProps> = ({ width, depth, height, color })
         <group key={i} position={[width / 2, i * drawerHeight + drawerHeight / 2 + 2, depth + 0.5]}>
           <mesh castShadow receiveShadow>
             <boxGeometry args={[width - 2, drawerHeight - 2, 1]} />
-            <meshStandardMaterial color={color} roughness={0.7} />
+            <meshStandardMaterial color={drawerColor} roughness={0.7} />
           </mesh>
           {/* Handle */}
           <mesh position={[0, 0, 1]} castShadow receiveShadow>

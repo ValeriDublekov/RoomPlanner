@@ -26,6 +26,7 @@ export interface FurnitureObject {
   rotation: number;
   points?: Vector2d[];
   color?: string;
+  secondaryColor?: string;
   svgPath?: string;
 }
 

@@ -19,7 +19,13 @@ const Furniture = ({ item, pixelsPerCm }: { item: FurnitureObject, pixelsPerCm: 
   const rotationRad = -(item.rotation * Math.PI) / 180;
 
   const renderFurniture = () => {
-    const props = { width, depth, height, color: item.color || "#f8fafc" };
+    const props = { 
+      width, 
+      depth, 
+      height, 
+      color: item.color || "#f8fafc",
+      secondaryColor: item.secondaryColor
+    };
     
     switch (item.furnitureType) {
       case 'bed': return <Bed3D {...props} />;

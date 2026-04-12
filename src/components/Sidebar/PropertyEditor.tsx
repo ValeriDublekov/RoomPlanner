@@ -2,7 +2,7 @@ import React from 'react';
 import { X, FlipHorizontal, FlipVertical, ArrowUpToLine, ArrowDownToLine, ChevronUp, ChevronDown, RotateCcw, RotateCw } from 'lucide-react';
 import { FurnitureObject, RoomObject, DimensionObject, WallAttachment } from '../../types';
 import { cn } from '../../lib/utils';
-import { FLOOR_TEXTURES } from '../../constants';
+import { FLOOR_TEXTURES, WOOD_COLORS } from '../../constants';
 
 interface PropertyEditorProps {
   selectedFurniture?: FurnitureObject;
@@ -131,8 +131,23 @@ export const PropertyEditor: React.FC<PropertyEditorProps> = ({
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Color</label>
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Main Color / Material</label>
             <div className="flex gap-2 flex-wrap">
+              {WOOD_COLORS.map(wood => (
+                <button
+                  key={wood.id}
+                  onClick={() => updateFurniture(selectedFurniture.id, { color: wood.color })}
+                  className={cn(
+                    "w-6 h-6 rounded-full border-2 transition-all flex items-center justify-center overflow-hidden",
+                    selectedFurniture.color === wood.color ? "border-indigo-500 scale-110" : "border-transparent"
+                  )}
+                  title={wood.name}
+                  style={{ backgroundColor: wood.color }}
+                >
+                  <div className="w-full h-full opacity-20 bg-[radial-gradient(circle,transparent_20%,#000_20%,#000_40%,transparent_40%,transparent_60%,#000_60%,#000_80%,transparent_80%)] bg-[length:4px_4px]" />
+                </button>
+              ))}
+              <div className="w-px h-6 bg-slate-200 mx-1" />
               {['#f8fafc', '#f1f5f9', '#e2e8f0', '#cbd5e1', '#94a3b8', '#64748b', '#475569', '#334155'].map(color => (
                 <button
                   key={color}
@@ -152,6 +167,52 @@ export const PropertyEditor: React.FC<PropertyEditorProps> = ({
               />
             </div>
           </div>
+
+          {(selectedFurniture.furnitureType === 'wardrobe' || selectedFurniture.furnitureType === 'dresser') && (
+            <div className="space-y-1.5 p-3 bg-slate-50 rounded-xl border border-slate-200">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Doors / Drawers Color</label>
+              <div className="flex gap-2 flex-wrap">
+                {WOOD_COLORS.map(wood => (
+                  <button
+                    key={wood.id}
+                    onClick={() => updateFurniture(selectedFurniture.id, { secondaryColor: wood.color })}
+                    className={cn(
+                      "w-6 h-6 rounded-full border-2 transition-all flex items-center justify-center overflow-hidden",
+                      selectedFurniture.secondaryColor === wood.color ? "border-indigo-500 scale-110" : "border-transparent"
+                    )}
+                    title={wood.name}
+                    style={{ backgroundColor: wood.color }}
+                  >
+                    <div className="w-full h-full opacity-20 bg-[radial-gradient(circle,transparent_20%,#000_20%,#000_40%,transparent_40%,transparent_60%,#000_60%,#000_80%,transparent_80%)] bg-[length:4px_4px]" />
+                  </button>
+                ))}
+                <div className="w-px h-6 bg-slate-200 mx-1" />
+                {['#f8fafc', '#f1f5f9', '#e2e8f0', '#cbd5e1', '#94a3b8', '#64748b', '#475569', '#334155'].map(color => (
+                  <button
+                    key={color}
+                    onClick={() => updateFurniture(selectedFurniture.id, { secondaryColor: color })}
+                    className={cn(
+                      "w-6 h-6 rounded-full border-2 transition-all",
+                      selectedFurniture.secondaryColor === color ? "border-indigo-500 scale-110" : "border-transparent"
+                    )}
+                    style={{ backgroundColor: color }}
+                  />
+                ))}
+                <input 
+                  type="color" 
+                  value={selectedFurniture.secondaryColor || selectedFurniture.color || '#f8fafc'} 
+                  onChange={(e) => updateFurniture(selectedFurniture.id, { secondaryColor: e.target.value })}
+                  className="w-6 h-6 rounded-full border-none p-0 overflow-hidden cursor-pointer"
+                />
+                <button
+                  onClick={() => updateFurniture(selectedFurniture.id, { secondaryColor: undefined })}
+                  className="text-[9px] text-slate-400 hover:text-indigo-500 font-bold uppercase tracking-tighter ml-auto"
+                >
+                  Same as body
+                </button>
+              </div>
+            </div>
+          )}
 
           <div className="space-y-1.5">
             <div className="flex justify-between items-center ml-1">
