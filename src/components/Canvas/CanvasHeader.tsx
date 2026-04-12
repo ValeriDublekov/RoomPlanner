@@ -1,5 +1,5 @@
 import React from 'react';
-import { Undo2, Download, Upload, Layout, FilePlus, RotateCcw, Grid, BookOpen, Box } from 'lucide-react';
+import { Undo2, Download, Upload, Layout, FilePlus, RotateCcw, Grid, BookOpen, Box, Maximize } from 'lucide-react';
 import { useStore } from '../../store';
 import { UserManualModal } from '../UserManualModal';
 
@@ -13,6 +13,7 @@ export const CanvasHeader: React.FC = () => {
     setProjectName,
     newProject,
     resetView,
+    fitToScreen,
     pixelsPerCm,
     gridVisible,
     setGridVisible,
@@ -34,6 +35,14 @@ export const CanvasHeader: React.FC = () => {
         try {
           const json = JSON.parse(event.target?.result as string);
           loadState(json);
+          
+          // Auto-fit after load
+          setTimeout(() => {
+            const canvas = document.querySelector('.flex-1.relative');
+            if (canvas) {
+              fitToScreen(canvas.clientWidth, canvas.clientHeight);
+            }
+          }, 100);
         } catch (err) {
           console.error('Failed to load:', err);
         }
@@ -105,6 +114,18 @@ export const CanvasHeader: React.FC = () => {
             title="Reset View"
           >
             <RotateCcw size={18} />
+          </button>
+          <button
+            onClick={() => {
+              const canvas = document.querySelector('.flex-1.relative');
+              if (canvas) {
+                fitToScreen(canvas.clientWidth, canvas.clientHeight);
+              }
+            }}
+            className="p-2 text-slate-500 hover:bg-slate-50 rounded-lg transition-colors"
+            title="Fit to Screen"
+          >
+            <Maximize size={18} />
           </button>
           <button
             onClick={() => setGridVisible(!gridVisible)}

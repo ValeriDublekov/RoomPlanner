@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import { Vector2d, RoomObject, FurnitureObject, DimensionObject, AppMode, HistoryEntry, LayerType, EdgeMap, WallAttachment } from './types';
 import { getDistance, scalePoints } from './lib/geometry';
 
@@ -29,6 +30,7 @@ export interface AppState {
   gridVisible: boolean;
   edgeMap: EdgeMap | null;
   wallThickness: number; // in cm
+  wallHeight: number; // in cm
   
   // Room Drawing
   roomPoints: Vector2d[];
@@ -74,6 +76,7 @@ export interface AppState {
   setGridVisible: (visible: boolean) => void;
   setEdgeMap: (map: EdgeMap | null) => void;
   setWallThickness: (thickness: number) => void;
+  setWallHeight: (height: number) => void;
   
   // Room Actions
   addRoomPoint: (point: Vector2d) => void;
@@ -124,11 +127,14 @@ export interface AppState {
 
   // Helpers
   resetView: () => void;
+  fitToScreen: (width: number, height: number) => void;
   newProject: () => void;
 }
 
-export const useStore = create<AppState>((set, get) => ({
-  scale: 1,
+export const useStore = create<AppState>()(
+  persist(
+    (set, get) => ({
+      scale: 1,
   position: { x: 0, y: 0 },
   mode: 'select',
   activeLayer: 'furniture',
@@ -148,6 +154,7 @@ export const useStore = create<AppState>((set, get) => ({
   gridVisible: true,
   edgeMap: null,
   wallThickness: 20,
+  wallHeight: 250,
   roomPoints: [],
   rooms: [],
   wallAttachments: [],
@@ -190,6 +197,7 @@ export const useStore = create<AppState>((set, get) => ({
   setGridVisible: (gridVisible) => set({ gridVisible }),
   setEdgeMap: (edgeMap) => set({ edgeMap }),
   setWallThickness: (wallThickness) => set({ wallThickness }),
+  setWallHeight: (wallHeight) => set({ wallHeight }),
 
   addMeasurePoint: (point) => set((state) => {
     if (state.measurePoints.length === 0) {
@@ -485,21 +493,19 @@ export const useStore = create<AppState>((set, get) => ({
 
     return {
       rooms: loadedRooms,
-      furniture: Array.isArray(data.furniture) ? data.furniture : state.furniture,
+      furniture: Array.isArray(data.furniture) ? data.furniture : [],
       dimensions: Array.isArray(data.dimensions) ? data.dimensions : [],
       wallAttachments: Array.isArray(data.wallAttachments) 
         ? data.wallAttachments.map((a: any) => ({ ...a, flipY: a.flipY ?? true })) 
         : [],
-      pixelsPerCm: typeof data.pixelsPerCm === 'number' ? data.pixelsPerCm : state.pixelsPerCm,
-      projectName: typeof data.projectName === 'string' ? data.projectName : state.projectName,
+      pixelsPerCm: (typeof data.pixelsPerCm === 'number' && data.pixelsPerCm > 0) ? data.pixelsPerCm : 1,
+      projectName: typeof data.projectName === 'string' ? data.projectName : 'Loaded Project',
       backgroundImage: typeof data.backgroundImage === 'string' ? data.backgroundImage : null,
       backgroundPosition: data.backgroundPosition || { x: 0, y: 0 },
       backgroundScale: typeof data.backgroundScale === 'number' ? data.backgroundScale : 1,
       backgroundRotation: typeof data.backgroundRotation === 'number' ? data.backgroundRotation : 0,
       backgroundOpacity: typeof data.backgroundOpacity === 'number' ? data.backgroundOpacity : 0.5,
       backgroundVisible: typeof data.backgroundVisible === 'boolean' ? data.backgroundVisible : true,
-      scale: 1,
-      position: { x: 0, y: 0 },
       selectedId: null,
       selectedRoomId: null,
       selectedDimensionId: null,
@@ -566,6 +572,49 @@ export const useStore = create<AppState>((set, get) => ({
 
   resetView: () => set({ scale: 1, position: { x: 0, y: 0 } }),
 
+  fitToScreen: (width, height) => set((state) => {
+    const allPoints: Vector2d[] = [];
+    
+    state.rooms.forEach(r => allPoints.push(...r.points));
+    state.furniture.forEach(f => {
+      allPoints.push({ x: f.x, y: f.y });
+      allPoints.push({ x: f.x + f.width, y: f.y + f.height });
+    });
+    state.dimensions.forEach(d => {
+      allPoints.push(d.p1);
+      allPoints.push(d.p2);
+    });
+
+    if (allPoints.length === 0) return { scale: 1, position: { x: 0, y: 0 } };
+
+    const minX = Math.min(...allPoints.map(p => p.x));
+    const minY = Math.min(...allPoints.map(p => p.y));
+    const maxX = Math.max(...allPoints.map(p => p.x));
+    const maxY = Math.max(...allPoints.map(p => p.y));
+
+    const contentWidth = maxX - minX;
+    const contentHeight = maxY - minY;
+    
+    const padding = 50;
+    const availableWidth = width - padding * 2;
+    const availableHeight = height - padding * 2;
+
+    const scaleX = availableWidth / contentWidth;
+    const scaleY = availableHeight / contentHeight;
+    const newScale = Math.min(scaleX, scaleY, 1); // Don't zoom in too much, max 1:1
+
+    const centerX = (minX + maxX) / 2;
+    const centerY = (minY + maxY) / 2;
+
+    return {
+      scale: newScale,
+      position: {
+        x: width / 2 - centerX * newScale,
+        y: height / 2 - centerY * newScale
+      }
+    };
+  }),
+
   newProject: () => set({
     rooms: [],
     furniture: [],
@@ -589,4 +638,19 @@ export const useStore = create<AppState>((set, get) => ({
     activeLayer: 'blueprint',
     mode: 'select'
   }),
+}), {
+  name: 'room-planner-storage',
+  partialize: (state) => {
+    // Exclude large or temporary fields from localStorage
+    const { 
+      history, 
+      backgroundImage, 
+      roomPoints, 
+      measurePoints, 
+      lastMeasurement,
+      clipboard,
+      ...rest 
+    } = state;
+    return rest;
+  },
 }));

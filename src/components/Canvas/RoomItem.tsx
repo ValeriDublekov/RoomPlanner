@@ -49,11 +49,19 @@ export const RoomItem: React.FC<RoomItemProps> = ({
   // Cache the group to make globalCompositeOperation work correctly within the group's local context
   useEffect(() => {
     const group = groupRef.current;
-    if (group) {
-      group.clearCache();
-      group.cache();
+    if (group && room.points.length >= 3) {
+      try {
+        group.clearCache();
+        // Only cache if the group has some size to avoid "drawImage with 0 width/height" error
+        const rect = group.getClientRect();
+        if (rect.width > 0 && rect.height > 0) {
+          group.cache();
+        }
+      } catch (e) {
+        console.warn('Failed to cache room group:', e);
+      }
     }
-  }, [points, wallThicknessPx, isSelected, scale]);
+  }, [points, wallThicknessPx, isSelected, scale, room.points.length]);
 
   const wallSegments = useMemo(() => {
     const segments = [];

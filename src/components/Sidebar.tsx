@@ -45,6 +45,14 @@ export const Sidebar: React.FC = () => {
       try {
         const json = JSON.parse(event.target?.result as string);
         loadState(json);
+        
+        // Auto-fit after load
+        setTimeout(() => {
+          const canvas = document.querySelector('.flex-1.relative');
+          if (canvas) {
+            useStore.getState().fitToScreen(canvas.clientWidth, canvas.clientHeight);
+          }
+        }, 100);
       } catch (err) {
         console.error('Failed to load room plan:', err);
         alert('Invalid room plan file.');

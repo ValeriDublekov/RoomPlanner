@@ -37,8 +37,11 @@ export const Canvas: React.FC = () => {
     snapToImage,
     gridVisible,
     edgeMap, setEdgeMap,
-    saveHistory
+    saveHistory,
+    fitToScreen
   } = useStore();
+
+  const [hasAutoFitted, setHasAutoFitted] = useState(false);
 
   const [bgImage] = useImage(backgroundImage || '');
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
@@ -46,6 +49,14 @@ export const Canvas: React.FC = () => {
   const bgTrRef = useRef<Konva.Transformer>(null);
 
   const { getSnappedMousePos } = useMouseSnapping(mousePos, isCtrlPressed);
+
+  // Auto-fit on initial load
+  useEffect(() => {
+    if (!hasAutoFitted && dimensions.width > 0 && (rooms.length > 0 || furniture.length > 0)) {
+      fitToScreen(dimensions.width, dimensions.height);
+      setHasAutoFitted(true);
+    }
+  }, [dimensions, rooms.length, furniture.length, hasAutoFitted, fitToScreen]);
 
   const handleDimensionSubmit = useCallback(() => {
     const cm = parseFloat(dimensionInput);
@@ -268,24 +279,26 @@ export const Canvas: React.FC = () => {
 
       <div className="flex-1 relative">
         {gridVisible && <GridLayer scale={scale} position={position} />}
-        <CanvasStage
-          stageRef={stageRef}
-          dimensions={dimensions}
-          scale={scale}
-          position={position}
-          onWheel={handleWheel}
-          onMouseDown={() => {}}
-          onMouseUp={() => {}}
-          onDragEnd={handleDragEnd}
-          onClick={handleClick}
-          onDblClick={handleDblClick}
-          onMouseMove={handleMouseMove}
-          bgImage={bgImage}
-          bgRef={bgRef}
-          bgTrRef={bgTrRef}
-          snappedMouse={snappedMouse}
-          mousePos={mousePos}
-        />
+        {dimensions.width > 0 && dimensions.height > 0 && (
+          <CanvasStage
+            stageRef={stageRef}
+            dimensions={dimensions}
+            scale={scale}
+            position={position}
+            onWheel={handleWheel}
+            onMouseDown={() => {}}
+            onMouseUp={() => {}}
+            onDragEnd={handleDragEnd}
+            onClick={handleClick}
+            onDblClick={handleDblClick}
+            onMouseMove={handleMouseMove}
+            bgImage={bgImage}
+            bgRef={bgRef}
+            bgTrRef={bgTrRef}
+            snappedMouse={snappedMouse}
+            mousePos={mousePos}
+          />
+        )}
 
         <CanvasOverlays
           lastMeasurement={lastMeasurement}

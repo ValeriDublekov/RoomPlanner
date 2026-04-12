@@ -43,9 +43,13 @@ export const Floor: React.FC<{ room: RoomObject, pixelsPerCm: number }> = ({ roo
   );
 };
 
-export const WallSegments: React.FC<{ room: RoomObject, pixelsPerCm: number, wallThickness: number, attachments: WallAttachment[] }> = ({ room, pixelsPerCm, wallThickness, attachments }) => {
-  const wallHeight = 210;
-
+export const WallSegments: React.FC<{ 
+  room: RoomObject, 
+  pixelsPerCm: number, 
+  wallThickness: number, 
+  wallHeight: number,
+  attachments: WallAttachment[] 
+}> = ({ room, pixelsPerCm, wallThickness, wallHeight, attachments }) => {
   const segments = useMemo(() => {
     const segs: { type: 'wall' | 'glass', length: number, angle: number, midX: number, midZ: number, height: number, y: number, color: string }[] = [];
     
@@ -112,7 +116,7 @@ export const WallSegments: React.FC<{ room: RoomObject, pixelsPerCm: number, wal
       }
     }
     return segs;
-  }, [room.points, pixelsPerCm, attachments, room.wallColors, room.defaultWallColor]);
+  }, [room.points, pixelsPerCm, attachments, room.wallColors, room.defaultWallColor, wallHeight]);
 
   return (
     <group>

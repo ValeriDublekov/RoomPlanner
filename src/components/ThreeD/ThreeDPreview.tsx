@@ -42,7 +42,7 @@ const Furniture = ({ item, pixelsPerCm }: { item: FurnitureObject, pixelsPerCm: 
 };
 
 export const ThreeDPreview: React.FC = () => {
-  const { rooms, furniture, pixelsPerCm, setShow3d, wallThickness, wallAttachments } = useStore();
+  const { rooms, furniture, pixelsPerCm, setShow3d, wallThickness, wallHeight, setWallHeight, wallAttachments } = useStore();
 
   const center = useMemo(() => {
     if (rooms.length === 0) return new THREE.Vector3(0, 0, 0);
@@ -115,6 +115,7 @@ export const ThreeDPreview: React.FC = () => {
                   room={room} 
                   pixelsPerCm={pixelsPerCm} 
                   wallThickness={wallThickness} 
+                  wallHeight={wallHeight}
                   attachments={wallAttachments}
                 />
               ))}
@@ -134,18 +135,36 @@ export const ThreeDPreview: React.FC = () => {
           />
         </Canvas>
 
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-slate-800/80 backdrop-blur-md px-6 py-3 rounded-2xl border border-slate-700 text-white text-xs font-medium flex gap-6">
-          <div className="flex items-center gap-2">
-            <span className="w-3 h-3 bg-indigo-500 rounded-full"></span>
-            Left Click: Rotate
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-4">
+          <div className="bg-slate-800/90 backdrop-blur-md px-6 py-4 rounded-2xl border border-slate-700 shadow-2xl flex flex-col gap-3 w-80">
+            <div className="flex justify-between items-center">
+              <span className="text-white text-xs font-bold uppercase tracking-wider">Wall Height</span>
+              <span className="text-indigo-400 font-mono font-bold">{wallHeight} cm</span>
+            </div>
+            <input 
+              type="range"
+              min="0"
+              max="400"
+              step="10"
+              value={wallHeight}
+              onChange={(e) => setWallHeight(parseInt(e.target.value))}
+              className="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+            />
           </div>
-          <div className="flex items-center gap-2">
-            <span className="w-3 h-3 bg-indigo-500 rounded-full"></span>
-            Right Click: Pan
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="w-3 h-3 bg-indigo-500 rounded-full"></span>
-            Scroll: Zoom
+
+          <div className="bg-slate-800/80 backdrop-blur-md px-6 py-3 rounded-2xl border border-slate-700 text-white text-[10px] font-bold uppercase tracking-wider flex gap-6">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 bg-indigo-500 rounded-full"></span>
+              Left Click: Rotate
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 bg-indigo-500 rounded-full"></span>
+              Right Click: Pan
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 bg-indigo-500 rounded-full"></span>
+              Scroll: Zoom
+            </div>
           </div>
         </div>
       </div>
