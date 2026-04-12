@@ -1,5 +1,6 @@
-import React, { useRef, useEffect, useState, useMemo } from 'react';
+import React, { useRef, useMemo } from 'react';
 import { Line, Group } from 'react-konva';
+import useImage from 'use-image';
 import { RoomObject } from '../../types';
 import { useStore } from '../../store';
 import Konva from 'konva';
@@ -26,24 +27,16 @@ export const RoomItem: React.FC<RoomItemProps> = ({
   const setSelectedWallIndex = useStore((state) => state.setSelectedWallIndex);
   const selectedWallIndex = useStore((state) => state.selectedWallIndex);
   const wallThicknessPx = wallThicknessCm * pixelsPerCm;
-  const [textureImage, setTextureImage] = useState<HTMLImageElement | null>(null);
+  
+  const textureData = useMemo(() => FLOOR_TEXTURES.find(t => t.id === room.floorTexture), [room.floorTexture]);
+  const [textureImage] = useImage(textureData?.url || '');
+
+  const textureScale = useMemo(() => {
+    // Each pixel in our SVG represents 1cm
+    return { x: pixelsPerCm, y: pixelsPerCm };
+  }, [pixelsPerCm]);
 
   const points = room.points.flatMap((p) => [p.x, p.y]);
-
-  useEffect(() => {
-    if (room.floorTexture && room.floorTexture !== 'none') {
-      const tex = FLOOR_TEXTURES.find(t => t.id === room.floorTexture);
-      if (tex && tex.url) {
-        const img = new window.Image();
-        img.src = tex.url;
-        img.onload = () => setTextureImage(img);
-      } else {
-        setTextureImage(null);
-      }
-    } else {
-      setTextureImage(null);
-    }
-  }, [room.floorTexture]);
 
   const wallSegments = useMemo(() => {
     const segments = [];
@@ -57,7 +50,11 @@ export const RoomItem: React.FC<RoomItemProps> = ({
 
   return (
     <Group 
-      onClick={onSelect} 
+      id={room.id}
+      onClick={(e) => {
+        if (e.evt.button !== 0) return;
+        onSelect();
+      }} 
       onTap={onSelect} 
       listening={!isLocked}
     >
@@ -65,13 +62,25 @@ export const RoomItem: React.FC<RoomItemProps> = ({
       <Line
         points={points}
         closed={true}
-        fill={isSelected ? "#818cf8" : (room.floorColor || "#f1f5f9")}
+        fill={room.floorColor || "#f1f5f9"}
         fillPatternImage={textureImage || undefined}
         fillPatternRepeat="repeat"
-        fillPatternScale={{ x: 0.5, y: 0.5 }}
-        opacity={isSelected ? 0.4 : 1}
+        fillPatternScale={textureScale}
+        fillPriority={textureImage ? "pattern" : "color"}
         lineJoin="miter"
       />
+
+      {/* Selection Overlay for Floor */}
+      {isSelected && (
+        <Line
+          points={points}
+          closed={true}
+          fill="#818cf8"
+          opacity={0.2}
+          lineJoin="miter"
+          listening={false}
+        />
+      )}
 
       {/* 
         2. Walls: 

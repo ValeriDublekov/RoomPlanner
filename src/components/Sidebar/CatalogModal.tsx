@@ -138,8 +138,14 @@ export const CatalogModal: React.FC<CatalogModalProps> = ({ isOpen, onClose }) =
                       : "border-slate-100 bg-white hover:border-indigo-200 hover:bg-slate-50"
                   )}
                 >
-                  <div className="w-full aspect-square bg-slate-100 rounded-xl mb-3 flex items-center justify-center text-slate-300 group-hover:text-indigo-200 transition-colors">
-                    {item.type === 'circle' ? <div className="w-12 h-12 rounded-full border-4 border-current" /> : <div className="w-12 h-12 border-4 border-current rounded-md" />}
+                  <div className="w-full aspect-square bg-slate-100 rounded-xl mb-3 flex items-center justify-center text-slate-300 group-hover:text-indigo-200 transition-colors overflow-hidden p-4">
+                    {item.svgPath ? (
+                      <svg viewBox="0 0 100 100" className="w-full h-full fill-current stroke-current stroke-2">
+                        <path d={item.svgPath} fillOpacity="0.2" />
+                      </svg>
+                    ) : (
+                      item.type === 'circle' ? <div className="w-12 h-12 rounded-full border-4 border-current" /> : <div className="w-12 h-12 border-4 border-current rounded-md" />
+                    )}
                   </div>
                   <span className="text-sm font-bold text-slate-700 mb-1 group-hover:text-indigo-700">{item.name}</span>
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{item.category}</span>

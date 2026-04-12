@@ -22,11 +22,11 @@ export const Floor: React.FC<{ room: RoomObject, pixelsPerCm: number }> = ({ roo
   if (texture) {
     texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
     texture.anisotropy = 16;
-    let repeatScale = 0.01; 
-    if (room.floorTexture === 'laminate') repeatScale = 1 / 200;
-    if (room.floorTexture === 'tiles') repeatScale = 1 / 80;
-    if (room.floorTexture === 'concrete') repeatScale = 1 / 100;
+    let sizeCm = 100;
+    if (room.floorTexture === 'laminate' || room.floorTexture === 'wood' || room.floorTexture === 'parquet') sizeCm = 64;
+    if (room.floorTexture === 'tiles') sizeCm = 80;
     
+    const repeatScale = 1 / sizeCm;
     texture.repeat.set(repeatScale, repeatScale);
   }
 

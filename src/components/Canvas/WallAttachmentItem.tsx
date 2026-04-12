@@ -233,7 +233,10 @@ export const WallAttachmentItem: React.FC<WallAttachmentItemProps> = ({
         x={x}
         y={y}
         rotation={angle}
-        onClick={onSelect}
+        onClick={(e) => {
+          if (e.evt.button !== 0) return;
+          onSelect();
+        }}
         onTap={onSelect}
         draggable={isSelected}
         onDragStart={() => {

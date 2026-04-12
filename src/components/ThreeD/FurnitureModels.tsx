@@ -1,4 +1,7 @@
 import React from 'react';
+import { useTexture } from '@react-three/drei';
+import * as THREE from 'three';
+import { WOOD_GRAIN } from '../../constants';
 
 interface ModelProps {
   width: number;
@@ -7,6 +10,13 @@ interface ModelProps {
   color: string;
   secondaryColor?: string;
 }
+
+const WoodMaterial: React.FC<{ color: string, opacity?: number, transparent?: boolean }> = ({ color, opacity = 1, transparent = false }) => {
+  const texture = useTexture(WOOD_GRAIN);
+  texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+  texture.repeat.set(0.02, 0.02);
+  return <meshStandardMaterial color={color} map={texture} roughness={0.8} opacity={opacity} transparent={transparent} />;
+};
 
 export const Bed3D: React.FC<ModelProps> = ({ width, depth, height, color }) => {
   const frameHeight = height * 0.3;
@@ -18,7 +28,7 @@ export const Bed3D: React.FC<ModelProps> = ({ width, depth, height, color }) => 
       {/* Base Frame */}
       <mesh position={[width / 2, frameHeight / 2, depth / 2]} castShadow receiveShadow>
         <boxGeometry args={[width, frameHeight, depth]} />
-        <meshStandardMaterial color="#8B4513" roughness={0.8} />
+        <WoodMaterial color={color} />
       </mesh>
       
       {/* Mattress */}
@@ -49,7 +59,7 @@ export const Desk3D: React.FC<ModelProps> = ({ width, depth, height, color }) =>
       {/* Desktop */}
       <mesh position={[width / 2, height - topThickness / 2, depth / 2]} castShadow receiveShadow>
         <boxGeometry args={[width, topThickness, depth]} />
-        <meshStandardMaterial color={color} roughness={0.7} />
+        <WoodMaterial color={color} />
       </mesh>
       
       {/* Legs */}
@@ -80,7 +90,7 @@ export const Wardrobe3D: React.FC<ModelProps> = ({ width, depth, height, color, 
       {/* Carcass */}
       <mesh position={[width / 2, height / 2, depth / 2]} castShadow receiveShadow>
         <boxGeometry args={[width, height, depth]} />
-        <meshStandardMaterial color={color} roughness={0.8} />
+        <WoodMaterial color={color} />
       </mesh>
       
       {/* Doors */}
@@ -88,7 +98,7 @@ export const Wardrobe3D: React.FC<ModelProps> = ({ width, depth, height, color, 
         <group key={i} position={[i * doorWidth + doorWidth / 2 + 1, height / 2, depth + 0.5]}>
           <mesh castShadow receiveShadow>
             <boxGeometry args={[doorWidth - 0.5, height - 2, 1]} />
-            <meshStandardMaterial color={doorColor} roughness={0.7} metalness={0.1} />
+            <WoodMaterial color={doorColor} />
           </mesh>
           
           {/* Handle */}
@@ -112,7 +122,7 @@ export const Dresser3D: React.FC<ModelProps> = ({ width, depth, height, color, s
       {/* Main Body */}
       <mesh position={[width / 2, height / 2, depth / 2]} castShadow receiveShadow>
         <boxGeometry args={[width, height, depth]} />
-        <meshStandardMaterial color={color} roughness={0.8} />
+        <WoodMaterial color={color} />
       </mesh>
       
       {/* Drawers */}
@@ -120,7 +130,7 @@ export const Dresser3D: React.FC<ModelProps> = ({ width, depth, height, color, s
         <group key={i} position={[width / 2, i * drawerHeight + drawerHeight / 2 + 2, depth + 0.5]}>
           <mesh castShadow receiveShadow>
             <boxGeometry args={[width - 2, drawerHeight - 2, 1]} />
-            <meshStandardMaterial color={drawerColor} roughness={0.7} />
+            <WoodMaterial color={drawerColor} />
           </mesh>
           {/* Handle */}
           <mesh position={[0, 0, 1]} castShadow receiveShadow>
@@ -169,33 +179,74 @@ export const Chair3D: React.FC<ModelProps> = ({ width, depth, height, color }) =
 };
 
 export const Shelf3D: React.FC<ModelProps> = ({ width, depth, height, color }) => {
-  const numShelves = height > 100 ? 5 : 3;
-  const shelfSpacing = (height - 4) / numShelves;
+  const isWallShelf = height < 100;
+  const numShelves = isWallShelf ? 0 : (height > 100 ? 5 : 3);
+  const shelfSpacing = isWallShelf ? 0 : (height - 4) / numShelves;
   
+  const numVerticalDividers = isWallShelf ? Math.floor(width / 30) : 0;
+  const dividerSpacing = isWallShelf ? width / (numVerticalDividers + 1) : 0;
+
   return (
     <group>
-      {/* Side Panels */}
-      <mesh position={[1, height / 2, depth / 2]} castShadow receiveShadow>
-        <boxGeometry args={[2, height, depth]} />
-        <meshStandardMaterial color={color} roughness={0.8} />
-      </mesh>
-      <mesh position={[width - 1, height / 2, depth / 2]} castShadow receiveShadow>
-        <boxGeometry args={[2, height, depth]} />
-        <meshStandardMaterial color={color} roughness={0.8} />
-      </mesh>
+      {/* Top and Bottom Panels for Wall Shelf, or Side Panels for Tall Shelf */}
+      {isWallShelf ? (
+        <>
+          <mesh position={[width / 2, 1, depth / 2]} castShadow receiveShadow>
+            <boxGeometry args={[width, 2, depth]} />
+            <WoodMaterial color={color} />
+          </mesh>
+          <mesh position={[width / 2, height - 1, depth / 2]} castShadow receiveShadow>
+            <boxGeometry args={[width, 2, depth]} />
+            <WoodMaterial color={color} />
+          </mesh>
+        </>
+      ) : (
+        <>
+          <mesh position={[1, height / 2, depth / 2]} castShadow receiveShadow>
+            <boxGeometry args={[2, height, depth]} />
+            <WoodMaterial color={color} />
+          </mesh>
+          <mesh position={[width - 1, height / 2, depth / 2]} castShadow receiveShadow>
+            <boxGeometry args={[2, height, depth]} />
+            <WoodMaterial color={color} />
+          </mesh>
+        </>
+      )}
       
-      {/* Shelves */}
-      {Array.from({ length: numShelves + 1 }).map((_, i) => (
+      {/* Horizontal Shelves (for tall units) */}
+      {!isWallShelf && Array.from({ length: numShelves + 1 }).map((_, i) => (
         <mesh key={i} position={[width / 2, i * shelfSpacing + 2, depth / 2]} castShadow receiveShadow>
           <boxGeometry args={[width - 2, 2, depth - 1]} />
-          <meshStandardMaterial color={color} roughness={0.7} />
+          <WoodMaterial color={color} />
         </mesh>
       ))}
+
+      {/* Vertical Dividers (for wall shelves) */}
+      {isWallShelf && Array.from({ length: numVerticalDividers }).map((_, i) => (
+        <mesh key={i} position={[(i + 1) * dividerSpacing, height / 2, depth / 2]} castShadow receiveShadow>
+          <boxGeometry args={[2, height - 4, depth - 1]} />
+          <WoodMaterial color={color} />
+        </mesh>
+      ))}
+
+      {/* Side Panels for Wall Shelf */}
+      {isWallShelf && (
+        <>
+          <mesh position={[1, height / 2, depth / 2]} castShadow receiveShadow>
+            <boxGeometry args={[2, height, depth]} />
+            <WoodMaterial color={color} />
+          </mesh>
+          <mesh position={[width - 1, height / 2, depth / 2]} castShadow receiveShadow>
+            <boxGeometry args={[2, height, depth]} />
+            <WoodMaterial color={color} />
+          </mesh>
+        </>
+      )}
       
       {/* Back Panel */}
       <mesh position={[width / 2, height / 2, 0.5]} castShadow receiveShadow>
         <boxGeometry args={[width - 2, height, 1]} />
-        <meshStandardMaterial color={color} roughness={0.9} opacity={0.5} transparent />
+        <WoodMaterial color={color} opacity={0.5} transparent />
       </mesh>
     </group>
   );
@@ -235,7 +286,7 @@ export const Table3D: React.FC<ModelProps & { isRound?: boolean }> = ({ width, d
         ) : (
           <boxGeometry args={[width, topThickness, depth]} />
         )}
-        <meshStandardMaterial color={color} roughness={0.7} />
+        <WoodMaterial color={color} />
       </mesh>
       
       {/* Legs */}
@@ -264,6 +315,6 @@ export const Table3D: React.FC<ModelProps & { isRound?: boolean }> = ({ width, d
 export const GenericFurniture3D: React.FC<ModelProps> = ({ width, depth, height, color }) => (
   <mesh position={[width / 2, height / 2, depth / 2]} castShadow receiveShadow>
     <boxGeometry args={[width, height, depth]} />
-    <meshStandardMaterial color={color} roughness={0.8} />
+    <WoodMaterial color={color} />
   </mesh>
 );

@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { Vector2d, RoomObject, FurnitureObject, DimensionObject, AppMode, HistoryEntry, LayerType, EdgeMap, WallAttachment } from './types';
-import { getDistance, scalePoints } from './lib/geometry';
+import { getDistance, scalePoints, rotatePoint } from './lib/geometry';
 
 export interface AppState {
   scale: number;
@@ -45,6 +45,7 @@ export interface AppState {
   // Furniture
   furniture: FurnitureObject[];
   selectedId: string | null;
+  selectedIds: string[];
   clipboard: FurnitureObject | null;
   
   // Measurement
@@ -58,6 +59,16 @@ export interface AppState {
   // History
   history: HistoryEntry[];
   
+  // Context Menu
+  contextMenu: {
+    visible: boolean;
+    x: number;
+    y: number;
+    targetId: string | null;
+    targetType: 'furniture' | 'room' | 'dimension' | null;
+  };
+  setContextMenu: (menu: AppState['contextMenu']) => void;
+
   // Actions
   setScale: (scale: number) => void;
   setPosition: (position: Vector2d) => void;
@@ -97,9 +108,13 @@ export interface AppState {
   addFurniture: (item: Omit<FurnitureObject, 'id'>) => void;
   updateFurniture: (id: string, updates: Partial<FurnitureObject>) => void;
   setSelectedId: (id: string | null) => void;
+  setSelectedIds: (ids: string[]) => void;
+  groupSelected: () => void;
+  ungroupSelected: () => void;
   deleteSelected: () => void;
   copySelected: () => void;
   paste: () => void;
+  duplicateSelected: () => void;
   bringToFront: (id: string) => void;
   sendToBack: (id: string) => void;
   bringForward: (id: string) => void;
@@ -167,6 +182,7 @@ export const useStore = create<AppState>()(
   dimensionInput: '',
   furniture: [],
   selectedId: null,
+  selectedIds: [],
   clipboard: null,
   measurePoints: [],
   lastMeasurement: null,
@@ -174,6 +190,13 @@ export const useStore = create<AppState>()(
   selectedDimensionId: null,
   history: [],
   show3d: false,
+  contextMenu: {
+    visible: false,
+    x: 0,
+    y: 0,
+    targetId: null,
+    targetType: null,
+  },
 
   setScale: (scale) => set({ scale }),
   setPosition: (position) => set({ position }),
@@ -202,6 +225,30 @@ export const useStore = create<AppState>()(
   setEdgeMap: (edgeMap) => set({ edgeMap }),
   setWallThickness: (wallThickness) => set({ wallThickness }),
   setWallHeight: (wallHeight) => set({ wallHeight }),
+  setContextMenu: (contextMenu) => set({ contextMenu }),
+
+  duplicateSelected: () => set((state) => {
+    const idsToDuplicate = state.selectedIds.length > 0 ? state.selectedIds : (state.selectedId ? [state.selectedId] : []);
+    if (idsToDuplicate.length === 0) return {};
+    
+    const itemsToDuplicate = state.furniture.filter(f => idsToDuplicate.includes(f.id));
+    if (itemsToDuplicate.length === 0) return {};
+    
+    const historyEntry = { rooms: state.rooms, furniture: state.furniture, dimensions: state.dimensions };
+    const newItems = itemsToDuplicate.map(item => ({
+      ...item,
+      id: Math.random().toString(36).substr(2, 9),
+      x: item.x + 20,
+      y: item.y + 20,
+    }));
+
+    return {
+      furniture: [...state.furniture, ...newItems],
+      selectedIds: newItems.map(n => n.id),
+      selectedId: newItems.length === 1 ? newItems[0].id : null,
+      history: [...state.history, historyEntry].slice(-50)
+    };
+  }),
 
   addMeasurePoint: (point) => set((state) => {
     if (state.measurePoints.length === 0) {
@@ -397,16 +444,133 @@ export const useStore = create<AppState>()(
       furniture: newFurniture
     };
   }),
-  setSelectedId: (selectedId) => set({ selectedId }),
+  setSelectedId: (selectedId) => set({ selectedId, selectedIds: selectedId ? [selectedId] : [] }),
+  setSelectedIds: (selectedIds) => set({ selectedIds, selectedId: selectedIds.length === 1 ? selectedIds[0] : null }),
+  
+  groupSelected: () => set((state) => {
+    if (state.selectedIds.length < 2) return state;
+    
+    const selectedItems = state.furniture.filter(f => state.selectedIds.includes(f.id));
+    if (selectedItems.length < 2) return state;
+
+    state.saveHistory();
+
+    // Calculate bounding box
+    const vertices = selectedItems.flatMap(item => {
+      const halfW = item.width / 2;
+      const halfH = item.height / 2;
+      const center = { x: item.x + halfW, y: item.y + halfH };
+      const corners = [
+        { x: -halfW, y: -halfH },
+        { x: halfW, y: -halfH },
+        { x: halfW, y: halfH },
+        { x: -halfW, y: halfH },
+      ];
+      return corners.map(c => rotatePoint(c, { x: 0, y: 0 }, item.rotation)).map(p => ({
+        x: p.x + center.x,
+        y: p.y + center.y
+      }));
+    });
+
+    const minX = Math.min(...vertices.map(v => v.x));
+    const minY = Math.min(...vertices.map(v => v.y));
+    const maxX = Math.max(...vertices.map(v => v.x));
+    const maxY = Math.max(...vertices.map(v => v.y));
+    
+    const centerX = (minX + maxX) / 2;
+    const centerY = (minY + maxY) / 2;
+    const width = maxX - minX;
+    const height = maxY - minY;
+
+    const groupChildren: FurnitureObject[] = selectedItems.map(item => {
+      // Relative coordinates from group center
+      // We need to account for the fact that Konva Group will have its own rotation
+      // But initially rotation is 0, so it's just offset
+      return {
+        ...item,
+        x: item.x - minX,
+        y: item.y - minY,
+      };
+    });
+
+    const newGroup: FurnitureObject = {
+      id: Math.random().toString(36).substr(2, 9),
+      type: 'group',
+      name: 'Group',
+      x: minX,
+      y: minY,
+      width,
+      height,
+      rotation: 0,
+      children: groupChildren
+    };
+
+    const remainingFurniture = state.furniture.filter(f => !state.selectedIds.includes(f.id));
+    
+    return {
+      furniture: [...remainingFurniture, newGroup],
+      selectedIds: [newGroup.id],
+      selectedId: newGroup.id
+    };
+  }),
+
+  ungroupSelected: () => set((state) => {
+    const group = state.furniture.find(f => f.id === state.selectedId && f.type === 'group');
+    if (!group || !group.children) return state;
+
+    state.saveHistory();
+
+    const newItems = group.children.map(child => {
+      // Convert relative to absolute
+      // Child x/y are relative to group top-left (minX, minY)
+      // We need to rotate the child's position around the group's rotation pivot
+      
+      // Group pivot is usually top-left for x/y in our state, but Konva might use center for rotation
+      // Let's assume x/y is top-left of the group's bounding box at 0 rotation.
+      
+      const rad = (group.rotation * Math.PI) / 180;
+      const cos = Math.cos(rad);
+      const sin = Math.sin(rad);
+      
+      // Child position relative to group top-left
+      const rx = child.x;
+      const ry = child.y;
+      
+      // Rotate relative position
+      const rotatedX = rx * cos - ry * sin;
+      const rotatedY = rx * sin + ry * cos;
+      
+      return {
+        ...child,
+        id: Math.random().toString(36).substr(2, 9),
+        x: group.x + rotatedX,
+        y: group.y + rotatedY,
+        rotation: (child.rotation + group.rotation) % 360
+      };
+    });
+
+    const remainingFurniture = state.furniture.filter(f => f.id !== group.id);
+    
+    return {
+      furniture: [...remainingFurniture, ...newItems],
+      selectedIds: newItems.map(n => n.id),
+      selectedId: newItems.length === 1 ? newItems[0].id : null
+    };
+  }),
+
   deleteSelected: () => set((state) => {
     const historyEntry = { rooms: state.rooms, furniture: state.furniture, dimensions: state.dimensions };
     
-    if (state.activeLayer === 'furniture' && state.selectedId) {
-      return {
-        furniture: state.furniture.filter(f => f.id !== state.selectedId),
-        selectedId: null,
-        history: [...state.history, historyEntry].slice(-50)
-      };
+    if (state.activeLayer === 'furniture') {
+      const idsToDelete = state.selectedIds.length > 0 ? state.selectedIds : (state.selectedId ? [state.selectedId] : []);
+      if (idsToDelete.length > 0) {
+        return {
+          furniture: state.furniture.filter(f => !idsToDelete.includes(f.id)),
+          selectedId: null,
+          selectedIds: [],
+          history: [...state.history, historyEntry].slice(-50)
+        };
+      }
     }
     
     if (state.activeLayer === 'room' && state.selectedRoomId) {
@@ -448,19 +612,29 @@ export const useStore = create<AppState>()(
   }),
 
   bringToFront: (id) => set((state) => {
-    const item = state.furniture.find(f => f.id === id);
-    if (!item) return state;
-    state.saveHistory();
+    const idsToMove = state.selectedIds.includes(id) ? state.selectedIds : [id];
+    const itemsToMove = state.furniture.filter(f => idsToMove.includes(f.id));
+    if (itemsToMove.length === 0) return {};
+    
+    const historyEntry = { rooms: state.rooms, furniture: state.furniture, dimensions: state.dimensions };
+    const others = state.furniture.filter(f => !idsToMove.includes(f.id));
+    
     return {
-      furniture: [...state.furniture.filter(f => f.id !== id), item]
+      furniture: [...others, ...itemsToMove],
+      history: [...state.history, historyEntry].slice(-50)
     };
   }),
   sendToBack: (id) => set((state) => {
-    const item = state.furniture.find(f => f.id === id);
-    if (!item) return state;
-    state.saveHistory();
+    const idsToMove = state.selectedIds.includes(id) ? state.selectedIds : [id];
+    const itemsToMove = state.furniture.filter(f => idsToMove.includes(f.id));
+    if (itemsToMove.length === 0) return {};
+    
+    const historyEntry = { rooms: state.rooms, furniture: state.furniture, dimensions: state.dimensions };
+    const others = state.furniture.filter(f => !idsToMove.includes(f.id));
+    
     return {
-      furniture: [item, ...state.furniture.filter(f => f.id !== id)]
+      furniture: [...itemsToMove, ...others],
+      history: [...state.history, historyEntry].slice(-50)
     };
   }),
   bringForward: (id) => set((state) => {

@@ -19,6 +19,8 @@ export const useKeyboardShortcuts = (
     selectedDimensionId,
     deleteDimension,
     undo,
+    groupSelected,
+    ungroupSelected,
     orthoMode,
     setOrthoMode,
     snapToGrid,
@@ -95,6 +97,15 @@ export const useKeyboardShortcuts = (
       if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
         e.preventDefault();
         undo();
+      }
+
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'g') {
+        e.preventDefault();
+        if (e.shiftKey) {
+          ungroupSelected();
+        } else {
+          groupSelected();
+        }
       }
 
       if (e.ctrlKey || e.metaKey) {

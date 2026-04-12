@@ -61,7 +61,9 @@ export const DimensionItem: React.FC<DimensionItemProps> = ({
 
   return (
     <Group 
+      id={dimension.id}
       onClick={(e) => {
+        if (e.evt.button !== 0) return;
         if (onSelect) {
           e.cancelBubble = true;
           onSelect();

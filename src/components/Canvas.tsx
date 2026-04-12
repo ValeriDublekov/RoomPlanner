@@ -158,6 +158,8 @@ export const Canvas: React.FC = () => {
   const handleClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
     if (e.evt.button !== 0) return;
     
+    useStore.getState().setContextMenu({ visible: false, x: 0, y: 0, targetId: null, targetType: null });
+
     const stage = stageRef.current;
     if (!stage) return;
 

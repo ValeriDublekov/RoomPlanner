@@ -41,8 +41,8 @@ export const FURNITURE_CATALOG: CatalogItem[] = [
   },
   { id: 'armchair', name: 'Armchair', category: 'Living Room', type: 'rectangle', width: 85, depth: 85, height3d: 85, defaultColor: '#f8fafc', svgPath: 'M0 0 H100 V100 H0 Z M0 75 H100 V100 H0 Z M0 0 H20 V100 H0 Z M80 0 H100 V100 H80 Z' },
   {id: 'bookshelf-tall', name: 'Tall Shelving Unit', furnitureType: 'shelf', category: 'Living Room', type: 'rectangle', width: 80, depth: 35, height3d: 200, defaultColor: '#e2e8f0', svgPath: 'M0 0 H100 V100 H0 Z M10 10 H90 V90 H10 Z M10 25 H90 M10 40 H90 M10 55 H90 M10 70 H90 M10 85 H90'}, 
- {id: 'wall-shelf-quad', name: 'Wall Shelf (4 sectors)', furnitureType: 'shelf', category: 'Living Room', type: 'rectangle', width: 100, depth: 25, height3d: 40, defaultElevation: 120, defaultColor: '#e2e8f0', svgPath: 'M0 0 H100 V100 H0 Z M25 0 V100 M50 0 V100 M75 0 V100'},
- {id: 'tv-lcd', name: 'LCD TV', furnitureType: 'electronics', category: 'Living Room', type: 'rectangle', width: 120, depth: 10, height3d: 70, defaultElevation: 100, defaultColor: '#1e293b', svgPath: 'M0 40 H100 V55 H0 Z M35 55 H65 V65 H35 Z'}, 
+  {id: 'wall-shelf', name: 'Wall Shelf', furnitureType: 'shelf', category: 'Living Room', type: 'rectangle', width: 100, depth: 25, height3d: 40, defaultElevation: 120, defaultColor: '#e2e8f0'},
+  {id: 'tv-lcd', name: 'LCD TV', furnitureType: 'electronics', category: 'Living Room', type: 'rectangle', width: 120, depth: 10, height3d: 70, defaultElevation: 100, defaultColor: '#1e293b', svgPath: 'M0 40 H100 V55 H0 Z M35 55 H65 V65 H35 Z'}, 
  {id: 'dining-table-round', name: 'Round Dining Table', furnitureType: 'table', category: 'Kitchen', type: 'circle', width: 100, depth: 100, height3d: 75, defaultColor: '#f8fafc', svgPath: 'M 50, 50 m -50, 0 a 50,50 0 1,0 100,0 a 50,50 0 1,0 -100,0'}, 
  {id: 'dining-table-square', name: 'Square Dining Table', furnitureType: 'table', category: 'Kitchen', type: 'rectangle', width: 90, depth: 90, height3d: 75, defaultColor: '#f8fafc', svgPath: 'M0 0 H100 V100 H0 Z M10 10 H90 V90 H10 Z'},
  

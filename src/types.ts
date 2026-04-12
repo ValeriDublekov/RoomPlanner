@@ -14,7 +14,7 @@ export interface RoomObject {
 
 export interface FurnitureObject {
   id: string;
-  type: 'box' | 'polygon' | 'circle';
+  type: 'box' | 'polygon' | 'circle' | 'group';
   furnitureType?: 'bed' | 'desk' | 'wardrobe' | 'dresser' | 'chair' | 'shelf' | 'electronics' | 'table' | 'generic';
   name: string;
   x: number;
@@ -28,6 +28,7 @@ export interface FurnitureObject {
   color?: string;
   secondaryColor?: string;
   svgPath?: string;
+  children?: FurnitureObject[]; // For groups
 }
 
 export interface CatalogItem {
