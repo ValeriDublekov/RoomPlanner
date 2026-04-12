@@ -4,13 +4,16 @@ import Konva from 'konva';
 import { FurnitureObject, RoomObject, Vector2d } from '../../types';
 import { useStore } from '../../store';
 import { 
+  getDistance,
   getDistanceToSegment, 
   getFurnitureVertices, 
+  rotatePoint,
   checkPolygonsIntersect, 
   checkPolygonLineIntersect,
   checkCirclePolygonIntersect,
   checkCircleLineIntersect,
-  checkCirclesIntersect
+  checkCirclesIntersect,
+  isPointInPolygon
 } from '../../lib/geometry';
 
 interface FurnitureItemProps {
@@ -59,64 +62,151 @@ export const FurnitureItem: React.FC<FurnitureItemProps> = ({
     const y = node.y();
     const w = shape.width;
     const h = shape.height;
-
-    // Center of the object
-    const center = { x: x + w / 2, y: y + h / 2 };
+    const rotation = node.rotation();
+    const wallThicknessPx = useStore.getState().wallThickness * pixelsPerCm;
+    const halfWall = wallThicknessPx / 2;
+    const snapThreshold = 15 / scale;
     
-    // Find nearest walls for each side
-    const sides = [
-      { x: x + w / 2, y: y }, // Top
-      { x: x + w / 2, y: y + h }, // Bottom
-      { x: x, y: y + h / 2 }, // Left
-      { x: x + w, y: y + h / 2 }, // Right
+    let currentX = x;
+    let currentY = y;
+    let snappedWallIds = new Set<string>();
+
+    // We do up to 2 passes to handle corners (snapping to two different walls)
+    for (let pass = 0; pass < 2; pass++) {
+      let bestSnap = null;
+      let minSnapDist = Infinity;
+
+      const pivot = { x: currentX, y: currentY };
+      const currentSides = [
+        rotatePoint({ x: currentX + w / 2, y: currentY }, pivot, rotation),
+        rotatePoint({ x: currentX + w / 2, y: currentY + h }, pivot, rotation),
+        rotatePoint({ x: currentX, y: currentY + h / 2 }, pivot, rotation),
+        rotatePoint({ x: currentX + w, y: currentY + h / 2 }, pivot, rotation),
+      ];
+
+      for (const side of currentSides) {
+        for (const room of rooms) {
+          // Check if side is inside room (only snap to inner walls)
+          const isInside = isPointInPolygon(side, room.points);
+          if (!isInside) continue;
+
+          for (let i = 0; i < room.points.length; i++) {
+            const wallId = `${room.id}-${i}`;
+            if (snappedWallIds.has(wallId)) continue;
+
+            const p1 = room.points[i];
+            const p2 = room.points[(i + 1) % room.points.length];
+            const result = getDistanceToSegment(side, p1, p2);
+            
+            if (typeof result === 'object') {
+              // Distance to the FACE of the wall (which is halfWall away from center line)
+              const distToFace = Math.abs(result.distance - halfWall);
+              
+              if (distToFace < snapThreshold && distToFace < minSnapDist) {
+                minSnapDist = distToFace;
+                
+                // Direction from side to wall center
+                const dx = result.point.x - side.x;
+                const dy = result.point.y - side.y;
+                const d = Math.sqrt(dx * dx + dy * dy);
+                
+                if (d > 0) {
+                  const ux = dx / d;
+                  const uy = dy / d;
+                  // We want side to be at distance halfWall from result.point
+                  bestSnap = {
+                    offsetX: (result.point.x - ux * halfWall) - side.x,
+                    offsetY: (result.point.y - uy * halfWall) - side.y,
+                    wallId
+                  };
+                }
+              }
+            }
+          }
+        }
+      }
+
+      if (bestSnap && !useStore.getState().isAltPressed) {
+        currentX += bestSnap.offsetX;
+        currentY += bestSnap.offsetY;
+        snappedWallIds.add(bestSnap.wallId);
+      } else {
+        break;
+      }
+    }
+
+    // Apply final snapped position to node
+    node.x(currentX);
+    node.y(currentY);
+
+    // Calculate distances for UI based on FINAL position
+    const finalPivot = { x: currentX, y: currentY };
+    const finalSides = [
+      rotatePoint({ x: currentX + w / 2, y: currentY }, finalPivot, rotation),
+      rotatePoint({ x: currentX + w / 2, y: currentY + h }, finalPivot, rotation),
+      rotatePoint({ x: currentX, y: finalPivot.y + h / 2 }, finalPivot, rotation),
+      rotatePoint({ x: currentX + w, y: finalPivot.y + h / 2 }, finalPivot, rotation),
     ];
 
     const newDistances: { p1: Vector2d, p2: Vector2d, dist: number }[] = [];
-
-    sides.forEach(side => {
-      let minWallDist = Infinity;
-      let nearestPoint = side;
+    finalSides.forEach(side => {
+      let minFaceDist = Infinity;
+      let nearestPointOnFace = side;
 
       rooms.forEach(room => {
         for (let i = 0; i < room.points.length; i++) {
           const p1 = room.points[i];
           const p2 = room.points[(i + 1) % room.points.length];
           const result = getDistanceToSegment(side, p1, p2);
-          if (typeof result === 'object' && result.distance < minWallDist) {
-            minWallDist = result.distance;
-            nearestPoint = result.point;
+          if (typeof result === 'object') {
+            const distToFace = Math.abs(result.distance - halfWall);
+            if (distToFace < minFaceDist) {
+              minFaceDist = distToFace;
+              // Visual point on the face
+              const dx = result.point.x - side.x;
+              const dy = result.point.y - side.y;
+              const d = Math.sqrt(dx * dx + dy * dy);
+              if (d > 0) {
+                nearestPointOnFace = {
+                  x: result.point.x - (dx / d) * halfWall,
+                  y: result.point.y - (dy / d) * halfWall
+                };
+              } else {
+                nearestPointOnFace = result.point;
+              }
+            }
           }
         }
       });
 
-      if (minWallDist < 200) { // Only show if reasonably close
-        newDistances.push({ p1: side, p2: nearestPoint, dist: minWallDist });
+      if (minFaceDist < 200) {
+        newDistances.push({ p1: side, p2: nearestPointOnFace, dist: minFaceDist });
       }
     });
 
     setDragDistances(newDistances);
 
-    // Collision Detection
+    // Collision Detection (using the snapped position)
     let colliding = false;
+    const collisionEpsilon = 0.5; // Allow 0.5px overlap to avoid flickering at 0 distance
 
     if (shape.type === 'circle') {
       const radius = Math.max(shape.width, shape.height) / 2;
-      const center = { x: node.x() + shape.width / 2, y: node.y() + shape.height / 2 };
+      const center = { x: currentX + shape.width / 2, y: currentY + shape.height / 2 };
 
       // Check against other furniture
       for (const other of allFurniture) {
         if (other.id === shape.id) continue;
-        
         if (other.type === 'circle') {
           const otherRadius = Math.max(other.width, other.height) / 2;
           const otherCenter = { x: other.x + other.width / 2, y: other.y + other.height / 2 };
-          if (checkCirclesIntersect(center, radius, otherCenter, otherRadius)) {
+          if (getDistance(center, otherCenter) < (radius + otherRadius - collisionEpsilon)) {
             colliding = true;
             break;
           }
         } else {
           const otherVertices = getFurnitureVertices(other);
-          if (checkCirclePolygonIntersect(center, radius, otherVertices)) {
+          if (checkCirclePolygonIntersect(center, radius - collisionEpsilon, otherVertices)) {
             colliding = true;
             break;
           }
@@ -129,7 +219,8 @@ export const FurnitureItem: React.FC<FurnitureItemProps> = ({
           for (let i = 0; i < room.points.length; i++) {
             const p1 = room.points[i];
             const p2 = room.points[(i + 1) % room.points.length];
-            if (checkCircleLineIntersect(center, radius, p1, p2)) {
+            const result = getDistanceToSegment(center, p1, p2);
+            if (typeof result === 'object' && result.distance < (radius + halfWall - collisionEpsilon)) {
               colliding = true;
               break;
             }
@@ -139,27 +230,28 @@ export const FurnitureItem: React.FC<FurnitureItemProps> = ({
       }
     } else {
       const currentVertices = getFurnitureVertices({
-        x: node.x(),
-        y: node.y(),
+        x: currentX,
+        y: currentY,
         width: shape.width,
         height: shape.height,
-        rotation: node.rotation()
+        rotation: rotation
       });
 
       // Check against other furniture
       for (const other of allFurniture) {
         if (other.id === shape.id) continue;
-        
         if (other.type === 'circle') {
           const otherRadius = Math.max(other.width, other.height) / 2;
           const otherCenter = { x: other.x + other.width / 2, y: other.y + other.height / 2 };
-          if (checkCirclePolygonIntersect(otherCenter, otherRadius, currentVertices)) {
+          if (checkCirclePolygonIntersect(otherCenter, otherRadius - collisionEpsilon, currentVertices)) {
             colliding = true;
             break;
           }
         } else {
           const otherVertices = getFurnitureVertices(other);
           if (checkPolygonsIntersect(currentVertices, otherVertices)) {
+            // SAT doesn't easily support epsilon, but we can shrink the polygon slightly
+            // For now, standard SAT is okay, but let's check if we can do better
             colliding = true;
             break;
           }
@@ -172,10 +264,15 @@ export const FurnitureItem: React.FC<FurnitureItemProps> = ({
           for (let i = 0; i < room.points.length; i++) {
             const p1 = room.points[i];
             const p2 = room.points[(i + 1) % room.points.length];
-            if (checkPolygonLineIntersect(currentVertices, p1, p2)) {
-              colliding = true;
-              break;
+            // Check distance to wall center line
+            for (const vertex of currentVertices) {
+              const result = getDistanceToSegment(vertex, p1, p2);
+              if (typeof result === 'object' && result.distance < (halfWall - collisionEpsilon)) {
+                colliding = true;
+                break;
+              }
             }
+            if (colliding) break;
           }
           if (colliding) break;
         }

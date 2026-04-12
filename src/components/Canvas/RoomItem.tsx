@@ -26,7 +26,6 @@ export const RoomItem: React.FC<RoomItemProps> = ({
   const setSelectedWallIndex = useStore((state) => state.setSelectedWallIndex);
   const selectedWallIndex = useStore((state) => state.selectedWallIndex);
   const wallThicknessPx = wallThicknessCm * pixelsPerCm;
-  const groupRef = useRef<Konva.Group>(null);
   const [textureImage, setTextureImage] = useState<HTMLImageElement | null>(null);
 
   const points = room.points.flatMap((p) => [p.x, p.y]);
@@ -45,23 +44,6 @@ export const RoomItem: React.FC<RoomItemProps> = ({
       setTextureImage(null);
     }
   }, [room.floorTexture]);
-
-  // Cache the group to make globalCompositeOperation work correctly within the group's local context
-  useEffect(() => {
-    const group = groupRef.current;
-    if (group && room.points.length >= 3) {
-      try {
-        group.clearCache();
-        // Only cache if the group has some size to avoid "drawImage with 0 width/height" error
-        const rect = group.getClientRect();
-        if (rect.width > 0 && rect.height > 0) {
-          group.cache();
-        }
-      } catch (e) {
-        console.warn('Failed to cache room group:', e);
-      }
-    }
-  }, [points, wallThicknessPx, isSelected, scale, room.points.length]);
 
   const wallSegments = useMemo(() => {
     const segments = [];
@@ -92,29 +74,19 @@ export const RoomItem: React.FC<RoomItemProps> = ({
       />
 
       {/* 
-        2. Wall Group: 
-        Drawn after floor so it covers the floor edges if there's any overlap.
+        2. Walls: 
+        Drawn after floor so they cover the floor edges.
+        Centered on the points to match 3D logic.
       */}
-      <Group ref={groupRef}>
-        {/* The Wall Stroke */}
-        <Line
-          points={points}
-          closed={true}
-          stroke="#1e293b" // Slate 800 (Structural Wall Color)
-          strokeWidth={wallThicknessPx * 2}
-          lineJoin="miter"
-          lineCap="butt"
-          opacity={isSelected ? 1 : 0.8}
-        />
-        
-        {/* The "Cutter" - Erases the inner half of the stroke */}
-        <Line
-          points={points}
-          closed={true}
-          fill="black"
-          globalCompositeOperation="destination-out"
-        />
-      </Group>
+      <Line
+        points={points}
+        closed={true}
+        stroke="#1e293b" // Slate 800 (Structural Wall Color)
+        strokeWidth={wallThicknessPx}
+        lineJoin="miter"
+        lineCap="butt"
+        opacity={isSelected ? 1 : 0.8}
+      />
 
       {/* 3. Wall Selection Overlays (Invisible but clickable) */}
       {isSelected && wallSegments.map((seg, idx) => (

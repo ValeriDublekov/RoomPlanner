@@ -337,6 +337,17 @@ export const checkCirclePolygonIntersect = (center: Vector2d, radius: number, po
   return inside;
 };
 
+export const isPointInPolygon = (point: Vector2d, poly: Vector2d[]): boolean => {
+  let inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    if (((poly[i].y > point.y) !== (poly[j].y > point.y)) &&
+        (point.x < (poly[j].x - poly[i].x) * (point.y - poly[i].y) / (poly[j].y - poly[i].y) + poly[i].x)) {
+      inside = !inside;
+    }
+  }
+  return inside;
+};
+
 /**
  * Checks if two circles intersect.
  */

@@ -28,6 +28,7 @@ export interface AppState {
   snapToGrid: boolean;
   snapToImage: boolean;
   gridVisible: boolean;
+  isAltPressed: boolean;
   edgeMap: EdgeMap | null;
   wallThickness: number; // in cm
   wallHeight: number; // in cm
@@ -74,6 +75,7 @@ export interface AppState {
   setSnapToGrid: (enabled: boolean) => void;
   setSnapToImage: (enabled: boolean) => void;
   setGridVisible: (visible: boolean) => void;
+  setIsAltPressed: (pressed: boolean) => void;
   setEdgeMap: (map: EdgeMap | null) => void;
   setWallThickness: (thickness: number) => void;
   setWallHeight: (height: number) => void;
@@ -152,6 +154,7 @@ export const useStore = create<AppState>()(
   snapToGrid: true,
   snapToImage: true,
   gridVisible: true,
+  isAltPressed: false,
   edgeMap: null,
   wallThickness: 20,
   wallHeight: 250,
@@ -195,6 +198,7 @@ export const useStore = create<AppState>()(
   setSnapToGrid: (snapToGrid) => set({ snapToGrid }),
   setSnapToImage: (snapToImage) => set({ snapToImage }),
   setGridVisible: (gridVisible) => set({ gridVisible }),
+  setIsAltPressed: (isAltPressed) => set({ isAltPressed }),
   setEdgeMap: (edgeMap) => set({ edgeMap }),
   setWallThickness: (wallThickness) => set({ wallThickness }),
   setWallHeight: (wallHeight) => set({ wallHeight }),

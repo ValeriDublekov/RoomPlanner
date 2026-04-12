@@ -33,6 +33,10 @@ export const useKeyboardShortcuts = (
       }
 
       if (e.key === 'Control') setIsCtrlPressed(true);
+      if (e.key === 'Alt') {
+        e.preventDefault();
+        useStore.getState().setIsAltPressed(true);
+      }
       
       const panStep = 20;
       if (e.key === 'ArrowUp') { moveView(0, panStep); return; }
@@ -104,6 +108,7 @@ export const useKeyboardShortcuts = (
 
     const handleKeyUp = (e: KeyboardEvent) => {
       if (e.key === 'Control') setIsCtrlPressed(false);
+      if (e.key === 'Alt') useStore.getState().setIsAltPressed(false);
     };
 
     window.addEventListener('keydown', handleKeyDown);

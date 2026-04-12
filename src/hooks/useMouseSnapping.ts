@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 import { useStore } from '../store';
 import { getSnappedPosition, getOrthoPoint } from '../lib/geometry';
 
-export const useMouseSnapping = (mousePos: { x: number, y: number }, isCtrlPressed: boolean) => {
+export const useMouseSnapping = (mousePos: { x: number, y: number }, isCtrlPressed: boolean, isAltPressed: boolean) => {
   const {
     scale,
     mode,
@@ -22,6 +22,8 @@ export const useMouseSnapping = (mousePos: { x: number, y: number }, isCtrlPress
 
   const getSnappedMousePos = useCallback((forceIgnoreGrid = false) => {
     let pos = { ...mousePos };
+
+    if (isAltPressed) return pos;
 
     if (snapToGrid && !forceIgnoreGrid) {
       const snapThreshold = 10 / scale;

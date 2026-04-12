@@ -36,6 +36,7 @@ export const Canvas: React.FC = () => {
     snapToGrid,
     snapToImage,
     gridVisible,
+    isAltPressed,
     edgeMap, setEdgeMap,
     saveHistory,
     fitToScreen
@@ -48,7 +49,7 @@ export const Canvas: React.FC = () => {
   const bgRef = useRef<Konva.Image>(null);
   const bgTrRef = useRef<Konva.Transformer>(null);
 
-  const { getSnappedMousePos } = useMouseSnapping(mousePos, isCtrlPressed);
+  const { getSnappedMousePos } = useMouseSnapping(mousePos, isCtrlPressed, isAltPressed);
 
   // Auto-fit on initial load
   useEffect(() => {
