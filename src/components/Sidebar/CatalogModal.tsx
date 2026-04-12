@@ -17,6 +17,7 @@ export const CatalogModal: React.FC<CatalogModalProps> = ({ isOpen, onClose }) =
   const [customWidth, setCustomWidth] = useState<number>(0);
   const [customDepth, setCustomDepth] = useState<number>(0);
   const [customHeight, setCustomHeight] = useState<number>(0);
+  const [customElevation, setCustomElevation] = useState<number>(0);
 
   if (!isOpen) return null;
 
@@ -25,6 +26,7 @@ export const CatalogModal: React.FC<CatalogModalProps> = ({ isOpen, onClose }) =
     setCustomWidth(item.width);
     setCustomDepth(item.depth);
     setCustomHeight(item.height3d || 75); // Default 75cm if not specified
+    setCustomElevation(item.defaultElevation || 0);
   };
 
   const handleAddItem = () => {
@@ -33,6 +35,7 @@ export const CatalogModal: React.FC<CatalogModalProps> = ({ isOpen, onClose }) =
     const widthPx = customWidth * pixelsPerCm;
     const heightPx = customDepth * pixelsPerCm;
     const height3dPx = customHeight * pixelsPerCm;
+    const elevationPx = customElevation * pixelsPerCm;
     
     addFurniture({
       type: selectedItem.type === 'circle' ? 'circle' : 'box',
@@ -43,6 +46,7 @@ export const CatalogModal: React.FC<CatalogModalProps> = ({ isOpen, onClose }) =
       width: widthPx,
       height: heightPx,
       height3d: height3dPx,
+      elevation: elevationPx,
       rotation: 0,
       color: selectedItem.defaultColor,
       svgPath: selectedItem.svgPath
@@ -180,6 +184,15 @@ export const CatalogModal: React.FC<CatalogModalProps> = ({ isOpen, onClose }) =
                         type="number"
                         value={customHeight}
                         onChange={(e) => setCustomHeight(parseFloat(e.target.value) || 0)}
+                        className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Elevation (cm)</label>
+                      <input 
+                        type="number"
+                        value={customElevation}
+                        onChange={(e) => setCustomElevation(parseFloat(e.target.value) || 0)}
                         className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
                       />
                     </div>

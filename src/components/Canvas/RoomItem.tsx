@@ -22,6 +22,7 @@ export const RoomItem: React.FC<RoomItemProps> = ({
 }) => {
   const wallThicknessCm = useStore((state) => state.wallThickness);
   const pixelsPerCm = useStore((state) => state.pixelsPerCm);
+  const activeLayer = useStore((state) => state.activeLayer);
   const setSelectedWallIndex = useStore((state) => state.setSelectedWallIndex);
   const selectedWallIndex = useStore((state) => state.selectedWallIndex);
   const wallThicknessPx = wallThicknessCm * pixelsPerCm;

@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { MousePointer2, Pencil, Square, Ruler, DoorOpen, Layout, Circle, BookPlus } from 'lucide-react';
 import { useStore } from '../store';
 import { ToolButton } from './Sidebar/ToolButton';
-import { PropertyEditor } from './Sidebar/PropertyEditor';
 import { FileActions } from './Sidebar/FileActions';
 import { CatalogModal } from './Sidebar/CatalogModal';
 
@@ -26,44 +25,16 @@ export const Sidebar: React.FC = () => {
     activeLayer,
     setBackgroundImage, 
     pixelsPerCm,
-    selectedId,
-    deleteSelected,
-    furniture,
-    updateFurniture,
-    rooms,
-    dimensions,
-    selectedDimensionId,
-    setSelectedDimensionId,
-    deleteDimension,
     loadState,
-    selectedRoomId,
-    selectedWallIndex,
-    deleteRoom,
-    updateRoom,
-    wallAttachments,
-    selectedAttachmentId,
-    setSelectedAttachmentId,
-    updateWallAttachment,
-    deleteWallAttachment,
-    saveHistory,
     saveProject,
     backgroundImage,
     backgroundVisible,
     setBackgroundVisible,
     backgroundOpacity,
     setBackgroundOpacity,
-    bringToFront,
-    sendToBack,
-    bringForward,
-    sendBackward
   } = useStore();
 
   const [isCatalogOpen, setIsCatalogOpen] = useState(false);
-
-  const selectedFurniture = furniture.find(f => f.id === selectedId);
-  const selectedRoom = rooms.find(r => r.id === selectedRoomId);
-  const selectedDimension = dimensions.find(d => d.id === selectedDimensionId);
-  const selectedAttachment = wallAttachments.find(a => a.id === selectedAttachmentId);
 
   const handleLoad = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -150,27 +121,6 @@ export const Sidebar: React.FC = () => {
           hideImageActions={activeLayer !== 'blueprint'}
         />
 
-        <PropertyEditor
-          selectedFurniture={selectedFurniture}
-          selectedRoom={selectedRoom}
-          selectedWallIndex={selectedWallIndex}
-          selectedDimension={selectedDimension}
-          selectedAttachment={selectedAttachment}
-          pixelsPerCm={pixelsPerCm}
-          updateFurniture={updateFurniture}
-          updateRoom={updateRoom}
-          deleteFurniture={deleteSelected}
-          deleteRoom={deleteRoom}
-          deleteDimension={deleteDimension}
-          updateAttachment={updateWallAttachment}
-          deleteAttachment={deleteWallAttachment}
-          saveHistory={saveHistory}
-          bringToFront={bringToFront}
-          sendToBack={sendToBack}
-          bringForward={bringForward}
-          sendBackward={sendBackward}
-        />
-        
         {activeLayer === 'blueprint' && (
           <div className="px-4 py-2 bg-indigo-50 border border-indigo-100 rounded-xl mx-4 mb-4">
             <p className="text-[10px] text-indigo-700 font-medium leading-tight">

@@ -8,6 +8,19 @@ export const getDistance = (p1: Vector2d, p2: Vector2d): number => {
 };
 
 /**
+ * Calculates the area of a polygon using the Shoelace formula.
+ */
+export const calculateArea = (points: Vector2d[]): number => {
+  let area = 0;
+  for (let i = 0; i < points.length; i++) {
+    const j = (i + 1) % points.length;
+    area += points[i].x * points[j].y;
+    area -= points[j].x * points[i].y;
+  }
+  return Math.abs(area) / 2;
+};
+
+/**
  * Snaps a point to the nearest orthogonal direction (horizontal or vertical) relative to a start point.
  */
 export const getOrthoPoint = (start: Vector2d, end: Vector2d): Vector2d => {

@@ -8,6 +8,7 @@ import { RoomItem } from './RoomItem';
 import { DimensionItem } from './DimensionItem';
 import { DrawingLayer } from './DrawingLayer';
 import { WallAttachmentItem } from './WallAttachmentItem';
+import { RoomAreaLabel } from './RoomAreaLabel';
 
 interface CanvasStageProps {
   stageRef: React.RefObject<Konva.Stage>;
@@ -168,7 +169,7 @@ export const CanvasStage: React.FC<CanvasStageProps> = ({
         ))}
 
         {/* Furniture */}
-        {furniture.map((item) => (
+        {[...furniture].sort((a, b) => (a.elevation || 0) - (b.elevation || 0)).map((item) => (
           <FurnitureItem
             key={item.id}
             shape={item}
@@ -185,6 +186,15 @@ export const CanvasStage: React.FC<CanvasStageProps> = ({
             isLocked={activeLayer !== 'furniture'}
             rooms={rooms}
             allFurniture={furniture}
+          />
+        ))}
+
+        {/* Room Area Labels (Rendered after furniture to be on top) */}
+        {rooms.map((room) => (
+          <RoomAreaLabel
+            key={`label-${room.id}`}
+            room={room}
+            scale={scale}
           />
         ))}
 

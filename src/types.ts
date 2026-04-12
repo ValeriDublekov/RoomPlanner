@@ -15,13 +15,14 @@ export interface RoomObject {
 export interface FurnitureObject {
   id: string;
   type: 'box' | 'polygon' | 'circle';
-  furnitureType?: 'bed' | 'desk' | 'wardrobe' | 'generic';
+  furnitureType?: 'bed' | 'desk' | 'wardrobe' | 'dresser' | 'chair' | 'shelf' | 'electronics' | 'table' | 'generic';
   name: string;
   x: number;
   y: number;
   width: number;
   height: number;
   height3d?: number; // in px, for 3D extrusion
+  elevation?: number; // in px, height from floor
   rotation: number;
   points?: Vector2d[];
   color?: string;
@@ -31,12 +32,13 @@ export interface FurnitureObject {
 export interface CatalogItem {
   id: string;
   name: string;
-  furnitureType?: 'bed' | 'desk' | 'wardrobe' | 'generic';
+  furnitureType?: 'bed' | 'desk' | 'wardrobe' | 'dresser' | 'chair' | 'shelf' | 'electronics' | 'table' | 'generic';
   category: 'Bedroom' | 'Living Room' | 'Kitchen' | 'Bathroom' | 'Office';
   type: 'rectangle' | 'circle';
   width: number; // in cm
   depth: number; // in cm
   height3d?: number; // in cm
+  defaultElevation?: number; // in cm
   defaultColor: string;
   svgPath?: string;
 }

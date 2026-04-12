@@ -17,11 +17,15 @@ The application is structured into logical modules to ensure maintainability and
       FileActions.tsx     # Save/Load and background image controls
       PropertyEditor.tsx  # Editor for selected furniture or rooms
       ToolButton.tsx      # Reusable button for the tool navigation
+    /ThreeD
+      FurnitureModels.tsx # Individual 3D models for furniture types
+      RoomElements.tsx    # 3D Floor and Wall Segment rendering
+      ThreeDPreview.tsx   # Main 3D Canvas and scene setup
     Canvas.tsx            # Main Canvas container and event handling
     CanvasHeader.tsx      # Top bar with global actions
+    RightSidebar.tsx      # Sidebar for property editing (Right side)
+    Sidebar.tsx           # Sidebar for tools and file actions (Left side)
     SubHeader.tsx         # Horizontal bar for layer selection and settings
-    Sidebar.tsx           # Compact sidebar for tools and property editing
-    UserManualModal.tsx   # Modal for displaying the user guide
   /hooks
     useKeyboardShortcuts.ts # Extracted keyboard event logic
     useMouseSnapping.ts     # Extracted coordinate snapping logic

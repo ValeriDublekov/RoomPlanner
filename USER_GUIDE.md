@@ -13,6 +13,7 @@ Welcome to RoomPlanner! This guide will help you understand the workflow and fea
 *   **Draw Room (R)**: Click to place corners of your room. 
     *   **Precise Input**: While drawing, you can type a number (e.g., `300`) and press **Enter** to create a segment of exactly that length (in cm) in the direction of your mouse.
     *   **Close Room**: Click the starting point or double-click to finish the room.
+*   **Area Calculation**: Once a room is closed, its area in square meters (m²) is automatically calculated and displayed in the center. This is only visible while in the **Room Layer**.
 *   **Add Door/Window**: Select the tool and click on any wall to place an attachment.
     *   **Flip/Mirror**: Select a door or window to see flip controls in the sidebar. You can change the hinge side or the opening direction (In/Out).
     *   **Move**: Drag doors and windows along the wall. Distances to nearest perpendicular walls will be shown.
@@ -21,6 +22,7 @@ Welcome to RoomPlanner! This guide will help you understand the workflow and fea
 *   **Catalog**: Use the Catalog to add standard furniture items.
 *   **CAD Symbols**: Many items feature detailed CAD symbols (like pillows on beds) that scale automatically to your chosen dimensions.
 *   **3D Height**: Every furniture item has a **Height (3D)** property in the sidebar. Set this to define how tall the object appears in the 3D preview (e.g., 50cm for a bed, 220cm for a wardrobe).
+*   **Elevation**: Use the **Elevation** property to define the height from the floor. This is useful for wall-mounted TVs, shelves, or placing objects on top of others. In 2D, items with higher elevation are rendered on top of lower items.
 *   **Manipulate**: Select an object to move, rotate, or resize it using the handles.
     *   **Ortho Snapping**: If Ortho Mode is active, rotation will snap to 90-degree increments.
 
