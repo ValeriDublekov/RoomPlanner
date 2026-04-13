@@ -18,6 +18,16 @@ const Furniture = ({ item, pixelsPerCm }: { item: FurnitureObject, pixelsPerCm: 
   
   const rotationRad = -(item.rotation * Math.PI) / 180;
 
+  if (item.type === 'group' && item.children) {
+    return (
+      <group position={[item.x / pixelsPerCm, elevation, item.y / pixelsPerCm]} rotation={[0, rotationRad, 0]}>
+        {item.children.map(child => (
+          <Furniture key={child.id} item={child} pixelsPerCm={pixelsPerCm} />
+        ))}
+      </group>
+    );
+  }
+
   const renderFurniture = () => {
     const props = { 
       width, 

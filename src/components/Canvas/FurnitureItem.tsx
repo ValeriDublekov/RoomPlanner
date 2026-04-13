@@ -77,14 +77,64 @@ export const FurnitureItem: React.FC<FurnitureItemProps> = ({
       let minSnapDist = Infinity;
 
       const pivot = { x: currentX, y: currentY };
-      const currentSides = [
-        rotatePoint({ x: currentX + w / 2, y: currentY }, pivot, rotation),
-        rotatePoint({ x: currentX + w / 2, y: currentY + h }, pivot, rotation),
-        rotatePoint({ x: currentX, y: currentY + h / 2 }, pivot, rotation),
-        rotatePoint({ x: currentX + w, y: currentY + h / 2 }, pivot, rotation),
-      ];
+      
+      // Collect all points that should snap. 
+      // For a group, we use the midpoints of all children's boundaries.
+      // For a single item, we use its own midpoints.
+      let pointsToSnap: Vector2d[] = [];
+      
+      if (shape.type === 'group' && shape.children) {
+        shape.children.forEach(child => {
+          const cw = child.width;
+          const ch = child.height;
+          const cx = child.x;
+          const cy = child.y;
+          const cRot = child.rotation;
+          
+          // Child's midpoints in its own local space (relative to child.x, child.y)
+          // But child.rotation is also relative to group? 
+          // Actually child.rotation in store is absolute rotation at time of grouping.
+          // Wait, in FurnitureItem rendering: rotation={child.rotation}
+          // But it's inside a Group that has rotation={shape.rotation}.
+          // So the effective rotation is child.rotation + shape.rotation? 
+          // No, when ungrouping: rotation: (child.rotation + group.rotation) % 360
+          // This implies child.rotation is relative to group.
+          
+          const midpoints = [
+            { x: cx + cw / 2, y: cy },
+            { x: cx + cw / 2, y: cy + ch },
+            { x: cx, y: cy + ch / 2 },
+            { x: cx + cw, y: cy + ch / 2 },
+          ];
+          
+          // Rotate these points by the group's rotation around the group's pivot
+          midpoints.forEach(p => {
+            pointsToSnap.push(rotatePoint(p, { x: 0, y: 0 }, rotation));
+          });
+        });
+        // Also add group's own midpoints just in case
+        const groupMidpoints = [
+          { x: w / 2, y: 0 },
+          { x: w / 2, y: h },
+          { x: 0, y: h / 2 },
+          { x: w, y: h / 2 },
+        ];
+        groupMidpoints.forEach(p => {
+          pointsToSnap.push(rotatePoint(p, { x: 0, y: 0 }, rotation));
+        });
+      } else {
+        pointsToSnap = [
+          rotatePoint({ x: w / 2, y: 0 }, { x: 0, y: 0 }, rotation),
+          rotatePoint({ x: w / 2, y: h }, { x: 0, y: 0 }, rotation),
+          rotatePoint({ x: 0, y: h / 2 }, { x: 0, y: 0 }, rotation),
+          rotatePoint({ x: w, y: h / 2 }, { x: 0, y: 0 }, rotation),
+        ];
+      }
 
-      for (const side of currentSides) {
+      // Convert relative points to world points
+      const worldPoints = pointsToSnap.map(p => ({ x: p.x + currentX, y: p.y + currentY }));
+
+      for (const side of worldPoints) {
         for (const room of rooms) {
           // Check if side is inside room (only snap to inner walls)
           const isInside = isPointInPolygon(side, room.points);
