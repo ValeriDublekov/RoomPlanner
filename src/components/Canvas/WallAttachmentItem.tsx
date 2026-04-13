@@ -2,7 +2,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import { Group, Rect, Arc, Transformer, Text, Line } from 'react-konva';
 import { WallAttachment, Vector2d } from '../../types';
 import { useStore } from '../../store';
-import { getDistance, formatDistance } from '../../lib/geometry';
+import { getDistance, formatDistance, getOutwardNormal } from '../../lib/geometry';
 import Konva from 'konva';
 
 interface WallAttachmentItemProps {
@@ -21,7 +21,7 @@ export const WallAttachmentItem: React.FC<WallAttachmentItemProps> = ({
   const { rooms, wallThickness, pixelsPerCm, updateWallAttachment, saveHistory } = useStore();
   const groupRef = useRef<Konva.Group>(null);
   const trRef = useRef<Konva.Transformer>(null);
-  const [isDragging, setIsDragging] = useState(false);
+  const [isInteracting, setIsInteracting] = useState(false);
   const [distances, setDistances] = useState<{ left: number | null, right: number | null }>({ left: null, right: null });
 
   const room = rooms.find(r => r.id === attachment.roomId);
@@ -41,6 +41,12 @@ export const WallAttachmentItem: React.FC<WallAttachmentItemProps> = ({
 
   const widthPx = attachment.width * pixelsPerCm;
   const thicknessPx = wallThickness * pixelsPerCm;
+
+  const normal = getOutwardNormal(room.points, attachment.wallSegmentIndex);
+  const localY = { x: -dy / length, y: dx / length };
+  const dot = localY.x * normal.x + localY.y * normal.y;
+  const isLocalYOutside = dot > 0;
+  const finalOffsetY = isLocalYOutside ? 0 : thicknessPx;
 
   useEffect(() => {
     if (isSelected && trRef.current && groupRef.current) {
@@ -74,7 +80,7 @@ export const WallAttachmentItem: React.FC<WallAttachmentItemProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isSelected, attachment.id, attachment.type, attachment.flipX, attachment.flipY, updateWallAttachment]);
 
-  const handleTransform = () => {
+  const handleTransform = (e: Konva.KonvaEventObject<Event>) => {
     const node = groupRef.current;
     if (!node) return;
 
@@ -86,12 +92,16 @@ export const WallAttachmentItem: React.FC<WallAttachmentItemProps> = ({
     });
 
     updateWallAttachment(attachment.id, { width: Math.max(10, newWidth) });
+    
+    // Update distances during transform
+    handleDragMove(e);
   };
 
-  const handleDragMove = (e: Konva.KonvaEventObject<DragEvent>) => {
-    const node = e.target;
+  const handleDragMove = (e: Konva.KonvaEventObject<DragEvent | Event>) => {
+    const node = groupRef.current;
+    if (!node) return;
     
-    // Use node's current position (which is already snapped by dragBoundFunc)
+    // Use node's current position
     const relPos = {
       x: node.x(),
       y: node.y()
@@ -119,9 +129,10 @@ export const WallAttachmentItem: React.FC<WallAttachmentItemProps> = ({
 
     // Calculate distance from edge of attachment to perpendicular wall
     const halfWidth = (attachment.width * pixelsPerCm) / 2;
-    const halfWallPx = (wallThickness * pixelsPerCm) / 2;
-    const edgeDistToP1 = t * length - halfWidth - halfWallPx;
-    const edgeDistToP2 = (1 - t) * length - halfWidth - halfWallPx;
+    // Since points p1 and p2 are now the inner face of the wall, 
+    // we don't need to subtract half wall thickness anymore.
+    const edgeDistToP1 = t * length - halfWidth;
+    const edgeDistToP2 = (1 - t) * length - halfWidth;
 
     setDistances({
       left: isPrevPerp ? edgeDistToP1 / pixelsPerCm : null,
@@ -130,7 +141,7 @@ export const WallAttachmentItem: React.FC<WallAttachmentItemProps> = ({
   };
 
   const handleDragEnd = (e: Konva.KonvaEventObject<DragEvent>) => {
-    setIsDragging(false);
+    setIsInteracting(false);
     const node = e.target;
 
     const relPos = {
@@ -158,28 +169,23 @@ export const WallAttachmentItem: React.FC<WallAttachmentItemProps> = ({
   const edge2X = x + dx_norm * halfWidthPx;
   const edge2Y = y + dy_norm * halfWidthPx;
 
-  const p1_innerX = p1.x + dx_norm * halfWallPx;
-  const p1_innerY = p1.y + dy_norm * halfWallPx;
-  const p2_innerX = p2.x - dx_norm * halfWallPx;
-  const p2_innerY = p2.y - dy_norm * halfWallPx;
-
   return (
     <Group>
-      {/* Distance Labels during dragging */}
-      {isDragging && (
+      {/* Distance Labels during dragging/resizing */}
+      {isInteracting && (
         <Group>
           {/* Line to P1 */}
           {distances.left !== null && (
             <>
               <Line
-                points={[p1_innerX, p1_innerY, edge1X, edge1Y]}
+                points={[p1.x, p1.y, edge1X, edge1Y]}
                 stroke="#f43f5e"
                 strokeWidth={3 / scale}
                 dash={[4 / scale, 4 / scale]}
               />
               <Group
-                x={(p1_innerX + edge1X) / 2}
-                y={(p1_innerY + edge1Y) / 2}
+                x={(p1.x + edge1X) / 2}
+                y={(p1.y + edge1Y) / 2}
                 rotation={(() => {
                   let a = angle;
                   if (a > 90) a -= 180;
@@ -215,14 +221,14 @@ export const WallAttachmentItem: React.FC<WallAttachmentItemProps> = ({
           {distances.right !== null && (
             <>
               <Line
-                points={[edge2X, edge2Y, p2_innerX, p2_innerY]}
+                points={[edge2X, edge2Y, p2.x, p2.y]}
                 stroke="#f43f5e"
                 strokeWidth={3 / scale}
                 dash={[4 / scale, 4 / scale]}
               />
               <Group
-                x={(p2_innerX + edge2X) / 2}
-                y={(p2_innerY + edge2Y) / 2}
+                x={(p2.x + edge2X) / 2}
+                y={(p2.y + edge2Y) / 2}
                 rotation={(() => {
                   let a = angle;
                   if (a > 90) a -= 180;
@@ -269,7 +275,7 @@ export const WallAttachmentItem: React.FC<WallAttachmentItemProps> = ({
         draggable={isSelected}
         onDragStart={() => {
           saveHistory();
-          setIsDragging(true);
+          setIsInteracting(true);
         }}
         onDragMove={handleDragMove}
         onDragEnd={handleDragEnd}
@@ -303,7 +309,7 @@ export const WallAttachmentItem: React.FC<WallAttachmentItemProps> = ({
         width={widthPx}
         height={thicknessPx}
         offsetX={widthPx / 2}
-        offsetY={thicknessPx / 2}
+        offsetY={finalOffsetY}
       >
         {/* 
           The "Cutter" Rectangle 
@@ -373,7 +379,14 @@ export const WallAttachmentItem: React.FC<WallAttachmentItemProps> = ({
             if (newBox.width < 10 * pixelsPerCm) return oldBox;
             return newBox;
           }}
-          onTransformEnd={handleTransform}
+          onTransformStart={() => {
+            saveHistory();
+            setIsInteracting(true);
+          }}
+          onTransform={handleTransform}
+          onTransformEnd={() => {
+            setIsInteracting(false);
+          }}
         />
       )}
     </Group>

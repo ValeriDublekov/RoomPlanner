@@ -1,5 +1,6 @@
 import React from 'react';
 import { Vector2d } from '../../types';
+import { useStore } from '../../store';
 
 interface GridLayerProps {
   scale: number;
@@ -7,6 +8,10 @@ interface GridLayerProps {
 }
 
 export const GridLayer: React.FC<GridLayerProps> = ({ scale, position }) => {
+  const pixelsPerCm = useStore((state) => state.pixelsPerCm);
+  const grid10 = 10 * pixelsPerCm * scale;
+  const grid50 = 50 * pixelsPerCm * scale;
+
   return (
     <div
       className="absolute inset-0 pointer-events-none"
@@ -18,10 +23,10 @@ export const GridLayer: React.FC<GridLayerProps> = ({ scale, position }) => {
           linear-gradient(to bottom, rgba(0,0,0,0.1) 1px, transparent 1px)
         `,
         backgroundSize: `
-          ${10 * scale}px ${10 * scale}px,
-          ${10 * scale}px ${10 * scale}px,
-          ${50 * scale}px ${50 * scale}px,
-          ${50 * scale}px ${50 * scale}px
+          ${grid10}px ${grid10}px,
+          ${grid10}px ${grid10}px,
+          ${grid50}px ${grid50}px,
+          ${grid50}px ${grid50}px
         `,
         backgroundPosition: `${position.x}px ${position.y}px`,
       }}

@@ -2,6 +2,7 @@ import React, { useRef, useMemo, useState } from 'react';
 import { Line, Group, Circle, Text, Rect } from 'react-konva';
 import { RoomObject, Vector2d } from '../../types';
 import { useStore } from '../../store';
+import { getOutwardNormal } from '../../lib/geometry';
 
 interface RoomEditorProps {
   room: RoomObject;
@@ -46,13 +47,10 @@ export const RoomEditor: React.FC<RoomEditorProps> = ({
         const midX = (seg.p1.x + seg.p2.x) / 2;
         const midY = (seg.p1.y + seg.p2.y) / 2;
         
-        // Calculate normal for parallel dragging
-        const dx = seg.p2.x - seg.p1.x;
-        const dy = seg.p2.y - seg.p1.y;
-        const len = Math.sqrt(dx * dx + dy * dy);
-        if (len === 0) return null;
-        const nx = -dy / len;
-        const ny = dx / len;
+        // Calculate outward normal for parallel dragging
+        const normal = getOutwardNormal(room.points, idx);
+        const nx = normal.x;
+        const ny = normal.y;
 
         return (
           <Group key={`wall-editor-${idx}`}>
@@ -95,17 +93,18 @@ export const RoomEditor: React.FC<RoomEditorProps> = ({
                   wallSegments.forEach((other, oIdx) => {
                     if (oIdx === idx) return;
                     
-                    const odx = other.p2.x - other.p1.x;
-                    const ody = other.p2.y - other.p1.y;
-                    const olen = Math.sqrt(odx * odx + ody * ody);
-                    if (olen === 0) return;
-                    
-                    const onx = -ody / olen;
-                    const ony = odx / olen;
+                    const otherNormal = getOutwardNormal(room.points, oIdx);
+                    const onx = otherNormal.x;
+                    const ony = otherNormal.y;
 
                     // Check if parallel (dot product of normals is near 1 or -1)
                     const parallelDot = Math.abs(nx * onx + ny * ony);
                     if (parallelDot > 0.99) {
+                      const odx = other.p2.x - other.p1.x;
+                      const ody = other.p2.y - other.p1.y;
+                      const olen = Math.sqrt(odx * odx + ody * ody);
+                      if (olen === 0) return;
+
                       // Project mid point onto other wall line
                       const t = ((mid.x - other.p1.x) * odx + (mid.y - other.p1.y) * ody) / (olen * olen);
                       // Only show if projection is somewhat within the other segment

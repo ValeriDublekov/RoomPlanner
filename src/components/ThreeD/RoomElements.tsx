@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { useTexture } from '@react-three/drei';
 import { RoomObject, WallAttachment } from '../../types';
 import { FLOOR_TEXTURES } from '../../constants';
+import { getOutwardNormal } from '../../lib/geometry';
 
 export const Floor: React.FC<{ room: RoomObject, pixelsPerCm: number }> = ({ room, pixelsPerCm }) => {
   const floorShape = useMemo(() => {
@@ -68,10 +69,13 @@ export const WallSegments: React.FC<{
         .sort((a, b) => a.positionAlongWall - b.positionAlongWall);
 
       const segmentColor = room.wallColors?.[i] || room.defaultWallColor || "#f0f0f0";
+      const normal = getOutwardNormal(room.points, i);
+      const offsetX = (normal.x * wallThickness) / (2 * pixelsPerCm);
+      const offsetZ = (normal.y * wallThickness) / (2 * pixelsPerCm);
 
       if (segmentAttachments.length === 0) {
-        const midX = (p1.x + p2.x) / (2 * pixelsPerCm);
-        const midZ = (p1.y + p2.y) / (2 * pixelsPerCm);
+        const midX = (p1.x + p2.x) / (2 * pixelsPerCm) + offsetX;
+        const midZ = (p1.y + p2.y) / (2 * pixelsPerCm) + offsetZ;
         segs.push({ type: 'wall', length: totalLength, angle, midX, midZ, height: wallHeight, y: wallHeight / 2, color: segmentColor });
       } else {
         let currentPos = 0;
@@ -84,8 +88,8 @@ export const WallSegments: React.FC<{
           if (attStartPos > currentPos) {
             const partLength = attStartPos - currentPos;
             const partMidPos = currentPos + partLength / 2;
-            const midX = (p1.x / pixelsPerCm) + Math.cos(angle) * partMidPos;
-            const midZ = (p1.y / pixelsPerCm) + Math.sin(angle) * partMidPos;
+            const midX = (p1.x / pixelsPerCm) + Math.cos(angle) * partMidPos + offsetX;
+            const midZ = (p1.y / pixelsPerCm) + Math.sin(angle) * partMidPos + offsetZ;
             segs.push({ type: 'wall', length: partLength, angle, midX, midZ, height: wallHeight, y: wallHeight / 2, color: segmentColor });
           }
 
@@ -93,14 +97,14 @@ export const WallSegments: React.FC<{
           const openingHeight = att.type === 'door' ? 210 : 120;
           
           if (att.type === 'window' && sillHeight > 0) {
-            const midX = (p1.x / pixelsPerCm) + Math.cos(angle) * attCenterPos;
-            const midZ = (p1.y / pixelsPerCm) + Math.sin(angle) * attCenterPos;
+            const midX = (p1.x / pixelsPerCm) + Math.cos(angle) * attCenterPos + offsetX;
+            const midZ = (p1.y / pixelsPerCm) + Math.sin(angle) * attCenterPos + offsetZ;
             segs.push({ type: 'wall', length: attWidth, angle, midX, midZ, height: sillHeight, y: sillHeight / 2, color: segmentColor });
           }
 
           if (att.type === 'window') {
-            const midX = (p1.x / pixelsPerCm) + Math.cos(angle) * attCenterPos;
-            const midZ = (p1.y / pixelsPerCm) + Math.sin(angle) * attCenterPos;
+            const midX = (p1.x / pixelsPerCm) + Math.cos(angle) * attCenterPos + offsetX;
+            const midZ = (p1.y / pixelsPerCm) + Math.sin(angle) * attCenterPos + offsetZ;
             segs.push({ type: 'glass', length: attWidth, angle, midX, midZ, height: Math.min(openingHeight, wallHeight - sillHeight), y: sillHeight + Math.min(openingHeight, wallHeight - sillHeight) / 2, color: '#93c5fd' });
           }
 
@@ -110,8 +114,8 @@ export const WallSegments: React.FC<{
         if (currentPos < totalLength) {
           const partLength = totalLength - currentPos;
           const partMidPos = currentPos + partLength / 2;
-          const midX = (p1.x / pixelsPerCm) + Math.cos(angle) * partMidPos;
-          const midZ = (p1.y / pixelsPerCm) + Math.sin(angle) * partMidPos;
+          const midX = (p1.x / pixelsPerCm) + Math.cos(angle) * partMidPos + offsetX;
+          const midZ = (p1.y / pixelsPerCm) + Math.sin(angle) * partMidPos + offsetZ;
           segs.push({ type: 'wall', length: partLength, angle, midX, midZ, height: wallHeight, y: wallHeight / 2, color: segmentColor });
         }
       }

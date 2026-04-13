@@ -149,8 +149,8 @@ export const FurnitureItem: React.FC<FurnitureItemProps> = ({
             const result = getDistanceToSegment(side, p1, p2);
             
             if (typeof result === 'object') {
-              // Distance to the FACE of the wall (which is halfWall away from center line)
-              const distToFace = Math.abs(result.distance - halfWall);
+              // Distance to the inner face of the wall (which is the segment itself)
+              const distToFace = result.distance;
               
               if (distToFace < snapThreshold && distToFace < minSnapDist) {
                 minSnapDist = distToFace;
@@ -160,13 +160,10 @@ export const FurnitureItem: React.FC<FurnitureItemProps> = ({
                 const dy = result.point.y - side.y;
                 const d = Math.sqrt(dx * dx + dy * dy);
                 
-                if (d > 0) {
-                  const ux = dx / d;
-                  const uy = dy / d;
-                  // We want side to be at distance halfWall from result.point
+                if (d >= 0) {
                   bestSnap = {
-                    offsetX: (result.point.x - ux * halfWall) - side.x,
-                    offsetY: (result.point.y - uy * halfWall) - side.y,
+                    offsetX: result.point.x - side.x,
+                    offsetY: result.point.y - side.y,
                     wallId
                   };
                 }
@@ -209,21 +206,11 @@ export const FurnitureItem: React.FC<FurnitureItemProps> = ({
           const p2 = room.points[(i + 1) % room.points.length];
           const result = getDistanceToSegment(side, p1, p2);
           if (typeof result === 'object') {
-            const distToFace = Math.abs(result.distance - halfWall);
+            const distToFace = result.distance;
             if (distToFace < minFaceDist) {
               minFaceDist = distToFace;
               // Visual point on the face
-              const dx = result.point.x - side.x;
-              const dy = result.point.y - side.y;
-              const d = Math.sqrt(dx * dx + dy * dy);
-              if (d > 0) {
-                nearestPointOnFace = {
-                  x: result.point.x - (dx / d) * halfWall,
-                  y: result.point.y - (dy / d) * halfWall
-                };
-              } else {
-                nearestPointOnFace = result.point;
-              }
+              nearestPointOnFace = result.point;
             }
           }
         }
@@ -266,11 +253,18 @@ export const FurnitureItem: React.FC<FurnitureItemProps> = ({
       // Check against walls
       if (!colliding) {
         for (const room of rooms) {
+          // If center is outside the room, it's a collision
+          if (!isPointInPolygon(center, room.points)) {
+            colliding = true;
+            break;
+          }
+
+          // Check if any wall segment intersects the circle (excluding touching)
           for (let i = 0; i < room.points.length; i++) {
             const p1 = room.points[i];
             const p2 = room.points[(i + 1) % room.points.length];
             const result = getDistanceToSegment(center, p1, p2);
-            if (typeof result === 'object' && result.distance < (radius + halfWall - collisionEpsilon)) {
+            if (typeof result === 'object' && result.distance < (radius - 1)) {
               colliding = true;
               break;
             }
@@ -311,20 +305,17 @@ export const FurnitureItem: React.FC<FurnitureItemProps> = ({
       // Check against walls
       if (!colliding) {
         for (const room of rooms) {
-          for (let i = 0; i < room.points.length; i++) {
-            const p1 = room.points[i];
-            const p2 = room.points[(i + 1) % room.points.length];
-            // Check distance to wall center line
-            for (const vertex of currentVertices) {
-              const result = getDistanceToSegment(vertex, p1, p2);
-              if (typeof result === 'object' && result.distance < (halfWall - collisionEpsilon)) {
-                colliding = true;
-                break;
-              }
+          // If any vertex is outside the room, it's a collision
+          for (const vertex of currentVertices) {
+            if (!isPointInPolygon(vertex, room.points)) {
+              colliding = true;
+              break;
             }
-            if (colliding) break;
           }
           if (colliding) break;
+          
+          // Also check if any wall segment is "too deep" inside the furniture
+          // For now, vertex-outside is a good enough approximation for wall overlap
         }
       }
     }

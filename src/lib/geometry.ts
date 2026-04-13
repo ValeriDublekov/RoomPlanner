@@ -8,16 +8,50 @@ export const getDistance = (p1: Vector2d, p2: Vector2d): number => {
 };
 
 /**
- * Calculates the area of a polygon using the Shoelace formula.
+ * Calculates the signed area of a polygon. 
+ * Positive value indicates Clockwise winding in a Y-down coordinate system.
  */
-export const calculateArea = (points: Vector2d[]): number => {
+export const getSignedArea = (points: Vector2d[]): number => {
   let area = 0;
   for (let i = 0; i < points.length; i++) {
     const j = (i + 1) % points.length;
     area += points[i].x * points[j].y;
     area -= points[j].x * points[i].y;
   }
-  return Math.abs(area) / 2;
+  return area / 2;
+};
+
+/**
+ * Calculates the area of a polygon using the Shoelace formula.
+ */
+export const calculateArea = (points: Vector2d[]): number => {
+  return Math.abs(getSignedArea(points));
+};
+
+/**
+ * Gets the outward normal vector for a segment of a polygon.
+ */
+export const getOutwardNormal = (points: Vector2d[], segmentIndex: number): Vector2d => {
+  const p1 = points[segmentIndex];
+  const p2 = points[(segmentIndex + 1) % points.length];
+  const dx = p2.x - p1.x;
+  const dy = p2.y - p1.y;
+  const len = Math.sqrt(dx * dx + dy * dy);
+  
+  if (len === 0) return { x: 0, y: 0 };
+  
+  const isCW = getSignedArea(points) >= 0;
+  
+  // In Y-down:
+  // Right-hand normal: (dy/len, -dx/len)
+  // Left-hand normal: (-dy/len, dx/len)
+  // For CW winding, Right-hand normal points OUTSIDE.
+  // For CCW winding, Left-hand normal points OUTSIDE.
+  if (isCW) {
+    return { x: dy / len, y: -dx / len };
+  } else {
+    return { x: -dy / len, y: dx / len };
+  }
 };
 
 /**
@@ -54,9 +88,9 @@ export const scalePoints = (points: Vector2d[], scaleX: number, scaleY: number):
 /**
  * Calculates the distance from a point to a line segment.
  */
-export const getDistanceToSegment = (p: Vector2d, v: Vector2d, w: Vector2d) => {
+export const getDistanceToSegment = (p: Vector2d, v: Vector2d, w: Vector2d): { distance: number, point: Vector2d } => {
   const l2 = Math.pow(getDistance(v, w), 2);
-  if (l2 === 0) return getDistance(p, v);
+  if (l2 === 0) return { distance: getDistance(p, v), point: v };
   let t = ((p.x - v.x) * (w.x - v.x) + (p.y - v.y) * (w.y - v.y)) / l2;
   t = Math.max(0, Math.min(1, t));
   const projection = {
@@ -91,6 +125,17 @@ export const getSnappedPosition = (
       if (d < minDist) {
         minDist = d;
         nearest = { ...p };
+      }
+    }
+    
+    // Check wall segments (edges)
+    for (let i = 0; i < room.points.length; i++) {
+      const p1 = room.points[i];
+      const p2 = room.points[(i + 1) % room.points.length];
+      const result = getDistanceToSegment(pos, p1, p2);
+      if (result.distance < minDist) {
+        minDist = result.distance;
+        nearest = result.point;
       }
     }
   }

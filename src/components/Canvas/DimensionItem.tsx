@@ -69,6 +69,13 @@ export const DimensionItem: React.FC<DimensionItemProps> = ({
           onSelect();
         }
       }}
+      onTap={(e) => {
+        if (onSelect) {
+          e.cancelBubble = true;
+          onSelect();
+        }
+      }}
+      listening={true}
     >
       {/* Hit area for easier selection */}
       <Line

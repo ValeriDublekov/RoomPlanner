@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Stage, Layer, Image as KonvaImage, Transformer, Line, Text } from 'react-konva';
 import Konva from 'konva';
 import { useStore } from '../../store';
@@ -82,6 +82,73 @@ export const CanvasStage: React.FC<CanvasStageProps> = ({
     calibrationPoints,
     setContextMenu
   } = useStore();
+
+  const roomElements = useMemo(() => rooms.map((room) => (
+    <RoomItem
+      key={room.id}
+      room={room}
+      isSelected={selectedRoomId === room.id}
+      onSelect={() => setSelectedRoomId(room.id)}
+      scale={scale}
+      isLocked={activeLayer !== 'room'}
+    />
+  )), [rooms, selectedRoomId, scale, activeLayer, setSelectedRoomId]);
+
+  const furnitureElements = useMemo(() => [...furniture].sort((a, b) => (a.elevation || 0) - (b.elevation || 0)).map((item) => (
+    <FurnitureItem
+      key={item.id}
+      shape={item}
+      isSelected={selectedIds.includes(item.id)}
+      onSelect={(multi) => {
+        if (activeLayer === 'furniture') {
+          if (multi) {
+            const newIds = selectedIds.includes(item.id)
+              ? selectedIds.filter(id => id !== item.id)
+              : [...selectedIds, item.id];
+            setSelectedIds(newIds);
+          } else {
+            setSelectedId(item.id);
+          }
+        }
+      }}
+      onStartChange={saveHistory}
+      onChange={(newAttrs) => updateFurniture(item.id, newAttrs)}
+      scale={scale}
+      pixelsPerCm={pixelsPerCmVal}
+      isLocked={activeLayer !== 'furniture'}
+      rooms={rooms}
+      allFurniture={furniture}
+    />
+  )), [furniture, selectedIds, activeLayer, scale, pixelsPerCmVal, rooms, setSelectedIds, setSelectedId, saveHistory, updateFurniture]);
+
+  const attachmentElements = useMemo(() => wallAttachments.map((attachment) => (
+    <WallAttachmentItem
+      key={attachment.id}
+      attachment={attachment}
+      isSelected={selectedAttachmentId === attachment.id}
+      onSelect={() => {
+        setSelectedAttachmentId(attachment.id);
+        setMode('select');
+      }}
+      scale={scale}
+    />
+  )), [wallAttachments, selectedAttachmentId, scale, setSelectedAttachmentId, setMode]);
+
+  const dimensionElements = useMemo(() => savedDimensions.map((dim) => (
+    <DimensionItem
+      key={dim.id}
+      dimension={dim}
+      pixelsPerCm={pixelsPerCmVal}
+      scale={scale}
+      isSelected={selectedDimensionId === dim.id}
+      onSelect={() => {
+        if (activeLayer === 'annotation') {
+          setSelectedDimensionId(dim.id);
+          setMode('select');
+        }
+      }}
+    />
+  )), [savedDimensions, pixelsPerCmVal, scale, selectedDimensionId, activeLayer, setSelectedDimensionId, setMode]);
 
   const handleContextMenu = (e: Konva.KonvaEventObject<PointerEvent>) => {
     e.evt.preventDefault();
@@ -241,47 +308,19 @@ export const CanvasStage: React.FC<CanvasStageProps> = ({
       </Layer>
 
       <Layer id="content-layer">
-        {/* Rooms */}
-        {rooms.map((room) => (
-          <RoomItem
-            key={room.id}
-            room={room}
-            isSelected={selectedRoomId === room.id}
-            onSelect={() => setSelectedRoomId(room.id)}
-            scale={scale}
-            isLocked={activeLayer !== 'room'}
-          />
-        ))}
+        {/* 1. Base Rooms */}
+        {roomElements}
 
-        {/* Furniture */}
-        {[...furniture].sort((a, b) => (a.elevation || 0) - (b.elevation || 0)).map((item) => (
-          <FurnitureItem
-            key={item.id}
-            shape={item}
-            isSelected={selectedIds.includes(item.id)}
-            onSelect={(multi) => {
-              if (activeLayer === 'furniture') {
-                if (multi) {
-                  const newIds = selectedIds.includes(item.id)
-                    ? selectedIds.filter(id => id !== item.id)
-                    : [...selectedIds, item.id];
-                  setSelectedIds(newIds);
-                } else {
-                  setSelectedId(item.id);
-                }
-              }
-            }}
-            onStartChange={saveHistory}
-            onChange={(newAttrs) => updateFurniture(item.id, newAttrs)}
-            scale={scale}
-            pixelsPerCm={pixelsPerCmVal}
-            isLocked={activeLayer !== 'furniture'}
-            rooms={rooms}
-            allFurniture={furniture}
-          />
-        ))}
+        {/* 2. Furniture (if in room mode, it's below attachments) */}
+        {activeLayer === 'room' && furnitureElements}
 
-        {/* Room Editor (Handles & Drag Distances) - Rendered after furniture to be on top */}
+        {/* 3. Wall Attachments */}
+        {attachmentElements}
+
+        {/* 4. Furniture (if NOT in room mode, it's above attachments) */}
+        {activeLayer !== 'room' && furnitureElements}
+
+        {/* 5. Room Editor (Handles & Drag Distances) - Always on top of room elements */}
         {selectedRoomId && rooms.find(r => r.id === selectedRoomId) && (
           <RoomEditor
             room={rooms.find(r => r.id === selectedRoomId)!}
@@ -289,7 +328,7 @@ export const CanvasStage: React.FC<CanvasStageProps> = ({
           />
         )}
 
-        {/* Room Area Labels (Rendered after furniture to be on top) */}
+        {/* 6. Room Area Labels */}
         {rooms.map((room) => (
           <RoomAreaLabel
             key={`label-${room.id}`}
@@ -298,36 +337,8 @@ export const CanvasStage: React.FC<CanvasStageProps> = ({
           />
         ))}
 
-        {/* Wall Attachments (Rendered above walls/rooms to "cut" them) */}
-        {wallAttachments.map((attachment) => (
-          <WallAttachmentItem
-            key={attachment.id}
-            attachment={attachment}
-            isSelected={selectedAttachmentId === attachment.id}
-            onSelect={() => {
-              setSelectedAttachmentId(attachment.id);
-              setMode('select');
-            }}
-            scale={scale}
-          />
-        ))}
-
-        {/* Annotations */}
-        {savedDimensions.map((dim) => (
-          <DimensionItem
-            key={dim.id}
-            dimension={dim}
-            pixelsPerCm={pixelsPerCmVal}
-            scale={scale}
-            isSelected={selectedDimensionId === dim.id}
-            onSelect={() => {
-              if (activeLayer === 'annotation') {
-                setSelectedDimensionId(dim.id);
-                setMode('select');
-              }
-            }}
-          />
-        ))}
+        {/* 7. Annotations */}
+        {dimensionElements}
         {(mode === 'measure' || mode === 'dimension') && measurePoints.length === 1 && (
           <>
             <Line

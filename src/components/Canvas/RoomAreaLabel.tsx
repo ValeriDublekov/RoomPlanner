@@ -48,7 +48,7 @@ export const RoomAreaLabel: React.FC<RoomAreaLabelProps> = ({
   const isDraggingVertex = useStore(state => state.isDraggingVertex);
 
   if (activeLayer !== 'room') return null;
-  if (isDraggingWall || isDraggingVertex) return null;
+  if (isDraggingWall || isDraggingVertex || isRoomSelected) return null;
 
   return (
     <Text

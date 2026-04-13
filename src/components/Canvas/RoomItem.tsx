@@ -4,6 +4,7 @@ import useImage from 'use-image';
 import { RoomObject } from '../../types';
 import { useStore } from '../../store';
 import { FLOOR_TEXTURES } from '../../constants';
+import { getSignedArea } from '../../lib/geometry';
 
 interface RoomItemProps {
   room: RoomObject;
@@ -25,6 +26,11 @@ export const RoomItem: React.FC<RoomItemProps> = ({
   
   const wallThicknessPx = wallThicknessCm * pixelsPerCm;
   
+  const isDraggingWall = useStore((state) => state.isDraggingWall);
+  const isDraggingVertex = useStore((state) => state.isDraggingVertex);
+  const activeLayer = useStore((state) => state.activeLayer);
+  const isDragging = isDraggingWall || isDraggingVertex;
+  
   const textureData = useMemo(() => FLOOR_TEXTURES.find(t => t.id === room.floorTexture), [room.floorTexture]);
   const [textureImage] = useImage(textureData?.url || '');
 
@@ -33,6 +39,9 @@ export const RoomItem: React.FC<RoomItemProps> = ({
   }, [pixelsPerCm]);
 
   const points = room.points.flatMap((p) => [p.x, p.y]);
+
+  const wallOpacity = activeLayer === 'room' ? 0.4 : (isDragging ? 0.2 : (isSelected ? 1 : 0.8));
+  const floorOpacity = activeLayer === 'room' ? 0 : (isDragging ? 0.1 : 1);
 
   return (
     <Group 
@@ -44,7 +53,47 @@ export const RoomItem: React.FC<RoomItemProps> = ({
       onTap={onSelect} 
       listening={!isLocked}
     >
-      {/* 1. Inner Room Area (The "Floor") - Only if closed */}
+      {/* 1. Walls (Clipped to only show outside the room) */}
+      <Group
+        clipFunc={(ctx) => {
+          if (!room.isClosed) return;
+          
+          ctx.beginPath();
+          // Huge outer rectangle (Clockwise)
+          ctx.rect(-100000, -100000, 200000, 200000);
+          
+          // Room interior (Counter-Clockwise relative to the rect to create a hole)
+          if (room.points.length > 0) {
+            const isCW = getSignedArea(room.points) >= 0;
+            if (isCW) {
+              // Points are CW, so draw them in reverse to get CCW
+              ctx.moveTo(room.points[0].x, room.points[0].y);
+              for (let i = room.points.length - 1; i >= 1; i--) {
+                ctx.lineTo(room.points[i].x, room.points[i].y);
+              }
+            } else {
+              // Points are already CCW
+              ctx.moveTo(room.points[0].x, room.points[0].y);
+              for (let i = 1; i < room.points.length; i++) {
+                ctx.lineTo(room.points[i].x, room.points[i].y);
+              }
+            }
+            ctx.closePath();
+          }
+        }}
+      >
+        <Line
+          points={points}
+          closed={room.isClosed}
+          stroke="#1e293b"
+          strokeWidth={wallThicknessPx * 2}
+          lineJoin="miter"
+          lineCap="butt"
+          opacity={wallOpacity}
+        />
+      </Group>
+
+      {/* 2. Inner Room Area (The "Floor") - Only if closed */}
       {room.isClosed && (
         <>
           <Line
@@ -56,8 +105,9 @@ export const RoomItem: React.FC<RoomItemProps> = ({
             fillPatternScale={textureScale}
             fillPriority={textureImage ? "pattern" : "color"}
             lineJoin="miter"
+            opacity={floorOpacity}
           />
-          {isSelected && (
+          {isSelected && !isDragging && (
             <Line
               points={points}
               closed={true}
@@ -69,17 +119,6 @@ export const RoomItem: React.FC<RoomItemProps> = ({
           )}
         </>
       )}
-
-      {/* 2. Walls */}
-      <Line
-        points={points}
-        closed={room.isClosed}
-        stroke="#1e293b"
-        strokeWidth={wallThicknessPx}
-        lineJoin="miter"
-        lineCap="round"
-        opacity={isSelected ? 1 : 0.8}
-      />
 
       {/* 2.1 Missing wall indicator for open rooms */}
       {!room.isClosed && room.points.length > 2 && (
