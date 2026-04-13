@@ -5,6 +5,7 @@ import { useStore } from '../../store';
 import { getDistance } from '../../lib/geometry';
 import { FurnitureItem } from './FurnitureItem';
 import { RoomItem } from './RoomItem';
+import { RoomEditor } from './RoomEditor';
 import { DimensionItem } from './DimensionItem';
 import { DrawingLayer } from './DrawingLayer';
 import { WallAttachmentItem } from './WallAttachmentItem';
@@ -279,6 +280,14 @@ export const CanvasStage: React.FC<CanvasStageProps> = ({
             allFurniture={furniture}
           />
         ))}
+
+        {/* Room Editor (Handles & Drag Distances) - Rendered after furniture to be on top */}
+        {selectedRoomId && rooms.find(r => r.id === selectedRoomId) && (
+          <RoomEditor
+            room={rooms.find(r => r.id === selectedRoomId)!}
+            scale={scale}
+          />
+        )}
 
         {/* Room Area Labels (Rendered after furniture to be on top) */}
         {rooms.map((room) => (

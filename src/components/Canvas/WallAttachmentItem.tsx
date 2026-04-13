@@ -104,10 +104,6 @@ export const WallAttachmentItem: React.FC<WallAttachmentItemProps> = ({
     let t = ((relPos.x - p1.x) * dx + (relPos.y - p1.y) * dy) / l2;
     t = Math.max(0, Math.min(1, t));
 
-    // Calculate distances to corners
-    const distToP1 = t * length;
-    const distToP2 = (1 - t) * length;
-
     // Check if adjacent walls are perpendicular
     const prevIdx = (attachment.wallSegmentIndex - 1 + room.points.length) % room.points.length;
     const nextIdx = (attachment.wallSegmentIndex + 1) % room.points.length;
@@ -121,9 +117,15 @@ export const WallAttachmentItem: React.FC<WallAttachmentItemProps> = ({
     const isPrevPerp = Math.abs((prevAngle - angle + 360) % 180 - 90) < 5;
     const isNextPerp = Math.abs((nextAngle - angle + 360) % 180 - 90) < 5;
 
+    // Calculate distance from edge of attachment to perpendicular wall
+    const halfWidth = (attachment.width * pixelsPerCm) / 2;
+    const halfWallPx = (wallThickness * pixelsPerCm) / 2;
+    const edgeDistToP1 = t * length - halfWidth - halfWallPx;
+    const edgeDistToP2 = (1 - t) * length - halfWidth - halfWallPx;
+
     setDistances({
-      left: isPrevPerp ? distToP1 / pixelsPerCm : null,
-      right: isNextPerp ? distToP2 / pixelsPerCm : null
+      left: isPrevPerp ? edgeDistToP1 / pixelsPerCm : null,
+      right: isNextPerp ? edgeDistToP2 / pixelsPerCm : null
     });
   };
 
@@ -136,14 +138,30 @@ export const WallAttachmentItem: React.FC<WallAttachmentItemProps> = ({
       y: node.y()
     };
 
-    const dx = p2.x - p1.x;
-    const dy = p2.y - p1.y;
-    const l2 = dx * dx + dy * dy;
-    let t = ((relPos.x - p1.x) * dx + (relPos.y - p1.y) * dy) / l2;
+    const dx_seg = p2.x - p1.x;
+    const dy_seg = p2.y - p1.y;
+    const l2 = dx_seg * dx_seg + dy_seg * dy_seg;
+    let t = ((relPos.x - p1.x) * dx_seg + (relPos.y - p1.y) * dy_seg) / l2;
     t = Math.max(0, Math.min(1, t));
 
     updateWallAttachment(attachment.id, { positionAlongWall: t });
   };
+
+  // Calculate edge points for distance lines
+  const halfWidthPx = (attachment.width * pixelsPerCm) / 2;
+  const halfWallPx = (wallThickness * pixelsPerCm) / 2;
+  const dx_norm = dx / length;
+  const dy_norm = dy / length;
+
+  const edge1X = x - dx_norm * halfWidthPx;
+  const edge1Y = y - dy_norm * halfWidthPx;
+  const edge2X = x + dx_norm * halfWidthPx;
+  const edge2Y = y + dy_norm * halfWidthPx;
+
+  const p1_innerX = p1.x + dx_norm * halfWallPx;
+  const p1_innerY = p1.y + dy_norm * halfWallPx;
+  const p2_innerX = p2.x - dx_norm * halfWallPx;
+  const p2_innerY = p2.y - dy_norm * halfWallPx;
 
   return (
     <Group>
@@ -154,15 +172,20 @@ export const WallAttachmentItem: React.FC<WallAttachmentItemProps> = ({
           {distances.left !== null && (
             <>
               <Line
-                points={[p1.x, p1.y, x, y]}
+                points={[p1_innerX, p1_innerY, edge1X, edge1Y]}
                 stroke="#f43f5e"
                 strokeWidth={3 / scale}
                 dash={[4 / scale, 4 / scale]}
               />
               <Group
-                x={(p1.x + x) / 2}
-                y={(p1.y + y) / 2}
-                rotation={angle}
+                x={(p1_innerX + edge1X) / 2}
+                y={(p1_innerY + edge1Y) / 2}
+                rotation={(() => {
+                  let a = angle;
+                  if (a > 90) a -= 180;
+                  if (a < -90) a += 180;
+                  return a;
+                })()}
               >
                 <Rect
                   x={-20 / scale}
@@ -178,7 +201,7 @@ export const WallAttachmentItem: React.FC<WallAttachmentItemProps> = ({
                   x={-20 / scale}
                   y={-22 / scale}
                   width={40 / scale}
-                  text={formatDistance(distances.left, 1)}
+                  text={formatDistance(distances.left * pixelsPerCm, 1)}
                   fontSize={12 / scale}
                   fontStyle="bold"
                   fill="#f43f5e"
@@ -192,15 +215,20 @@ export const WallAttachmentItem: React.FC<WallAttachmentItemProps> = ({
           {distances.right !== null && (
             <>
               <Line
-                points={[x, y, p2.x, p2.y]}
+                points={[edge2X, edge2Y, p2_innerX, p2_innerY]}
                 stroke="#f43f5e"
                 strokeWidth={3 / scale}
                 dash={[4 / scale, 4 / scale]}
               />
               <Group
-                x={(p2.x + x) / 2}
-                y={(p2.y + y) / 2}
-                rotation={angle}
+                x={(p2_innerX + edge2X) / 2}
+                y={(p2_innerY + edge2Y) / 2}
+                rotation={(() => {
+                  let a = angle;
+                  if (a > 90) a -= 180;
+                  if (a < -90) a += 180;
+                  return a;
+                })()}
               >
                 <Rect
                   x={-20 / scale}
@@ -216,7 +244,7 @@ export const WallAttachmentItem: React.FC<WallAttachmentItemProps> = ({
                   x={-20 / scale}
                   y={-22 / scale}
                   width={40 / scale}
-                  text={formatDistance(distances.right, 1)}
+                  text={formatDistance(distances.right * pixelsPerCm, 1)}
                   fontSize={12 / scale}
                   fontStyle="bold"
                   fill="#f43f5e"

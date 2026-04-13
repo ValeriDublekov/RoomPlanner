@@ -53,7 +53,8 @@ export const WallSegments: React.FC<{
   const segments = useMemo(() => {
     const segs: { type: 'wall' | 'glass', length: number, angle: number, midX: number, midZ: number, height: number, y: number, color: string }[] = [];
     
-    for (let i = 0; i < room.points.length; i++) {
+    const count = room.isClosed ? room.points.length : room.points.length - 1;
+    for (let i = 0; i < count; i++) {
       const p1 = room.points[i];
       const p2 = room.points[(i + 1) % room.points.length];
       
@@ -120,7 +121,7 @@ export const WallSegments: React.FC<{
 
   return (
     <group>
-      <Floor room={room} pixelsPerCm={pixelsPerCm} />
+      {room.isClosed && <Floor room={room} pixelsPerCm={pixelsPerCm} />}
       {segments.map((seg, i) => (
         <mesh 
           key={i} 

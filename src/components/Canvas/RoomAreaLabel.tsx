@@ -43,7 +43,12 @@ export const RoomAreaLabel: React.FC<RoomAreaLabelProps> = ({
     }
   }, [areaText, scale, activeLayer]);
 
+  const isRoomSelected = useStore(state => state.selectedRoomId === room.id);
+  const isDraggingWall = useStore(state => state.isDraggingWall);
+  const isDraggingVertex = useStore(state => state.isDraggingVertex);
+
   if (activeLayer !== 'room') return null;
+  if (isDraggingWall || isDraggingVertex) return null;
 
   return (
     <Text
@@ -59,6 +64,7 @@ export const RoomAreaLabel: React.FC<RoomAreaLabelProps> = ({
       shadowBlur={2}
       shadowOpacity={0.8}
       shadowOffset={{ x: 0, y: 0 }}
+      opacity={isRoomSelected ? 0.3 : 1}
     />
   );
 };

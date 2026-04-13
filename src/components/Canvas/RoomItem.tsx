@@ -1,9 +1,8 @@
-import React, { useRef, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { Line, Group } from 'react-konva';
 import useImage from 'use-image';
 import { RoomObject } from '../../types';
 import { useStore } from '../../store';
-import Konva from 'konva';
 import { FLOOR_TEXTURES } from '../../constants';
 
 interface RoomItemProps {
@@ -23,30 +22,17 @@ export const RoomItem: React.FC<RoomItemProps> = ({
 }) => {
   const wallThicknessCm = useStore((state) => state.wallThickness);
   const pixelsPerCm = useStore((state) => state.pixelsPerCm);
-  const activeLayer = useStore((state) => state.activeLayer);
-  const setSelectedWallIndex = useStore((state) => state.setSelectedWallIndex);
-  const selectedWallIndex = useStore((state) => state.selectedWallIndex);
+  
   const wallThicknessPx = wallThicknessCm * pixelsPerCm;
   
   const textureData = useMemo(() => FLOOR_TEXTURES.find(t => t.id === room.floorTexture), [room.floorTexture]);
   const [textureImage] = useImage(textureData?.url || '');
 
   const textureScale = useMemo(() => {
-    // Each pixel in our SVG represents 1cm
     return { x: pixelsPerCm, y: pixelsPerCm };
   }, [pixelsPerCm]);
 
   const points = room.points.flatMap((p) => [p.x, p.y]);
-
-  const wallSegments = useMemo(() => {
-    const segments = [];
-    for (let i = 0; i < room.points.length; i++) {
-      const p1 = room.points[i];
-      const p2 = room.points[(i + 1) % room.points.length];
-      segments.push([p1.x, p1.y, p2.x, p2.y]);
-    }
-    return segments;
-  }, [room.points]);
 
   return (
     <Group 
@@ -58,63 +44,54 @@ export const RoomItem: React.FC<RoomItemProps> = ({
       onTap={onSelect} 
       listening={!isLocked}
     >
-      {/* 1. Inner Room Area (The "Floor") - Draw first */}
-      <Line
-        points={points}
-        closed={true}
-        fill={room.floorColor || "#f1f5f9"}
-        fillPatternImage={textureImage || undefined}
-        fillPatternRepeat="repeat"
-        fillPatternScale={textureScale}
-        fillPriority={textureImage ? "pattern" : "color"}
-        lineJoin="miter"
-      />
-
-      {/* Selection Overlay for Floor */}
-      {isSelected && (
-        <Line
-          points={points}
-          closed={true}
-          fill="#818cf8"
-          opacity={0.2}
-          lineJoin="miter"
-          listening={false}
-        />
+      {/* 1. Inner Room Area (The "Floor") - Only if closed */}
+      {room.isClosed && (
+        <>
+          <Line
+            points={points}
+            closed={true}
+            fill={room.floorColor || "#f1f5f9"}
+            fillPatternImage={textureImage || undefined}
+            fillPatternRepeat="repeat"
+            fillPatternScale={textureScale}
+            fillPriority={textureImage ? "pattern" : "color"}
+            lineJoin="miter"
+          />
+          {isSelected && (
+            <Line
+              points={points}
+              closed={true}
+              fill="#818cf8"
+              opacity={0.2}
+              lineJoin="miter"
+              listening={false}
+            />
+          )}
+        </>
       )}
 
-      {/* 
-        2. Walls: 
-        Drawn after floor so they cover the floor edges.
-        Centered on the points to match 3D logic.
-      */}
+      {/* 2. Walls */}
       <Line
         points={points}
-        closed={true}
-        stroke="#1e293b" // Slate 800 (Structural Wall Color)
+        closed={room.isClosed}
+        stroke="#1e293b"
         strokeWidth={wallThicknessPx}
         lineJoin="miter"
-        lineCap="butt"
+        lineCap="round"
         opacity={isSelected ? 1 : 0.8}
       />
 
-      {/* 3. Wall Selection Overlays (Invisible but clickable) */}
-      {isSelected && wallSegments.map((seg, idx) => (
+      {/* 2.1 Missing wall indicator for open rooms */}
+      {!room.isClosed && room.points.length > 2 && (
         <Line
-          key={idx}
-          points={seg}
-          stroke={selectedWallIndex === idx ? "#4f46e5" : "transparent"}
-          strokeWidth={wallThicknessPx}
-          hitStrokeWidth={wallThicknessPx * 2}
-          onClick={(e) => {
-            e.cancelBubble = true;
-            setSelectedWallIndex(idx);
-          }}
-          onTap={(e) => {
-            e.cancelBubble = true;
-            setSelectedWallIndex(idx);
-          }}
+          points={[room.points[room.points.length - 1].x, room.points[room.points.length - 1].y, room.points[0].x, room.points[0].y]}
+          stroke="#1e293b"
+          strokeWidth={1}
+          dash={[5, 5]}
+          opacity={0.3}
+          listening={false}
         />
-      ))}
+      )}
     </Group>
   );
 };

@@ -39,7 +39,8 @@ export const Canvas: React.FC = () => {
     isAltPressed,
     edgeMap, setEdgeMap,
     saveHistory,
-    fitToScreen
+    fitToScreen,
+    finishRoom
   } = useStore();
 
   const [hasAutoFitted, setHasAutoFitted] = useState(false);
@@ -312,6 +313,12 @@ export const Canvas: React.FC = () => {
           isCtrlPressed={isCtrlPressed}
           scale={scale}
           snapToGrid={snapToGrid}
+          finishRoom={finishRoom}
+          continueRoom={useStore.getState().continueRoom}
+          closeOpenRoom={useStore.getState().closeOpenRoom}
+          roomPoints={roomPoints}
+          selectedRoomId={selectedRoomId}
+          rooms={rooms}
         />
       </div>
     </div>

@@ -59,6 +59,10 @@ export interface AppState {
   // History
   history: HistoryEntry[];
   
+  // UI State
+  isDraggingWall: boolean;
+  isDraggingVertex: boolean;
+  
   // Context Menu
   contextMenu: {
     visible: boolean;
@@ -90,14 +94,23 @@ export interface AppState {
   setEdgeMap: (map: EdgeMap | null) => void;
   setWallThickness: (thickness: number) => void;
   setWallHeight: (height: number) => void;
+  setIsDraggingWall: (isDragging: boolean) => void;
+  setIsDraggingVertex: (isDragging: boolean) => void;
   
   // Room Actions
   addRoomPoint: (point: Vector2d) => void;
   closeRoom: () => void;
+  finishRoom: () => void;
   setDimensionInput: (input: string) => void;
   setSelectedRoomId: (id: string | null) => void;
   setSelectedWallIndex: (index: number | null) => void;
   updateRoom: (id: string, updates: Partial<RoomObject>) => void;
+  updateRoomPoint: (roomId: string, pointIndex: number, newPos: Vector2d) => void;
+  splitWallSegment: (roomId: string, segmentIndex: number, pos: Vector2d) => void;
+  moveWallSegment: (roomId: string, segmentIndex: number, delta: Vector2d) => void;
+  removeRoomVertex: (roomId: string, pointIndex: number) => void;
+  continueRoom: (roomId: string) => void;
+  closeOpenRoom: (roomId: string) => void;
   deleteRoom: (id: string) => void;
   setSelectedAttachmentId: (id: string | null) => void;
   addWallAttachment: (attachment: Omit<WallAttachment, 'id'>) => void;
@@ -190,6 +203,8 @@ export const useStore = create<AppState>()(
   selectedDimensionId: null,
   history: [],
   show3d: false,
+  isDraggingWall: false,
+  isDraggingVertex: false,
   contextMenu: {
     visible: false,
     x: 0,
@@ -226,6 +241,8 @@ export const useStore = create<AppState>()(
   setWallThickness: (wallThickness) => set({ wallThickness }),
   setWallHeight: (wallHeight) => set({ wallHeight }),
   setContextMenu: (contextMenu) => set({ contextMenu }),
+  setIsDraggingWall: (isDraggingWall: boolean) => set({ isDraggingWall }),
+  setIsDraggingVertex: (isDraggingVertex: boolean) => set({ isDraggingVertex }),
 
   duplicateSelected: () => set((state) => {
     const idsToDuplicate = state.selectedIds.length > 0 ? state.selectedIds : (state.selectedId ? [state.selectedId] : []);
@@ -365,7 +382,27 @@ export const useStore = create<AppState>()(
 
     const newRoom: RoomObject = {
       id: Math.random().toString(36).substr(2, 9),
-      points: uniquePoints
+      points: uniquePoints,
+      isClosed: true
+    };
+
+    return {
+      rooms: [...state.rooms, newRoom],
+      roomPoints: [],
+      dimensionInput: '',
+      history: [...state.history, historyEntry].slice(-50)
+    };
+  }),
+  finishRoom: () => set((state) => {
+    if (state.roomPoints.length < 2) return state;
+    
+    state.saveHistory();
+    const historyEntry = { rooms: state.rooms, furniture: state.furniture, dimensions: state.dimensions };
+    
+    const newRoom: RoomObject = {
+      id: Math.random().toString(36).substr(2, 9),
+      points: [...state.roomPoints],
+      isClosed: false
     };
 
     return {
@@ -387,6 +424,108 @@ export const useStore = create<AppState>()(
   updateRoom: (id, updates) => set((state) => ({
     rooms: state.rooms.map(r => r.id === id ? { ...r, ...updates } : r)
   })),
+  updateRoomPoint: (roomId, pointIndex, newPos) => set((state) => ({
+    rooms: state.rooms.map(r => {
+      if (r.id !== roomId) return r;
+      const newPoints = [...r.points];
+      newPoints[pointIndex] = newPos;
+      return { ...r, points: newPoints };
+    })
+  })),
+  splitWallSegment: (roomId, segmentIndex, pos) => set((state) => {
+    const room = state.rooms.find(r => r.id === roomId);
+    if (!room) return state;
+
+    const newRooms = state.rooms.map(r => {
+      if (r.id !== roomId) return r;
+      const newPoints = [...r.points];
+      newPoints.splice(segmentIndex + 1, 0, pos);
+      return { ...r, points: newPoints };
+    });
+
+    // Update attachments
+    const newAttachments = state.wallAttachments.map(a => {
+      if (a.roomId !== roomId) return a;
+      if (a.wallSegmentIndex > segmentIndex) {
+        return { ...a, wallSegmentIndex: a.wallSegmentIndex + 1 };
+      }
+      if (a.wallSegmentIndex === segmentIndex) {
+        // Split at 0.5 (approx)
+        if (a.positionAlongWall < 0.5) {
+          return { ...a, positionAlongWall: a.positionAlongWall * 2 };
+        } else {
+          return { ...a, wallSegmentIndex: a.wallSegmentIndex + 1, positionAlongWall: (a.positionAlongWall - 0.5) * 2 };
+        }
+      }
+      return a;
+    });
+
+    return { rooms: newRooms, wallAttachments: newAttachments };
+  }),
+  moveWallSegment: (roomId, segmentIndex, delta) => set((state) => ({
+    rooms: state.rooms.map(r => {
+      if (r.id !== roomId) return r;
+      const newPoints = [...r.points];
+      
+      const p1Idx = segmentIndex;
+      const p2Idx = (segmentIndex + 1) % r.points.length;
+      
+      // If it's an open room and we are at the last segment, don't wrap around
+      if (!r.isClosed && segmentIndex === r.points.length - 1) return r;
+
+      newPoints[p1Idx] = { x: newPoints[p1Idx].x + delta.x, y: newPoints[p1Idx].y + delta.y };
+      newPoints[p2Idx] = { x: newPoints[p2Idx].x + delta.x, y: newPoints[p2Idx].y + delta.y };
+      
+      return { ...r, points: newPoints };
+    })
+  })),
+  removeRoomVertex: (roomId, pointIndex) => set((state) => {
+    const room = state.rooms.find(r => r.id === roomId);
+    if (!room || room.points.length <= 2) return state;
+
+    const newRooms = state.rooms.map(r => {
+      if (r.id !== roomId) return r;
+      const newPoints = [...r.points];
+      newPoints.splice(pointIndex, 1);
+      return { ...r, points: newPoints };
+    });
+
+    // Update attachments - this is simplified: just remove attachments on affected segments or shift them
+    const newAttachments = state.wallAttachments.filter(a => {
+      if (a.roomId !== roomId) return true;
+      // If attachment was on the segment being merged, it might be invalid or need repositioning
+      // For now, let's just shift indices
+      return a.wallSegmentIndex !== pointIndex && a.wallSegmentIndex !== (pointIndex - 1 + room.points.length) % room.points.length;
+    }).map(a => {
+      if (a.roomId !== roomId) return a;
+      if (a.wallSegmentIndex > pointIndex) {
+        return { ...a, wallSegmentIndex: a.wallSegmentIndex - 1 };
+      }
+      return a;
+    });
+
+    return { rooms: newRooms, wallAttachments: newAttachments };
+  }),
+  continueRoom: (roomId) => set((state) => {
+    const room = state.rooms.find(r => r.id === roomId);
+    if (!room) return state;
+    
+    state.saveHistory();
+    return {
+      roomPoints: [...room.points],
+      rooms: state.rooms.filter(r => r.id !== roomId),
+      wallAttachments: state.wallAttachments.filter(a => a.roomId !== roomId), // Attachments are lost when continuing for now to avoid complexity
+      mode: 'draw-room',
+      selectedRoomId: null
+    };
+  }),
+  closeOpenRoom: (roomId) => set((state) => {
+    state.saveHistory();
+    return {
+      rooms: state.rooms.map(r => r.id === roomId ? { ...r, isClosed: true } : r),
+      selectedRoomId: roomId
+    };
+  }),
   deleteRoom: (id) => set((state) => {
     state.saveHistory();
     return {
