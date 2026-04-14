@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Stage, Layer, Image as KonvaImage, Transformer, Line, Text } from 'react-konva';
+import { Stage, Layer, Image as KonvaImage, Transformer, Line, Text, Group } from 'react-konva';
 import Konva from 'konva';
 import { useStore } from '../../store';
 import { getDistance } from '../../lib/geometry';
@@ -12,6 +12,8 @@ import { WallAttachmentItem } from './WallAttachmentItem';
 import { RoomAreaLabel } from './RoomAreaLabel';
 
 import { ContextMenu } from './ContextMenu';
+
+import { FurnitureRenderer } from './FurnitureRenderer';
 
 interface CanvasStageProps {
   stageRef: React.RefObject<Konva.Stage>;
@@ -50,7 +52,7 @@ export const CanvasStage: React.FC<CanvasStageProps> = ({
   snappedMouse,
   mousePos
 }) => {
-  const {
+    const {
     mode,
     setMode,
     activeLayer,
@@ -80,7 +82,8 @@ export const CanvasStage: React.FC<CanvasStageProps> = ({
     measurePoints,
     roomPoints,
     calibrationPoints,
-    setContextMenu
+    setContextMenu,
+    pendingFurniture
   } = useStore();
 
   const roomElements = useMemo(() => rooms.map((room) => (
@@ -260,7 +263,7 @@ export const CanvasStage: React.FC<CanvasStageProps> = ({
         }
         return pos;
       }}
-      className={(mode === 'calibrate' || mode === 'draw-room' || mode === 'draw-furniture' || mode === 'add-door' || mode === 'add-window' || mode === 'measure' || mode === 'dimension') ? 'custom-cursor' : ''}
+      className={(mode === 'calibrate' || mode === 'draw-room' || mode === 'draw-furniture' || mode === 'add-door' || mode === 'add-window' || mode === 'measure' || mode === 'dimension' || mode === 'place-furniture') ? 'custom-cursor' : ''}
     >
       <Layer id="background-layer" visible={backgroundVisible}>
         {bgImage && (
@@ -372,6 +375,25 @@ export const CanvasStage: React.FC<CanvasStageProps> = ({
           scale={scale}
           pixelsPerCm={pixelsPerCmVal}
         />
+        {mode === 'place-furniture' && pendingFurniture && (
+          <Group
+            x={snappedMouse.x}
+            y={snappedMouse.y}
+            rotation={pendingFurniture.rotation}
+            offsetX={pendingFurniture.width / 2}
+            offsetY={pendingFurniture.height / 2}
+            opacity={0.6}
+            listening={false}
+          >
+            <FurnitureRenderer
+              shape={{ ...pendingFurniture, id: 'preview' } as any}
+              isSelected={false}
+              isColliding={false}
+              scale={scale}
+              pixelsPerCm={pixelsPerCmVal}
+            />
+          </Group>
+        )}
       </Layer>
     </Stage>
     <ContextMenu />

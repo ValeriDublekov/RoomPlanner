@@ -37,13 +37,13 @@ export const CatalogModal: React.FC<CatalogModalProps> = ({ isOpen, onClose }) =
     const height3dPx = customHeight * pixelsPerCm;
     const elevationPx = customElevation * pixelsPerCm;
     
-    addFurniture({
+    useStore.getState().setPendingFurniture({
       type: selectedItem.type === 'circle' ? 'circle' : 'box',
       furnitureType: selectedItem.furnitureType || 'generic',
       catalogId: selectedItem.id,
       name: selectedItem.name,
-      x: 200,
-      y: 200,
+      x: 0,
+      y: 0,
       width: widthPx,
       height: heightPx,
       height3d: height3dPx,
@@ -52,7 +52,7 @@ export const CatalogModal: React.FC<CatalogModalProps> = ({ isOpen, onClose }) =
       color: selectedItem.defaultColor,
       svgPath: selectedItem.svgPath
     });
-    setMode('select');
+    setMode('place-furniture');
     onClose();
   };
 
@@ -62,6 +62,31 @@ export const CatalogModal: React.FC<CatalogModalProps> = ({ isOpen, onClose }) =
   );
 
   const categories = Array.from(new Set(FURNITURE_CATALOG.map(item => item.category)));
+
+  const handleItemDoubleClick = (item: CatalogItem) => {
+    const widthPx = item.width * pixelsPerCm;
+    const heightPx = item.depth * pixelsPerCm;
+    const height3dPx = (item.height3d || 75) * pixelsPerCm;
+    const elevationPx = (item.defaultElevation || 0) * pixelsPerCm;
+
+    useStore.getState().setPendingFurniture({
+      type: item.type === 'circle' ? 'circle' : 'box',
+      furnitureType: item.furnitureType || 'generic',
+      catalogId: item.id,
+      name: item.name,
+      x: 0,
+      y: 0,
+      width: widthPx,
+      height: heightPx,
+      height3d: height3dPx,
+      elevation: elevationPx,
+      rotation: 0,
+      color: item.defaultColor,
+      svgPath: item.svgPath
+    });
+    setMode('place-furniture');
+    onClose();
+  };
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
@@ -74,7 +99,7 @@ export const CatalogModal: React.FC<CatalogModalProps> = ({ isOpen, onClose }) =
             </div>
             <div>
               <h2 className="text-xl font-bold text-slate-900 tracking-tight">Furniture Catalog</h2>
-              <p className="text-xs text-slate-500 font-medium">Select and customize standard household items</p>
+              <p className="text-xs text-slate-500 font-medium">Select and customize items. Double-click to place immediately.</p>
             </div>
           </div>
           <button 
@@ -132,6 +157,7 @@ export const CatalogModal: React.FC<CatalogModalProps> = ({ isOpen, onClose }) =
                 <button
                   key={item.id}
                   onClick={() => handleSelectItem(item)}
+                  onDoubleClick={() => handleItemDoubleClick(item)}
                   className={cn(
                     "flex flex-col items-start p-4 rounded-2xl border-2 transition-all text-left group",
                     selectedItem?.id === item.id 

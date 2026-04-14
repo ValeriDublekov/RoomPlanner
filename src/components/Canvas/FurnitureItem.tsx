@@ -59,12 +59,15 @@ export const FurnitureItem: React.FC<FurnitureItemProps> = ({
       rotation = Math.round(rotation / 90) * 90;
     }
 
+    const newWidth = node.width() * node.scaleX();
+    const newHeight = node.height() * node.scaleY();
+
     const newAttrs: Partial<FurnitureObject> = {
-      x: node.x(),
-      y: node.y(),
+      x: node.x() - newWidth / 2,
+      y: node.y() - newHeight / 2,
       rotation: rotation,
-      width: node.width() * node.scaleX(),
-      height: node.height() * node.scaleY(),
+      width: newWidth,
+      height: newHeight,
     };
 
     node.scaleX(1);
@@ -98,10 +101,12 @@ export const FurnitureItem: React.FC<FurnitureItemProps> = ({
       <Group
         ref={shapeRef}
         id={shape.id}
-        x={shape.x}
-        y={shape.y}
+        x={shape.x + shape.width / 2}
+        y={shape.y + shape.height / 2}
         width={shape.width}
         height={shape.height}
+        offsetX={shape.width / 2}
+        offsetY={shape.height / 2}
         rotation={shape.rotation}
         draggable={!isLocked}
         onClick={(e) => {
@@ -126,8 +131,8 @@ export const FurnitureItem: React.FC<FurnitureItemProps> = ({
             setDragDistances([]);
             setIsColliding(false);
             onChange({
-              x: e.target.x(),
-              y: e.target.y(),
+              x: e.target.x() - shape.width / 2,
+              y: e.target.y() - shape.height / 2,
             });
           }
         }}

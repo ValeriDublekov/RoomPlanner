@@ -136,6 +136,17 @@ export const useCanvasLogic = (
         rotation: 0
       });
       setMode('select');
+    } else if (mode === 'place-furniture') {
+      const pending = useStore.getState().pendingFurniture;
+      if (pending) {
+        addFurniture({
+          ...pending,
+          x: relPos.x - pending.width / 2,
+          y: relPos.y - pending.height / 2,
+        });
+        useStore.getState().setPendingFurniture(null);
+        setMode('select');
+      }
     } else if (mode === 'select') {
       if (e.target === stageRef.current) {
         setSelectedId(null);

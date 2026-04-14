@@ -68,6 +68,7 @@ export const useKeyboardShortcuts = (
       } else if (e.key === 'Escape') {
         setSelectedId(null);
         setSelectedRoomId(null);
+        useStore.getState().setPendingFurniture(null);
         setMode('select');
         return;
       }

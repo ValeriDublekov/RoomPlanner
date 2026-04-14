@@ -47,8 +47,10 @@ export const useFurnitureInteraction = (
         shape.children.forEach(child => {
           const cw = child.width;
           const ch = child.height;
-          const cx = child.x;
-          const cy = child.y;
+          // child.x/y are relative to group top-left (0,0)
+          // Group center is at (w/2, h/2)
+          const cx = child.x - w / 2;
+          const cy = child.y - h / 2;
           const midpoints = [
             { x: cx + cw / 2, y: cy },
             { x: cx + cw / 2, y: cy + ch },
@@ -60,20 +62,20 @@ export const useFurnitureInteraction = (
           });
         });
         const groupMidpoints = [
-          { x: w / 2, y: 0 },
-          { x: w / 2, y: h },
+          { x: 0, y: -h / 2 },
           { x: 0, y: h / 2 },
-          { x: w, y: h / 2 },
+          { x: -w / 2, y: 0 },
+          { x: w / 2, y: 0 },
         ];
         groupMidpoints.forEach(p => {
           pointsToSnap.push(rotatePoint(p, { x: 0, y: 0 }, rotation));
         });
       } else {
         pointsToSnap = [
-          rotatePoint({ x: w / 2, y: 0 }, { x: 0, y: 0 }, rotation),
-          rotatePoint({ x: w / 2, y: h }, { x: 0, y: 0 }, rotation),
+          rotatePoint({ x: 0, y: -h / 2 }, { x: 0, y: 0 }, rotation),
           rotatePoint({ x: 0, y: h / 2 }, { x: 0, y: 0 }, rotation),
-          rotatePoint({ x: w, y: h / 2 }, { x: 0, y: 0 }, rotation),
+          rotatePoint({ x: -w / 2, y: 0 }, { x: 0, y: 0 }, rotation),
+          rotatePoint({ x: w / 2, y: 0 }, { x: 0, y: 0 }, rotation),
         ];
       }
 
@@ -121,10 +123,10 @@ export const useFurnitureInteraction = (
 
     const finalPivot = { x: currentX, y: currentY };
     const finalSides = [
+      rotatePoint({ x: currentX, y: currentY - h / 2 }, finalPivot, rotation),
+      rotatePoint({ x: currentX, y: currentY + h / 2 }, finalPivot, rotation),
+      rotatePoint({ x: currentX - w / 2, y: currentY }, finalPivot, rotation),
       rotatePoint({ x: currentX + w / 2, y: currentY }, finalPivot, rotation),
-      rotatePoint({ x: currentX + w / 2, y: currentY + h }, finalPivot, rotation),
-      rotatePoint({ x: currentX, y: finalPivot.y + h / 2 }, finalPivot, rotation),
-      rotatePoint({ x: currentX + w, y: finalPivot.y + h / 2 }, finalPivot, rotation),
     ];
 
     const newDistances: { p1: Vector2d, p2: Vector2d, dist: number }[] = [];
@@ -159,7 +161,7 @@ export const useFurnitureInteraction = (
 
     if (shape.type === 'circle') {
       const radius = Math.max(shape.width, shape.height) / 2;
-      const center = { x: currentX + shape.width / 2, y: currentY + shape.height / 2 };
+      const center = { x: currentX, y: currentY };
 
       for (const other of allFurniture) {
         if (other.id === shape.id) continue;
@@ -199,8 +201,8 @@ export const useFurnitureInteraction = (
       }
     } else {
       const currentVertices = getFurnitureVertices({
-        x: currentX,
-        y: currentY,
+        x: currentX - shape.width / 2,
+        y: currentY - shape.height / 2,
         width: shape.width,
         height: shape.height,
         rotation: rotation

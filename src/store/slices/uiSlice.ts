@@ -1,6 +1,6 @@
 import { StateCreator } from 'zustand';
 import { AppState } from '../../store';
-import { AppMode, LayerType, EdgeMap, Vector2d } from '../../types';
+import { AppMode, LayerType, EdgeMap, Vector2d, FurnitureObject } from '../../types';
 
 export interface UISlice {
   scale: number;
@@ -16,6 +16,7 @@ export interface UISlice {
   show3d: boolean;
   isDraggingWall: boolean;
   isDraggingVertex: boolean;
+  pendingFurniture: Omit<FurnitureObject, 'id'> | null;
   contextMenu: {
     visible: boolean;
     x: number;
@@ -37,6 +38,7 @@ export interface UISlice {
   setShow3d: (show: boolean) => void;
   setIsDraggingWall: (isDragging: boolean) => void;
   setIsDraggingVertex: (isDragging: boolean) => void;
+  setPendingFurniture: (furniture: Omit<FurnitureObject, 'id'> | null) => void;
   setContextMenu: (menu: UISlice['contextMenu']) => void;
   moveView: (dx: number, dy: number) => void;
   resetView: () => void;
@@ -57,6 +59,7 @@ export const createUISlice: StateCreator<AppState, [], [], UISlice> = (set, get)
   show3d: false,
   isDraggingWall: false,
   isDraggingVertex: false,
+  pendingFurniture: null,
   contextMenu: {
     visible: false,
     x: 0,
@@ -78,6 +81,7 @@ export const createUISlice: StateCreator<AppState, [], [], UISlice> = (set, get)
   setShow3d: (show3d) => set({ show3d }),
   setIsDraggingWall: (isDraggingWall) => set({ isDraggingWall }),
   setIsDraggingVertex: (isDraggingVertex) => set({ isDraggingVertex }),
+  setPendingFurniture: (pendingFurniture) => set({ pendingFurniture }),
   setContextMenu: (contextMenu) => set({ contextMenu }),
   
   moveView: (dx, dy) => set((state) => ({

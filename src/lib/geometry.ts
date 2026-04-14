@@ -259,12 +259,12 @@ export const rotatePoint = (point: Vector2d, pivot: Vector2d, angleDegrees: numb
  * Gets the world-space vertices of a furniture object.
  */
 export const getFurnitureVertices = (f: { x: number; y: number; width: number; height: number; rotation: number }): Vector2d[] => {
-  const pivot = { x: f.x, y: f.y };
+  const center = { x: f.x + f.width / 2, y: f.y + f.height / 2 };
   return [
-    { x: f.x, y: f.y },
-    rotatePoint({ x: f.x + f.width, y: f.y }, pivot, f.rotation),
-    rotatePoint({ x: f.x + f.width, y: f.y + f.height }, pivot, f.rotation),
-    rotatePoint({ x: f.x, y: f.y + f.height }, pivot, f.rotation)
+    rotatePoint({ x: f.x, y: f.y }, center, f.rotation),
+    rotatePoint({ x: f.x + f.width, y: f.y }, center, f.rotation),
+    rotatePoint({ x: f.x + f.width, y: f.y + f.height }, center, f.rotation),
+    rotatePoint({ x: f.x, y: f.y + f.height }, center, f.rotation)
   ];
 };
 
