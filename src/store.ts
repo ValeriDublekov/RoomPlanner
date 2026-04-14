@@ -961,7 +961,6 @@ export const useStore = create<AppState>()(
     // Exclude large or temporary fields from localStorage
     const { 
       history, 
-      backgroundImage, 
       roomPoints, 
       measurePoints, 
       lastMeasurement,

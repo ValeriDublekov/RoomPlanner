@@ -3,9 +3,10 @@ import { useStore } from '../store';
 import { getSnappedPosition, getOrthoPoint } from '../lib/geometry';
 
 export const useMouseSnapping = (mousePos: { x: number, y: number }, isCtrlPressed: boolean, isAltPressed: boolean) => {
-  const {
+    const {
     scale,
     mode,
+    activeLayer,
     rooms,
     furniture,
     snapToGrid,
@@ -27,12 +28,13 @@ export const useMouseSnapping = (mousePos: { x: number, y: number }, isCtrlPress
 
     // 1. Vector/Image Snapping
     const snapThreshold = 10 / scale;
+    const shouldSnapToImage = snapToImage && activeLayer === 'room';
     const snapped = getSnappedPosition(
       pos, 
       rooms, 
       furniture, 
       snapThreshold, 
-      snapToImage ? edgeMap : null,
+      shouldSnapToImage ? edgeMap : null,
       { x: backgroundPosition.x, y: backgroundPosition.y, scale: backgroundScale, rotation: backgroundRotation }
     );
     

@@ -11,6 +11,7 @@ import { CanvasStage } from './Canvas/CanvasStage';
 import { GridLayer } from './Canvas/GridLayer';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { useMouseSnapping } from '../hooks/useMouseSnapping';
+import { useClipboardPaste } from '../hooks/useClipboardPaste';
 
 export const Canvas: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -51,6 +52,8 @@ export const Canvas: React.FC = () => {
   const bgTrRef = useRef<Konva.Transformer>(null);
 
   const { getSnappedMousePos } = useMouseSnapping(mousePos, isCtrlPressed, isAltPressed);
+
+  useClipboardPaste();
 
   // Auto-fit on initial load
   useEffect(() => {
@@ -156,9 +159,63 @@ export const Canvas: React.FC = () => {
     };
   };
 
+  const handleMouseDown = (e: Konva.KonvaEventObject<MouseEvent>) => {
+    if (e.evt.button !== 0) return;
+    
+    const stage = stageRef.current;
+    if (!stage) return;
+
+    const relPos = getSnappedMousePos();
+
+    if (mode === 'add-box' || mode === 'draw-circle') {
+      // Start drag-to-draw
+      addRoomPoint(relPos);
+      return;
+    }
+
+    if (mode === 'draw-room' || mode === 'draw-furniture' || mode === 'measure' || mode === 'dimension' || mode === 'calibrate') {
+      // These use click-by-click, handled in handleClick
+      return;
+    }
+  };
+
+  const handleMouseMove = (e: Konva.KonvaEventObject<MouseEvent>) => {
+    const stage = stageRef.current;
+    if (!stage) return;
+    const relPos = getRelativePointerPosition(stage);
+    if (relPos) setMousePos(relPos);
+  };
+
+  const handleMouseUp = () => {
+    if ((mode === 'add-box' || mode === 'draw-circle') && roomPoints.length === 1) {
+      const start = roomPoints[0];
+      const end = getSnappedMousePos();
+      
+      const width = Math.abs(end.x - start.x);
+      const height = Math.abs(end.y - start.y);
+      
+      if (width > 5 && height > 5) {
+        addFurniture({
+          type: mode === 'add-box' ? 'box' : 'circle',
+          name: mode === 'add-box' ? 'New Box' : 'New Circle',
+          x: Math.min(start.x, end.x),
+          y: Math.min(start.y, end.y),
+          width: width,
+          height: height,
+          rotation: 0
+        });
+        setMode('select');
+      }
+      useStore.setState({ roomPoints: [] });
+    }
+  };
+
   const handleClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
     if (e.evt.button !== 0) return;
     
+    // If we just finished a drag-to-draw, don't trigger a click
+    if ((mode === 'add-box' || mode === 'draw-circle') && roomPoints.length > 0) return;
+
     useStore.getState().setContextMenu({ visible: false, x: 0, y: 0, targetId: null, targetType: null });
 
     const stage = stageRef.current;
@@ -260,13 +317,6 @@ export const Canvas: React.FC = () => {
     }
   };
 
-  const handleMouseMove = (e: Konva.KonvaEventObject<MouseEvent>) => {
-    const stage = stageRef.current;
-    if (!stage) return;
-    const relPos = getRelativePointerPosition(stage);
-    if (relPos) setMousePos(relPos);
-  };
-
   const handleDragEnd = (e: Konva.KonvaEventObject<DragEvent>) => {
     if (e.target instanceof Konva.Stage) {
       setPosition({ x: e.target.x(), y: e.target.y() });
@@ -276,13 +326,133 @@ export const Canvas: React.FC = () => {
   const snappedMouse = getSnappedMousePos();
   const pixelsPerCmVal = useStore.getState().pixelsPerCm;
 
+  const handleExport = async () => {
+    const stage = stageRef.current;
+    if (!stage) return;
+
+    // 1. Grid Exclusions & Selection Exclusions
+    const wasGridVisible = useStore.getState().gridVisible;
+    const selectedId = useStore.getState().selectedId;
+    const selectedIds = useStore.getState().selectedIds;
+    const selectedRoomId = useStore.getState().selectedRoomId;
+    const selectedDimensionId = useStore.getState().selectedDimensionId;
+    const selectedAttachmentId = useStore.getState().selectedAttachmentId;
+
+    // Temporarily hide things by clearing selection in store
+    useStore.getState().setGridVisible(false);
+    useStore.getState().setSelectedId(null);
+    useStore.getState().setSelectedIds([]);
+    useStore.getState().setSelectedRoomId(null);
+    useStore.getState().setSelectedDimensionId(null);
+    useStore.getState().setSelectedAttachmentId(null);
+
+    // Wait for React to re-render (hide transformers/handles)
+    await new Promise(resolve => setTimeout(resolve, 50));
+
+    // 2. High-Res Export
+    const dataURL = stage.toDataURL({ pixelRatio: 3 });
+
+    // 3. Restore
+    useStore.getState().setGridVisible(wasGridVisible);
+    useStore.getState().setSelectedId(selectedId);
+    useStore.getState().setSelectedIds(selectedIds);
+    useStore.getState().setSelectedRoomId(selectedRoomId);
+    useStore.getState().setSelectedDimensionId(selectedDimensionId);
+    useStore.getState().setSelectedAttachmentId(selectedAttachmentId);
+
+    // Trigger download
+    const link = document.createElement('a');
+    link.download = `${useStore.getState().projectName || 'project'}.png`;
+    link.href = dataURL;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handlePrint = async () => {
+    const stage = stageRef.current;
+    if (!stage) return;
+
+    // 1. Grid Exclusions & Selection Exclusions
+    const wasGridVisible = useStore.getState().gridVisible;
+    const selectedId = useStore.getState().selectedId;
+    const selectedIds = useStore.getState().selectedIds;
+    const selectedRoomId = useStore.getState().selectedRoomId;
+    const selectedDimensionId = useStore.getState().selectedDimensionId;
+    const selectedAttachmentId = useStore.getState().selectedAttachmentId;
+
+    // Temporarily hide things
+    useStore.getState().setGridVisible(false);
+    useStore.getState().setSelectedId(null);
+    useStore.getState().setSelectedIds([]);
+    useStore.getState().setSelectedRoomId(null);
+    useStore.getState().setSelectedDimensionId(null);
+    useStore.getState().setSelectedAttachmentId(null);
+
+    // Wait for React to re-render
+    await new Promise(resolve => setTimeout(resolve, 50));
+
+    // 2. High-Res Export
+    const dataURL = stage.toDataURL({ pixelRatio: 3 });
+
+    // 3. Restore
+    useStore.getState().setGridVisible(wasGridVisible);
+    useStore.getState().setSelectedId(selectedId);
+    useStore.getState().setSelectedIds(selectedIds);
+    useStore.getState().setSelectedRoomId(selectedRoomId);
+    useStore.getState().setSelectedDimensionId(selectedDimensionId);
+    useStore.getState().setSelectedAttachmentId(selectedAttachmentId);
+
+    // 4. Print Logic
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow?.document;
+    if (!doc) return;
+
+    doc.open();
+    doc.write(`
+      <html>
+        <head>
+          <title>Print Plan - ${useStore.getState().projectName}</title>
+          <style>
+            body { margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; background: white; }
+            img { width: 100%; height: auto; display: block; max-width: 100%; }
+            @page { margin: 1cm; size: landscape; }
+            @media print {
+              body { -webkit-print-color-adjust: exact; }
+            }
+          </style>
+        </head>
+        <body>
+          <img src="${dataURL}" />
+          <script>
+            window.onload = () => {
+              window.print();
+              setTimeout(() => {
+                window.frameElement.remove();
+              }, 1000);
+            };
+          </script>
+        </body>
+      </html>
+    `);
+    doc.close();
+  };
+
   return (
     <div ref={containerRef} className="flex-1 bg-slate-50 relative overflow-hidden flex flex-col">
-      <CanvasHeader />
+      <CanvasHeader onExport={handleExport} onPrint={handlePrint} />
       <SubHeader />
 
       <div className="flex-1 relative">
-        {gridVisible && <GridLayer scale={scale} position={position} />}
+        {gridVisible && activeLayer !== 'blueprint' && <GridLayer scale={scale} position={position} />}
         {dimensions.width > 0 && dimensions.height > 0 && (
           <CanvasStage
             stageRef={stageRef}
@@ -290,8 +460,8 @@ export const Canvas: React.FC = () => {
             scale={scale}
             position={position}
             onWheel={handleWheel}
-            onMouseDown={() => {}}
-            onMouseUp={() => {}}
+            onMouseDown={handleMouseDown}
+            onMouseUp={handleMouseUp}
             onDragEnd={handleDragEnd}
             onClick={handleClick}
             onDblClick={handleDblClick}

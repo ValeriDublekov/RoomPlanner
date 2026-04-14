@@ -307,7 +307,7 @@ export const CanvasStage: React.FC<CanvasStageProps> = ({
         )}
       </Layer>
 
-      <Layer id="content-layer">
+      <Layer id="content-layer" visible={activeLayer !== 'blueprint'}>
         {/* 1. Base Rooms */}
         {roomElements}
 

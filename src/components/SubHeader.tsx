@@ -14,7 +14,8 @@ export const SubHeader: React.FC = () => {
     snapToImage,
     setSnapToImage,
     wallThickness,
-    setWallThickness
+    setWallThickness,
+    setShow3d
   } = useStore();
 
   return (
@@ -39,6 +40,12 @@ export const SubHeader: React.FC = () => {
               {layer}
             </button>
           ))}
+          <button
+            onClick={() => setShow3d(true)}
+            className="px-4 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all text-slate-500 hover:text-slate-700 hover:bg-white/50"
+          >
+            3D View
+          </button>
         </div>
       </div>
 
@@ -70,15 +77,17 @@ export const SubHeader: React.FC = () => {
               <span className="text-[10px] font-bold text-slate-600 uppercase tracking-wider group-hover:text-slate-900">Snap Grid (S)</span>
             </label>
 
-            <label className="flex items-center gap-2 cursor-pointer group">
-              <input
-                type="checkbox"
-                checked={snapToImage}
-                onChange={(e) => setSnapToImage(e.target.checked)}
-                className="w-3.5 h-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-              />
-              <span className="text-[10px] font-bold text-slate-600 uppercase tracking-wider group-hover:text-slate-900">Snap Image</span>
-            </label>
+            {activeLayer === 'room' && (
+              <label className="flex items-center gap-2 cursor-pointer group">
+                <input
+                  type="checkbox"
+                  checked={snapToImage}
+                  onChange={(e) => setSnapToImage(e.target.checked)}
+                  className="w-3.5 h-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                />
+                <span className="text-[10px] font-bold text-slate-600 uppercase tracking-wider group-hover:text-slate-900">Snap Image</span>
+              </label>
+            )}
           </div>
         </div>
 

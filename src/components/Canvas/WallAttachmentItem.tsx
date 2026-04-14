@@ -269,11 +269,17 @@ export const WallAttachmentItem: React.FC<WallAttachmentItemProps> = ({
         rotation={angle}
         onClick={(e) => {
           if (e.evt.button !== 0) return;
+          e.cancelBubble = true;
           onSelect();
         }}
-        onTap={onSelect}
-        draggable={isSelected}
-        onDragStart={() => {
+        onTap={(e) => {
+          e.cancelBubble = true;
+          onSelect();
+        }}
+        draggable={true}
+        onDragStart={(e) => {
+          if (e.evt.button !== 0) return;
+          onSelect();
           saveHistory();
           setIsInteracting(true);
         }}

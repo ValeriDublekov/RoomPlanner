@@ -3,7 +3,12 @@ import { Undo2, Download, Upload, Layout, FilePlus, RotateCcw, Grid, BookOpen, B
 import { useStore } from '../../store';
 import { UserManualModal } from '../UserManualModal';
 
-export const CanvasHeader: React.FC = () => {
+interface CanvasHeaderProps {
+  onExport: () => void;
+  onPrint: () => void;
+}
+
+export const CanvasHeader: React.FC<CanvasHeaderProps> = ({ onExport, onPrint }) => {
   const { 
     undo, 
     history, 
@@ -17,7 +22,8 @@ export const CanvasHeader: React.FC = () => {
     pixelsPerCm,
     gridVisible,
     setGridVisible,
-    setShow3d
+    setShow3d,
+    setPixelsPerCm
   } = useStore();
 
   const [showNewConfirm, setShowNewConfirm] = React.useState(false);
@@ -94,13 +100,6 @@ export const CanvasHeader: React.FC = () => {
             </div>
           ) : null}
           <button
-            onClick={() => setShowNewConfirm(true)}
-            className="p-2 text-slate-500 hover:bg-slate-50 rounded-lg transition-colors"
-            title="New Project"
-          >
-            <FilePlus size={18} />
-          </button>
-          <button
             onClick={undo}
             disabled={history.length === 0}
             className="p-2 text-slate-500 hover:bg-slate-50 rounded-lg transition-colors disabled:opacity-30"
@@ -111,7 +110,7 @@ export const CanvasHeader: React.FC = () => {
           <button
             onClick={resetView}
             className="p-2 text-slate-500 hover:bg-slate-50 rounded-lg transition-colors"
-            title="Reset View"
+            title="Center View (0,0)"
           >
             <RotateCcw size={18} />
           </button>
@@ -143,10 +142,11 @@ export const CanvasHeader: React.FC = () => {
           </button>
           <button
             onClick={() => setShow3d(true)}
-            className="p-2 text-slate-500 hover:bg-slate-50 rounded-lg transition-colors"
+            className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-lg transition-colors font-bold text-[10px] uppercase tracking-wider"
             title="3D Preview"
           >
-            <Box size={18} />
+            <Box size={16} />
+            3D View
           </button>
         </div>
 
@@ -154,14 +154,71 @@ export const CanvasHeader: React.FC = () => {
 
         <div className="flex items-center gap-2 px-3 py-1 bg-slate-50 rounded-lg border border-slate-100">
           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Scale</span>
-          <span className="text-[10px] font-mono font-bold text-indigo-600">
-            {pixelsPerCm.toFixed(2)} px/cm
-          </span>
+          <div className="flex items-center gap-1">
+            <input
+              type="number"
+              value={pixelsPerCm.toFixed(2)}
+              onChange={(e) => setPixelsPerCm(parseFloat(e.target.value) || 1)}
+              className="w-12 text-[10px] font-mono font-bold text-indigo-600 bg-transparent border-none p-0 focus:ring-0 outline-none"
+              step="0.1"
+            />
+            <span className="text-[10px] font-mono font-bold text-indigo-400">px/cm</span>
+          </div>
         </div>
       </div>
 
       <div className="flex items-center gap-3">
         <UserManualModal isOpen={showManual} onClose={() => setShowManual(false)} />
+        
+        <div className="relative">
+          {showNewConfirm && (
+            <div className="absolute bottom-full right-0 mb-2 bg-white border border-slate-200 rounded-xl shadow-xl p-3 z-50 w-48 animate-in fade-in slide-in-from-bottom-2">
+              <p className="text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-2">Reset Project?</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    newProject();
+                    setShowNewConfirm(false);
+                  }}
+                  className="flex-1 px-2 py-1.5 bg-red-500 text-white rounded-lg text-[10px] font-bold hover:bg-red-600 transition-colors uppercase tracking-wider"
+                >
+                  Yes
+                </button>
+                <button
+                  onClick={() => setShowNewConfirm(false)}
+                  className="flex-1 px-2 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[10px] font-bold hover:bg-slate-200 transition-colors uppercase tracking-wider"
+                >
+                  No
+                </button>
+              </div>
+            </div>
+          )}
+          <button
+            onClick={() => setShowNewConfirm(true)}
+            className="flex items-center gap-2 px-3 py-2 text-slate-600 hover:bg-slate-50 rounded-xl text-xs font-bold transition-all uppercase tracking-wider border border-transparent hover:border-slate-200"
+            title="New Project"
+          >
+            <FilePlus size={16} />
+            New
+          </button>
+        </div>
+
+        <button
+          onClick={onPrint}
+          className="flex items-center gap-2 px-3 py-2 text-slate-600 hover:bg-slate-50 rounded-xl text-xs font-bold transition-all uppercase tracking-wider border border-transparent hover:border-slate-200"
+          title="Print Plan"
+        >
+          <Layout size={16} />
+          Print
+        </button>
+        <button
+          onClick={onExport}
+          className="flex items-center gap-2 px-3 py-2 text-slate-600 hover:bg-slate-50 rounded-xl text-xs font-bold transition-all uppercase tracking-wider border border-transparent hover:border-slate-200"
+          title="Export as PNG"
+        >
+          <Download size={16} />
+          Export
+        </button>
         <button
           onClick={handleLoad}
           className="flex items-center gap-2 px-4 py-2 text-slate-600 hover:bg-slate-50 rounded-xl text-xs font-bold transition-all uppercase tracking-wider border border-transparent hover:border-slate-200"

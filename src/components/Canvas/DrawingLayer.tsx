@@ -23,10 +23,37 @@ export const DrawingLayer: React.FC<DrawingLayerProps> = ({
   pixelsPerCm,
 }) => {
   const isDrawing = (mode === 'draw-room' || mode === 'draw-furniture') && roomPoints.length > 0;
+  const isDragDrawing = (mode === 'add-box' || mode === 'draw-circle') && roomPoints.length === 1;
   const isCalibrating = mode === 'calibrate' && calibrationPoints && calibrationPoints.length === 1;
 
   return (
     <Group>
+      {/* Drag-to-draw preview for furniture */}
+      {isDragDrawing && (
+        <Group>
+          <Line
+            points={[
+              roomPoints[0].x, roomPoints[0].y,
+              snappedMouse.x, roomPoints[0].y,
+              snappedMouse.x, snappedMouse.y,
+              roomPoints[0].x, snappedMouse.y,
+              roomPoints[0].x, roomPoints[0].y
+            ]}
+            stroke="#6366f1"
+            strokeWidth={2 / scale}
+            dash={[5 / scale, 5 / scale]}
+          />
+          <Text
+            x={Math.min(roomPoints[0].x, snappedMouse.x)}
+            y={Math.min(roomPoints[0].y, snappedMouse.y) - 20 / scale}
+            text={`${(Math.abs(snappedMouse.x - roomPoints[0].x) / pixelsPerCm).toFixed(1)} x ${(Math.abs(snappedMouse.y - roomPoints[0].y) / pixelsPerCm).toFixed(1)} cm`}
+            fontSize={12 / scale}
+            fill="#4f46e5"
+            fontStyle="bold"
+          />
+        </Group>
+      )}
+
       {/* Current Drawing (Room or Furniture) */}
       {isDrawing && (
         <Group>
