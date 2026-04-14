@@ -215,8 +215,8 @@ export const useStore = create<AppState>()(
 
   setScale: (scale) => set({ scale }),
   setPosition: (position) => set({ position }),
-  setMode: (mode) => set({ mode, roomPoints: [], measurePoints: [], dimensionInput: '', selectedId: null, selectedRoomId: null, selectedDimensionId: null }),
-  setActiveLayer: (activeLayer) => set({ activeLayer, selectedId: null, selectedRoomId: null, selectedDimensionId: null }),
+  setMode: (mode) => set({ mode, roomPoints: [], measurePoints: [], dimensionInput: '' }),
+  setActiveLayer: (activeLayer) => set({ activeLayer }),
   setPixelsPerCm: (pixelsPerCm) => set({ pixelsPerCm }),
   setProjectName: (projectName) => set({ projectName }),
   setBackgroundImage: (backgroundImage) => set({ backgroundImage }),

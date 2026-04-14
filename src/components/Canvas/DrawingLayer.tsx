@@ -25,9 +25,10 @@ export const DrawingLayer: React.FC<DrawingLayerProps> = ({
   const isDrawing = (mode === 'draw-room' || mode === 'draw-furniture') && roomPoints.length > 0;
   const isDragDrawing = (mode === 'add-box' || mode === 'draw-circle') && roomPoints.length === 1;
   const isCalibrating = mode === 'calibrate' && calibrationPoints && calibrationPoints.length === 1;
+  const isActive = isDrawing || isDragDrawing || isCalibrating;
 
   return (
-    <Group>
+    <Group listening={isActive}>
       {/* Drag-to-draw preview for furniture */}
       {isDragDrawing && (
         <Group>

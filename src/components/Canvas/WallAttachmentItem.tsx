@@ -316,6 +316,7 @@ export const WallAttachmentItem: React.FC<WallAttachmentItemProps> = ({
         height={thicknessPx}
         offsetX={widthPx / 2}
         offsetY={finalOffsetY}
+        listening={useStore.getState().activeLayer === 'room'}
       >
         {/* 
           The "Cutter" Rectangle 

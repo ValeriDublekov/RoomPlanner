@@ -32,6 +32,11 @@ export const Sidebar: React.FC = () => {
     setBackgroundVisible,
     backgroundOpacity,
     setBackgroundOpacity,
+    setSelectedId,
+    setSelectedIds,
+    setSelectedRoomId,
+    setSelectedDimensionId,
+    setSelectedAttachmentId,
   } = useStore();
 
   const [isCatalogOpen, setIsCatalogOpen] = useState(false);
@@ -97,7 +102,14 @@ export const Sidebar: React.FC = () => {
                   icon={tool.icon}
                   label={tool.label}
                   isActive={mode === tool.id}
-                  onClick={() => setMode(tool.id as any)}
+                  onClick={() => {
+                    setMode(tool.id as any);
+                    setSelectedId(null);
+                    setSelectedIds([]);
+                    setSelectedRoomId(null);
+                    setSelectedDimensionId(null);
+                    setSelectedAttachmentId(null);
+                  }}
                 />
               ))}
             

@@ -17,6 +17,7 @@ export const useKeyboardShortcuts = (
     setSelectedRoomId,
     deleteRoom,
     selectedDimensionId,
+    setSelectedDimensionId,
     deleteDimension,
     undo,
     groupSelected,
@@ -74,13 +75,48 @@ export const useKeyboardShortcuts = (
       if (!e.ctrlKey && !e.metaKey) {
         switch (e.key.toLowerCase()) {
           case 'v': setMode('select'); break;
-          case 'r': setMode('draw-room'); break;
-          case 'b': setMode('add-box'); break;
-          case 'f': setMode('draw-furniture'); break;
-          case 'c': setMode('calibrate'); break;
-          case 'm': setMode('measure'); break;
-          case 'd': setMode('dimension'); break;
-          case 'o': setMode('draw-circle'); break;
+          case 'r': 
+            setMode('draw-room'); 
+            setSelectedId(null);
+            setSelectedRoomId(null);
+            setSelectedDimensionId(null);
+            break;
+          case 'b': 
+            setMode('add-box'); 
+            setSelectedId(null);
+            setSelectedRoomId(null);
+            setSelectedDimensionId(null);
+            break;
+          case 'f': 
+            setMode('draw-furniture'); 
+            setSelectedId(null);
+            setSelectedRoomId(null);
+            setSelectedDimensionId(null);
+            break;
+          case 'c': 
+            setMode('calibrate'); 
+            setSelectedId(null);
+            setSelectedRoomId(null);
+            setSelectedDimensionId(null);
+            break;
+          case 'm': 
+            setMode('measure'); 
+            setSelectedId(null);
+            setSelectedRoomId(null);
+            setSelectedDimensionId(null);
+            break;
+          case 'd': 
+            setMode('dimension'); 
+            setSelectedId(null);
+            setSelectedRoomId(null);
+            setSelectedDimensionId(null);
+            break;
+          case 'o': 
+            setMode('draw-circle'); 
+            setSelectedId(null);
+            setSelectedRoomId(null);
+            setSelectedDimensionId(null);
+            break;
           case 'h': setOrthoMode(!orthoMode); break;
           case 's': setSnapToGrid(!snapToGrid); break;
         }

@@ -142,13 +142,11 @@ export const CanvasStage: React.FC<CanvasStageProps> = ({
       scale={scale}
       isSelected={selectedDimensionId === dim.id}
       onSelect={() => {
-        if (activeLayer === 'annotation') {
-          setSelectedDimensionId(dim.id);
-          setMode('select');
-        }
+        setSelectedDimensionId(dim.id);
+        if (mode !== 'select') setMode('select');
       }}
     />
-  )), [savedDimensions, pixelsPerCmVal, scale, selectedDimensionId, activeLayer, setSelectedDimensionId, setMode]);
+  )), [savedDimensions, pixelsPerCmVal, scale, selectedDimensionId, setSelectedDimensionId, setMode, mode]);
 
   const handleContextMenu = (e: Konva.KonvaEventObject<PointerEvent>) => {
     e.evt.preventDefault();
@@ -336,7 +334,9 @@ export const CanvasStage: React.FC<CanvasStageProps> = ({
             scale={scale}
           />
         ))}
+      </Layer>
 
+      <Layer id="annotation-layer" visible={activeLayer !== 'blueprint'}>
         {/* 7. Annotations */}
         {dimensionElements}
         {(mode === 'measure' || mode === 'dimension') && measurePoints.length === 1 && (
@@ -355,6 +355,8 @@ export const CanvasStage: React.FC<CanvasStageProps> = ({
               fill={mode === 'measure' ? "#f43f5e" : "#6366f1"}
               fontStyle="bold"
               align="center"
+              verticalAlign="middle"
+              listening={false}
             />
           </>
         )}

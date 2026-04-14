@@ -62,26 +62,23 @@ export const DimensionItem: React.FC<DimensionItemProps> = ({
   return (
     <Group 
       id={dimension.id}
+      name="dimension-item"
       onClick={(e) => {
         if (e.evt.button !== 0) return;
-        if (onSelect) {
-          e.cancelBubble = true;
-          onSelect();
-        }
+        e.cancelBubble = true;
+        if (onSelect) onSelect();
       }}
       onTap={(e) => {
-        if (onSelect) {
-          e.cancelBubble = true;
-          onSelect();
-        }
+        e.cancelBubble = true;
+        if (onSelect) onSelect();
       }}
       listening={true}
     >
       {/* Hit area for easier selection */}
       <Line
         points={[p1.x, p1.y, p2.x, p2.y]}
-        stroke="transparent"
-        strokeWidth={20 / scale}
+        stroke="rgba(0,0,0,0)"
+        strokeWidth={24 / scale}
       />
 
       {/* Main line */}
