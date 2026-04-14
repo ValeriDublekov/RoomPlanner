@@ -44,6 +44,43 @@ export const Floor: React.FC<{ room: RoomObject, pixelsPerCm: number }> = ({ roo
   );
 };
 
+const Curtain: React.FC<{
+  length: number;
+  height: number;
+  color: string;
+  opacity: number;
+  amplitude: number;
+  frequency: number;
+}> = ({ length, height, color, opacity, amplitude, frequency }) => {
+  const geometry = useMemo(() => {
+    const segments = Math.max(20, Math.floor(length / 2));
+    const geo = new THREE.PlaneGeometry(length, height, segments, 1);
+    const pos = geo.attributes.position;
+    for (let i = 0; i < pos.count; i++) {
+      const x = pos.getX(i);
+      // Sine wave for the folds
+      const z = Math.sin((x + length / 2) * frequency) * amplitude;
+      pos.setZ(i, z);
+    }
+    pos.needsUpdate = true;
+    geo.computeVertexNormals();
+    return geo;
+  }, [length, height, amplitude, frequency]);
+
+  return (
+    <mesh geometry={geometry}>
+      <meshStandardMaterial 
+        color={color} 
+        transparent 
+        opacity={opacity} 
+        side={THREE.DoubleSide} 
+        roughness={1} 
+        depthWrite={false}
+      />
+    </mesh>
+  );
+};
+
 export const WallSegments: React.FC<{ 
   room: RoomObject, 
   pixelsPerCm: number, 
@@ -52,7 +89,18 @@ export const WallSegments: React.FC<{
   attachments: WallAttachment[] 
 }> = ({ room, pixelsPerCm, wallThickness, wallHeight, attachments }) => {
   const segments = useMemo(() => {
-    const segs: { type: 'wall' | 'glass', length: number, angle: number, midX: number, midZ: number, height: number, y: number, color: string }[] = [];
+    const segs: { 
+      type: 'wall' | 'glass' | 'frame' | 'curtain', 
+      length: number, 
+      angle: number, 
+      midX: number, 
+      midZ: number, 
+      height: number, 
+      y: number, 
+      color: string,
+      depth?: number,
+      opacity?: number
+    }[] = [];
     
     const count = room.isClosed ? room.points.length : room.points.length - 1;
     for (let i = 0; i < count; i++) {
@@ -115,6 +163,109 @@ export const WallSegments: React.FC<{
             segs.push({ type: 'glass', length: attWidth, angle, midX, midZ, height: Math.min(openingHeight, wallHeight - sillHeight), y: sillHeight + Math.min(openingHeight, wallHeight - sillHeight) / 2, color: '#93c5fd' });
           }
 
+          // Frame
+          const frameColor = att.frameColor || '#ffffff';
+          const frameThickness = 5;
+          const frameDepth = wallThickness + 2;
+
+          // Vertical Frame Sides
+          const sideX1 = (p1.x / pixelsPerCm) + Math.cos(angle) * (attCenterPos - attWidth / 2 + frameThickness / 2) + offsetX;
+          const sideZ1 = (p1.y / pixelsPerCm) + Math.sin(angle) * (attCenterPos - attWidth / 2 + frameThickness / 2) + offsetZ;
+          segs.push({ type: 'frame', length: frameThickness, angle, midX: sideX1, midZ: sideZ1, height: openingHeight, y: sillHeight + openingHeight / 2, color: frameColor, depth: frameDepth });
+
+          const sideX2 = (p1.x / pixelsPerCm) + Math.cos(angle) * (attCenterPos + attWidth / 2 - frameThickness / 2) + offsetX;
+          const sideZ2 = (p1.y / pixelsPerCm) + Math.sin(angle) * (attCenterPos + attWidth / 2 - frameThickness / 2) + offsetZ;
+          segs.push({ type: 'frame', length: frameThickness, angle, midX: sideX2, midZ: sideZ2, height: openingHeight, y: sillHeight + openingHeight / 2, color: frameColor, depth: frameDepth });
+
+          // Horizontal Frame Top
+          const topY = sillHeight + openingHeight - frameThickness / 2;
+          segs.push({ type: 'frame', length: attWidth, angle, midX, midZ, height: frameThickness, y: topY, color: frameColor, depth: frameDepth });
+
+          // Horizontal Frame Bottom (for windows)
+          if (att.type === 'window') {
+            const bottomY = sillHeight + frameThickness / 2;
+            segs.push({ type: 'frame', length: attWidth, angle, midX, midZ, height: frameThickness, y: bottomY, color: frameColor, depth: frameDepth });
+          }
+
+          // Curtains
+          if (att.type === 'window' && att.curtainType && att.curtainType !== 'none') {
+            const curtainOffset = wallThickness / 2 + 5;
+            const cMidX = midX - normal.x * curtainOffset;
+            const cMidZ = midZ - normal.y * curtainOffset;
+            
+            if (att.curtainType === 'thin' || att.curtainType === 'both') {
+              segs.push({ 
+                type: 'curtain', 
+                length: attWidth + 20, 
+                angle, 
+                midX: cMidX, 
+                midZ: cMidZ, 
+                height: openingHeight + 10, 
+                y: sillHeight + openingHeight / 2, 
+                color: att.thinCurtainColor || '#ffffff', 
+                opacity: 0.6, 
+                depth: 1 
+              });
+            }
+            
+            if (att.curtainType === 'thick' || att.curtainType === 'both') {
+              const thickOffset = att.curtainType === 'both' ? 2 : 0;
+              const thickColor = att.thickCurtainColor || '#f1f5f9';
+              
+              if (att.curtainType === 'both') {
+                // Split thick curtains at the ends
+                const sideWidth = (attWidth + 40) * 0.25; // Each side takes 25% of width
+                const offsetFromCenter = (attWidth + 40) / 2 - sideWidth / 2;
+                
+                // Left side
+                const lx = cMidX - Math.cos(angle) * offsetFromCenter - normal.x * thickOffset;
+                const lz = cMidZ - Math.sin(angle) * offsetFromCenter - normal.y * thickOffset;
+                segs.push({ 
+                  type: 'curtain', 
+                  length: sideWidth, 
+                  angle, 
+                  midX: lx, 
+                  midZ: lz, 
+                  height: openingHeight + 20, 
+                  y: sillHeight + openingHeight / 2 + 5, 
+                  color: thickColor, 
+                  opacity: 0.9, 
+                  depth: 2 
+                });
+
+                // Right side
+                const rx = cMidX + Math.cos(angle) * offsetFromCenter - normal.x * thickOffset;
+                const rz = cMidZ + Math.sin(angle) * offsetFromCenter - normal.y * thickOffset;
+                segs.push({ 
+                  type: 'curtain', 
+                  length: sideWidth, 
+                  angle, 
+                  midX: rx, 
+                  midZ: rz, 
+                  height: openingHeight + 20, 
+                  y: sillHeight + openingHeight / 2 + 5, 
+                  color: thickColor, 
+                  opacity: 0.9, 
+                  depth: 2 
+                });
+              } else {
+                // Full width thick curtain
+                segs.push({ 
+                  type: 'curtain', 
+                  length: attWidth + 40, 
+                  angle, 
+                  midX: cMidX - normal.x * thickOffset, 
+                  midZ: cMidZ - normal.y * thickOffset, 
+                  height: openingHeight + 20, 
+                  y: sillHeight + openingHeight / 2 + 5, 
+                  color: thickColor, 
+                  opacity: 0.9, 
+                  depth: 2 
+                });
+              }
+            }
+          }
+
           currentPos = attEndPos;
         });
 
@@ -133,22 +284,42 @@ export const WallSegments: React.FC<{
   return (
     <group>
       {room.isClosed && <Floor room={room} pixelsPerCm={pixelsPerCm} />}
-      {segments.map((seg, i) => (
-        <mesh 
-          key={i} 
-          position={[seg.midX, seg.y, seg.midZ]} 
-          rotation={[0, -seg.angle, 0]}
-          castShadow={seg.type === 'wall'}
-          receiveShadow
-        >
-          <boxGeometry args={[seg.length, seg.height, wallThickness]} />
-          {seg.type === 'wall' ? (
-            <meshStandardMaterial color={seg.color} roughness={1} />
-          ) : (
-            <meshStandardMaterial color="#93c5fd" transparent opacity={0.4} roughness={0.1} metalness={0.5} />
-          )}
-        </mesh>
-      ))}
+      {segments.map((seg, i) => {
+        if (seg.type === 'curtain') {
+          return (
+            <group key={i} position={[seg.midX, seg.y, seg.midZ]} rotation={[0, -seg.angle, 0]}>
+              <Curtain 
+                length={seg.length} 
+                height={seg.height} 
+                color={seg.color} 
+                opacity={seg.opacity || 1} 
+                amplitude={seg.depth === 1 ? 2.5 : 4} 
+                frequency={seg.depth === 1 ? 0.8 : 0.4} 
+              />
+            </group>
+          );
+        }
+        return (
+          <mesh 
+            key={i} 
+            position={[seg.midX, seg.y, seg.midZ]} 
+            rotation={[0, -seg.angle, 0]}
+            castShadow={seg.type === 'wall'}
+            receiveShadow
+          >
+            <boxGeometry args={[seg.length, seg.height, seg.depth || wallThickness]} />
+            {seg.type === 'wall' ? (
+              <meshStandardMaterial color={seg.color} roughness={1} />
+            ) : seg.type === 'glass' ? (
+              <meshStandardMaterial color="#93c5fd" transparent opacity={0.4} roughness={0.1} metalness={0.5} />
+            ) : seg.type === 'frame' ? (
+              <meshStandardMaterial color={seg.color} roughness={0.5} />
+            ) : (
+              <meshStandardMaterial color={seg.color} transparent opacity={seg.opacity || 1} roughness={1} />
+            )}
+          </mesh>
+        );
+      })}
     </group>
   );
 };
