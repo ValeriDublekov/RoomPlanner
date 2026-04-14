@@ -7,7 +7,8 @@ import { FurnitureObject } from '../../types';
 import { WallSegments } from './RoomElements';
 import { 
   Bed3D, Desk3D, Wardrobe3D, Dresser3D, Chair3D, 
-  Shelf3D, Electronics3D, Table3D, GenericFurniture3D 
+  Shelf3D, Electronics3D, Table3D, GenericFurniture3D,
+  Sofa3D, Nightstand3D, Toilet3D, Bathtub3D
 } from './FurnitureModels';
 
 const Furniture = ({ item, pixelsPerCm }: { item: FurnitureObject, pixelsPerCm: number }) => {
@@ -46,7 +47,16 @@ const Furniture = ({ item, pixelsPerCm }: { item: FurnitureObject, pixelsPerCm: 
       case 'shelf': return <Shelf3D {...props} />;
       case 'electronics': return <Electronics3D {...props} />;
       case 'table': return <Table3D {...props} isRound={item.type === 'circle'} />;
-      default: return <GenericFurniture3D {...props} />;
+      default: {
+        // Use catalogId for specific models that don't have a dedicated furnitureType yet
+        const cid = item.catalogId || '';
+        if (cid.includes('sofa')) return <Sofa3D {...props} />;
+        if (cid.includes('nightstand')) return <Nightstand3D {...props} />;
+        if (cid.includes('armchair')) return <Sofa3D {...props} width={props.width} depth={props.depth} />;
+        if (cid.includes('toilet')) return <Toilet3D {...props} />;
+        if (cid.includes('bathtub')) return <Bathtub3D {...props} />;
+        return <GenericFurniture3D {...props} />;
+      }
     }
   };
 

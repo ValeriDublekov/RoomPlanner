@@ -465,9 +465,19 @@ export const FurnitureItem: React.FC<FurnitureItemProps> = ({
             <Rect
               width={shape.width}
               height={shape.height}
-              fill={isColliding ? "rgba(239, 68, 68, 0.1)" : (shape.svgPath ? "transparent" : (shape.color || "#f8fafc"))}
-              stroke={isColliding ? "#ef4444" : (isSelected ? "#4f46e5" : "#cbd5e1")}
-              strokeWidth={2 / scale}
+              fill={isColliding ? "rgba(239, 68, 68, 0.1)" : (
+                shape.svgPath ? "transparent" : (
+                  (shape.furnitureType === 'bed' || shape.furnitureType === 'wardrobe' || shape.furnitureType === 'dresser') 
+                    ? (shape.secondaryColor || "#f8fafc") 
+                    : (shape.color || "#f8fafc")
+                )
+              )}
+              stroke={isColliding ? "#ef4444" : (isSelected ? "#4f46e5" : (
+                (shape.furnitureType === 'bed' || shape.furnitureType === 'wardrobe' || shape.furnitureType === 'dresser')
+                  ? (shape.color || "#cbd5e1")
+                  : "#cbd5e1"
+              ))}
+              strokeWidth={(shape.furnitureType === 'bed' || shape.furnitureType === 'wardrobe' || shape.furnitureType === 'dresser') ? 4 / scale : 2 / scale}
               cornerRadius={4 / scale}
               shadowBlur={isSelected ? 10 / scale : 0}
               shadowColor={isColliding ? "#ef4444" : "#4f46e5"}
@@ -481,12 +491,17 @@ export const FurnitureItem: React.FC<FurnitureItemProps> = ({
               const pathRect = tempPath.getSelfRect();
               const sX = shape.width / (pathRect.width || 100);
               const sY = shape.height / (pathRect.height || 100);
+              
+              const isTwoColor = shape.furnitureType === 'bed' || shape.furnitureType === 'wardrobe' || shape.furnitureType === 'dresser';
+              const fillColor = isTwoColor ? (shape.secondaryColor || "#f8fafc") : (shape.color || "#f8fafc");
+              const strokeColor = isTwoColor ? (shape.color || "#64748b") : (isSelected ? "#4f46e5" : "#64748b");
+
               return (
                 <Path
                   data={shape.svgPath}
-                  fill={isColliding ? "rgba(239, 68, 68, 0.2)" : (shape.color || "#f8fafc")}
-                  stroke={isColliding ? "#ef4444" : (isSelected ? "#4f46e5" : "#64748b")}
-                  strokeWidth={1.5 / (scale * sX)}
+                  fill={isColliding ? "rgba(239, 68, 68, 0.2)" : fillColor}
+                  stroke={isColliding ? "#ef4444" : strokeColor}
+                  strokeWidth={(isTwoColor ? 2 : 1.5) / (scale * sX)}
                   scaleX={sX}
                   scaleY={sY}
                   x={-pathRect.x * sX}

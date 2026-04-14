@@ -40,6 +40,7 @@ export const CatalogModal: React.FC<CatalogModalProps> = ({ isOpen, onClose }) =
     addFurniture({
       type: selectedItem.type === 'circle' ? 'circle' : 'box',
       furnitureType: selectedItem.furnitureType || 'generic',
+      catalogId: selectedItem.id,
       name: selectedItem.name,
       x: 200,
       y: 200,

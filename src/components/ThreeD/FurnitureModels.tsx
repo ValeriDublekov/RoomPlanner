@@ -18,10 +18,11 @@ const WoodMaterial: React.FC<{ color: string, opacity?: number, transparent?: bo
   return <meshStandardMaterial color={color} map={texture} roughness={0.8} opacity={opacity} transparent={transparent} />;
 };
 
-export const Bed3D: React.FC<ModelProps> = ({ width, depth, height, color }) => {
+export const Bed3D: React.FC<ModelProps> = ({ width, depth, height, color, secondaryColor }) => {
   const frameHeight = height * 0.3;
   const mattressHeight = height * 0.5;
   const mattressInset = 5; // 5cm inset
+  const mattressColor = secondaryColor || "#ffffff";
   
   return (
     <group>
@@ -34,21 +35,92 @@ export const Bed3D: React.FC<ModelProps> = ({ width, depth, height, color }) => 
       {/* Mattress */}
       <mesh position={[width / 2, frameHeight + mattressHeight / 2, depth / 2]} castShadow receiveShadow>
         <boxGeometry args={[width - mattressInset, mattressHeight, depth - mattressInset]} />
-        <meshStandardMaterial color="#ffffff" roughness={0.9} />
+        <meshStandardMaterial color={mattressColor} roughness={0.9} />
       </mesh>
       
       {/* Pillows */}
       <mesh position={[width * 0.25, frameHeight + mattressHeight + 2, depth * 0.15]} castShadow receiveShadow>
         <boxGeometry args={[width * 0.3, 5, depth * 0.2]} />
-        <meshStandardMaterial color="#f8fafc" roughness={1} />
+        <meshStandardMaterial color={mattressColor} roughness={1} />
       </mesh>
       <mesh position={[width * 0.75, frameHeight + mattressHeight + 2, depth * 0.15]} castShadow receiveShadow>
         <boxGeometry args={[width * 0.3, 5, depth * 0.2]} />
-        <meshStandardMaterial color="#f8fafc" roughness={1} />
+        <meshStandardMaterial color={mattressColor} roughness={1} />
       </mesh>
     </group>
   );
 };
+
+export const Sofa3D: React.FC<ModelProps> = ({ width, depth, height, color }) => {
+  const seatHeight = height * 0.5;
+  const armWidth = 15;
+  const backDepth = 15;
+  
+  return (
+    <group>
+      {/* Base/Seat */}
+      <mesh position={[width / 2, seatHeight / 2, depth / 2]} castShadow receiveShadow>
+        <boxGeometry args={[width, seatHeight, depth]} />
+        <meshStandardMaterial color={color} roughness={0.9} />
+      </mesh>
+      {/* Backrest */}
+      <mesh position={[width / 2, height / 2 + seatHeight / 2, backDepth / 2]} castShadow receiveShadow>
+        <boxGeometry args={[width, height - seatHeight, backDepth]} />
+        <meshStandardMaterial color={color} roughness={0.9} />
+      </mesh>
+      {/* Arms */}
+      <mesh position={[armWidth / 2, height * 0.7 / 2, depth / 2]} castShadow receiveShadow>
+        <boxGeometry args={[armWidth, height * 0.7, depth]} />
+        <meshStandardMaterial color={color} roughness={0.9} />
+      </mesh>
+      <mesh position={[width - armWidth / 2, height * 0.7 / 2, depth / 2]} castShadow receiveShadow>
+        <boxGeometry args={[armWidth, height * 0.7, depth]} />
+        <meshStandardMaterial color={color} roughness={0.9} />
+      </mesh>
+    </group>
+  );
+};
+
+export const Nightstand3D: React.FC<ModelProps> = ({ width, depth, height, color }) => (
+  <group>
+    <mesh position={[width / 2, height / 2, depth / 2]} castShadow receiveShadow>
+      <boxGeometry args={[width, height, depth]} />
+      <WoodMaterial color={color} />
+    </mesh>
+    <mesh position={[width / 2, height * 0.7, depth + 0.5]} castShadow receiveShadow>
+      <boxGeometry args={[width - 4, 2, 1]} />
+      <meshStandardMaterial color="#94a3b8" />
+    </mesh>
+  </group>
+);
+
+export const Toilet3D: React.FC<ModelProps> = ({ width, depth, height, color }) => (
+  <group>
+    {/* Tank */}
+    <mesh position={[width / 2, height * 0.8, depth * 0.2]} castShadow receiveShadow>
+      <boxGeometry args={[width, height * 0.4, depth * 0.3]} />
+      <meshStandardMaterial color={color} roughness={0.1} />
+    </mesh>
+    {/* Bowl */}
+    <mesh position={[width / 2, height * 0.3, depth * 0.6]} castShadow receiveShadow>
+      <cylinderGeometry args={[width / 2, width / 3, height * 0.6, 16]} />
+      <meshStandardMaterial color={color} roughness={0.1} />
+    </mesh>
+  </group>
+);
+
+export const Bathtub3D: React.FC<ModelProps> = ({ width, depth, height, color }) => (
+  <group>
+    <mesh position={[width / 2, height / 2, depth / 2]} castShadow receiveShadow>
+      <boxGeometry args={[width, height, depth]} />
+      <meshStandardMaterial color={color} roughness={0.1} />
+    </mesh>
+    <mesh position={[width / 2, height * 0.6, depth / 2]}>
+      <boxGeometry args={[width - 10, height * 0.8, depth - 10]} />
+      <meshStandardMaterial color="#e2e8f0" roughness={0.1} />
+    </mesh>
+  </group>
+);
 
 export const Desk3D: React.FC<ModelProps> = ({ width, depth, height, color }) => {
   const topThickness = 4; // 4cm

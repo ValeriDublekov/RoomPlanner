@@ -29,6 +29,7 @@ export interface FurnitureObject {
   color?: string;
   secondaryColor?: string;
   svgPath?: string;
+  catalogId?: string;
   children?: FurnitureObject[]; // For groups
 }
 

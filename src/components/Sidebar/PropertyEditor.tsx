@@ -168,9 +168,11 @@ export const PropertyEditor: React.FC<PropertyEditorProps> = ({
             </div>
           </div>
 
-          {(selectedFurniture.furnitureType === 'wardrobe' || selectedFurniture.furnitureType === 'dresser') && (
+          {(selectedFurniture.furnitureType === 'wardrobe' || selectedFurniture.furnitureType === 'dresser' || selectedFurniture.furnitureType === 'bed') && (
             <div className="space-y-1.5 p-3 bg-slate-50 rounded-xl border border-slate-200">
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Doors / Drawers Color</label>
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">
+                {selectedFurniture.furnitureType === 'bed' ? 'Mattress / Pillows Color' : 'Doors / Drawers Color'}
+              </label>
               <div className="flex gap-2 flex-wrap">
                 {WOOD_COLORS.map(wood => (
                   <button
