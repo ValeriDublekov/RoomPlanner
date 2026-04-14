@@ -13,10 +13,12 @@ export interface RoomObject {
   defaultWallColor?: string;
 }
 
+export type FurnitureType = 'bed' | 'desk' | 'wardrobe' | 'dresser' | 'chair' | 'shelf' | 'electronics' | 'table' | 'sofa' | 'armchair' | 'nightstand' | 'toilet' | 'bathtub' | 'generic';
+
 export interface FurnitureObject {
   id: string;
   type: 'box' | 'polygon' | 'circle' | 'group';
-  furnitureType?: 'bed' | 'desk' | 'wardrobe' | 'dresser' | 'chair' | 'shelf' | 'electronics' | 'table' | 'generic';
+  furnitureType?: FurnitureType;
   name: string;
   x: number;
   y: number;
@@ -36,7 +38,7 @@ export interface FurnitureObject {
 export interface CatalogItem {
   id: string;
   name: string;
-  furnitureType?: 'bed' | 'desk' | 'wardrobe' | 'dresser' | 'chair' | 'shelf' | 'electronics' | 'table' | 'generic';
+  furnitureType?: FurnitureType;
   category: 'Bedroom' | 'Living Room' | 'Kitchen' | 'Bathroom' | 'Office';
   type: 'rectangle' | 'circle';
   width: number; // in cm

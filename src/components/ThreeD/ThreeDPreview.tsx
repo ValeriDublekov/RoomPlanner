@@ -1,5 +1,5 @@
-import React, { useMemo, Suspense } from 'react';
-import { Canvas } from '@react-three/fiber';
+import React, { useMemo, Suspense, useState, useEffect } from 'react';
+import { Canvas, useThree } from '@react-three/fiber';
 import { OrbitControls, Environment, ContactShadows } from '@react-three/drei';
 import * as THREE from 'three';
 import { useStore } from '../../store';
@@ -10,6 +10,14 @@ import {
   Shelf3D, Electronics3D, Table3D, GenericFurniture3D,
   Sofa3D, Nightstand3D, Toilet3D, Bathtub3D
 } from './FurnitureModels';
+
+const SceneBackground = ({ isExporting }: { isExporting: boolean }) => {
+  const { gl } = useThree();
+  useEffect(() => {
+    gl.setClearColor(isExporting ? '#ffffff' : '#0f172a');
+  }, [isExporting, gl]);
+  return null;
+};
 
 const Furniture = ({ item, pixelsPerCm }: { item: FurnitureObject, pixelsPerCm: number }) => {
   const width = item.width / pixelsPerCm;
@@ -47,8 +55,13 @@ const Furniture = ({ item, pixelsPerCm }: { item: FurnitureObject, pixelsPerCm: 
       case 'shelf': return <Shelf3D {...props} />;
       case 'electronics': return <Electronics3D {...props} />;
       case 'table': return <Table3D {...props} isRound={item.type === 'circle'} />;
+      case 'sofa': return <Sofa3D {...props} />;
+      case 'armchair': return <Sofa3D {...props} width={props.width} depth={props.depth} />;
+      case 'nightstand': return <Nightstand3D {...props} />;
+      case 'toilet': return <Toilet3D {...props} />;
+      case 'bathtub': return <Bathtub3D {...props} />;
       default: {
-        // Use catalogId for specific models that don't have a dedicated furnitureType yet
+        // Fallback for catalogId if furnitureType is still generic
         const cid = item.catalogId || '';
         if (cid.includes('sofa')) return <Sofa3D {...props} />;
         if (cid.includes('nightstand')) return <Nightstand3D {...props} />;
@@ -69,6 +82,65 @@ const Furniture = ({ item, pixelsPerCm }: { item: FurnitureObject, pixelsPerCm: 
 
 export const ThreeDPreview: React.FC = () => {
   const { rooms, furniture, pixelsPerCm, setShow3d, wallThickness, wallHeight, setWallHeight, wallAttachments } = useStore();
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleExport = async (isPrint = false) => {
+    setIsExporting(true);
+    // Wait for a few frames to ensure the background color change is applied
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    const canvas = document.querySelector('.three-canvas canvas') as HTMLCanvasElement;
+    if (canvas) {
+      const dataURL = canvas.toDataURL('image/png');
+      
+      if (isPrint) {
+        const iframe = document.createElement('iframe');
+        iframe.style.position = 'fixed';
+        iframe.style.right = '0';
+        iframe.style.bottom = '0';
+        iframe.style.width = '0';
+        iframe.style.height = '0';
+        iframe.style.border = '0';
+        document.body.appendChild(iframe);
+        const doc = iframe.contentWindow?.document;
+        if (doc) {
+          doc.open();
+          doc.write(`
+            <html>
+              <head>
+                <title>3D Preview - ${useStore.getState().projectName}</title>
+                <style>
+                  body { margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; background: white; }
+                  img { max-width: 100%; max-height: 100%; object-fit: contain; }
+                  @page { margin: 0; }
+                </style>
+              </head>
+              <body>
+                <img src="${dataURL}" />
+                <script>
+                  window.onload = () => {
+                    window.print();
+                    setTimeout(() => {
+                      window.frameElement.remove();
+                    }, 1000);
+                  };
+                </script>
+              </body>
+            </html>
+          `);
+          doc.close();
+        }
+      } else {
+        const link = document.createElement('a');
+        const projectName = useStore.getState().projectName || 'project';
+        const sanitizedName = projectName.toLowerCase().replace(/\s+/g, '-');
+        link.download = `${sanitizedName}-3d-${new Date().getTime()}.png`;
+        link.href = dataURL;
+        link.click();
+      }
+    }
+    setIsExporting(false);
+  };
 
   const center = useMemo(() => {
     if (rooms.length === 0) return new THREE.Vector3(0, 0, 0);
@@ -93,23 +165,41 @@ export const ThreeDPreview: React.FC = () => {
           </div>
           <h2 className="text-white font-bold">3D Preview</h2>
         </div>
-        <button 
-          onClick={() => setShow3d(false)}
-          className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-xl text-sm font-bold transition-all"
-        >
-          Back to 2D
-        </button>
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={() => handleExport(false)}
+            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-bold transition-all flex items-center gap-2"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+            Export Image
+          </button>
+          <button 
+            onClick={() => handleExport(true)}
+            className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-xl text-sm font-bold transition-all flex items-center gap-2"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+            Print
+          </button>
+          <button 
+            onClick={() => setShow3d(false)}
+            className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-xl text-sm font-bold transition-all"
+          >
+            Back to 2D
+          </button>
+        </div>
       </div>
 
-      <div className="flex-1 relative">
+      <div className="flex-1 relative three-canvas">
         <Canvas 
           shadows
+          gl={{ preserveDrawingBuffer: true }}
           camera={{ position: [center.x + 400, 400, center.z + 400], fov: 45, near: 1, far: 10000 }}
           onCreated={({ gl }) => {
             gl.setClearColor('#0f172a');
             gl.shadowMap.type = THREE.PCFShadowMap;
           }}
         >
+          <SceneBackground isExporting={isExporting} />
           <OrbitControls target={center} makeDefault />
           
           <ambientLight intensity={0.5} />

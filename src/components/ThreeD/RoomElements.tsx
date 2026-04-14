@@ -70,8 +70,8 @@ export const WallSegments: React.FC<{
 
       const segmentColor = room.wallColors?.[i] || room.defaultWallColor || "#f0f0f0";
       const normal = getOutwardNormal(room.points, i);
-      const offsetX = (normal.x * wallThickness) / (2 * pixelsPerCm);
-      const offsetZ = (normal.y * wallThickness) / (2 * pixelsPerCm);
+      const offsetX = (normal.x * wallThickness) / 2;
+      const offsetZ = (normal.y * wallThickness) / 2;
 
       if (segmentAttachments.length === 0) {
         const midX = (p1.x + p2.x) / (2 * pixelsPerCm) + offsetX;
@@ -95,16 +95,23 @@ export const WallSegments: React.FC<{
 
           const sillHeight = att.type === 'door' ? 0 : 90;
           const openingHeight = att.type === 'door' ? 210 : 120;
+          const headerHeight = Math.max(0, wallHeight - (sillHeight + openingHeight));
           
+          const midX = (p1.x / pixelsPerCm) + Math.cos(angle) * attCenterPos + offsetX;
+          const midZ = (p1.y / pixelsPerCm) + Math.sin(angle) * attCenterPos + offsetZ;
+
+          // Sill (wall under window)
           if (att.type === 'window' && sillHeight > 0) {
-            const midX = (p1.x / pixelsPerCm) + Math.cos(angle) * attCenterPos + offsetX;
-            const midZ = (p1.y / pixelsPerCm) + Math.sin(angle) * attCenterPos + offsetZ;
             segs.push({ type: 'wall', length: attWidth, angle, midX, midZ, height: sillHeight, y: sillHeight / 2, color: segmentColor });
           }
 
+          // Header (wall above window/door)
+          if (headerHeight > 0) {
+            segs.push({ type: 'wall', length: attWidth, angle, midX, midZ, height: headerHeight, y: wallHeight - headerHeight / 2, color: segmentColor });
+          }
+
+          // Glass or Door Opening
           if (att.type === 'window') {
-            const midX = (p1.x / pixelsPerCm) + Math.cos(angle) * attCenterPos + offsetX;
-            const midZ = (p1.y / pixelsPerCm) + Math.sin(angle) * attCenterPos + offsetZ;
             segs.push({ type: 'glass', length: attWidth, angle, midX, midZ, height: Math.min(openingHeight, wallHeight - sillHeight), y: sillHeight + Math.min(openingHeight, wallHeight - sillHeight) / 2, color: '#93c5fd' });
           }
 
@@ -121,7 +128,7 @@ export const WallSegments: React.FC<{
       }
     }
     return segs;
-  }, [room.points, pixelsPerCm, attachments, room.wallColors, room.defaultWallColor, wallHeight]);
+  }, [room.points, pixelsPerCm, attachments, room.wallColors, room.defaultWallColor, wallHeight, wallThickness]);
 
   return (
     <group>
@@ -134,7 +141,7 @@ export const WallSegments: React.FC<{
           castShadow={seg.type === 'wall'}
           receiveShadow
         >
-          <boxGeometry args={[seg.length, seg.height, wallThickness / pixelsPerCm]} />
+          <boxGeometry args={[seg.length, seg.height, wallThickness]} />
           {seg.type === 'wall' ? (
             <meshStandardMaterial color={seg.color} roughness={1} />
           ) : (

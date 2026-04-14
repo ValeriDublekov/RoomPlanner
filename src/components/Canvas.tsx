@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useStore } from '../store';
 import Konva from 'konva';
 import useImage from 'use-image';
-import { getDistance } from '../lib/geometry';
+import { getDistance, getFurnitureVertices } from '../lib/geometry';
 import { processImageForEdges } from '../lib/edgeDetection';
 import { CanvasHeader } from './Canvas/CanvasHeader';
 import { SubHeader } from './SubHeader';
@@ -330,7 +330,7 @@ export const Canvas: React.FC = () => {
     const stage = stageRef.current;
     if (!stage) return;
 
-    // 1. Grid Exclusions & Selection Exclusions
+    // 1. Save current state and selection
     const wasGridVisible = useStore.getState().gridVisible;
     const selectedId = useStore.getState().selectedId;
     const selectedIds = useStore.getState().selectedIds;
@@ -338,7 +338,7 @@ export const Canvas: React.FC = () => {
     const selectedDimensionId = useStore.getState().selectedDimensionId;
     const selectedAttachmentId = useStore.getState().selectedAttachmentId;
 
-    // Temporarily hide things by clearing selection in store
+    // 2. Hide UI elements (transformers, grid, etc.)
     useStore.getState().setGridVisible(false);
     useStore.getState().setSelectedId(null);
     useStore.getState().setSelectedIds([]);
@@ -346,13 +346,74 @@ export const Canvas: React.FC = () => {
     useStore.getState().setSelectedDimensionId(null);
     useStore.getState().setSelectedAttachmentId(null);
 
+    // 3. Calculate Bounding Box of all content
+    const { rooms, furniture, dimensions: savedDimensions } = useStore.getState();
+    const allPoints: { x: number; y: number }[] = [];
+    
+    rooms.forEach(r => allPoints.push(...r.points));
+    furniture.forEach(f => {
+      // Use the helper to get all 4 vertices of the furniture, accounting for rotation
+      const vertices = getFurnitureVertices(f);
+      allPoints.push(...vertices);
+    });
+    savedDimensions.forEach(d => {
+      allPoints.push(d.p1);
+      allPoints.push(d.p2);
+    });
+
+    if (allPoints.length === 0) {
+      // Restore and abort if no content
+      useStore.getState().setGridVisible(wasGridVisible);
+      return;
+    }
+
+    const minX = Math.min(...allPoints.map(p => p.x));
+    const minY = Math.min(...allPoints.map(p => p.y));
+    const maxX = Math.max(...allPoints.map(p => p.x));
+    const maxY = Math.max(...allPoints.map(p => p.y));
+
+    const padding = 50; // cm
+    const exportArea = {
+      x: minX - padding,
+      y: minY - padding,
+      width: (maxX - minX) + padding * 2,
+      height: (maxY - minY) + padding * 2
+    };
+
+    // 4. Temporarily add a white background rectangle
+    const bgLayer = stage.findOne('#background-layer') as Konva.Layer;
+    const whiteRect = new Konva.Rect({
+      x: exportArea.x,
+      y: exportArea.y,
+      width: exportArea.width,
+      height: exportArea.height,
+      fill: 'white',
+      listening: false,
+    });
+    
+    if (bgLayer) {
+      bgLayer.add(whiteRect);
+      whiteRect.moveToBottom();
+    }
+
     // Wait for React to re-render (hide transformers/handles)
-    await new Promise(resolve => setTimeout(resolve, 50));
+    await new Promise(resolve => setTimeout(resolve, 60));
 
-    // 2. High-Res Export
-    const dataURL = stage.toDataURL({ pixelRatio: 3 });
+    // 5. High-Res Export of the specific area
+    // We use the stage's current scale to determine the export area in screen coordinates
+    const currentScale = stage.scaleX();
+    const currentPos = stage.position();
 
-    // 3. Restore
+    const dataURL = stage.toDataURL({
+      x: exportArea.x * currentScale + currentPos.x,
+      y: exportArea.y * currentScale + currentPos.y,
+      width: exportArea.width * currentScale,
+      height: exportArea.height * currentScale,
+      pixelRatio: Math.max(1, 3 / currentScale), // Ensure high resolution even if zoomed out
+    });
+
+    // 6. Restore state and cleanup
+    whiteRect.destroy();
     useStore.getState().setGridVisible(wasGridVisible);
     useStore.getState().setSelectedId(selectedId);
     useStore.getState().setSelectedIds(selectedIds);
@@ -360,9 +421,10 @@ export const Canvas: React.FC = () => {
     useStore.getState().setSelectedDimensionId(selectedDimensionId);
     useStore.getState().setSelectedAttachmentId(selectedAttachmentId);
 
-    // Trigger download
+    // 7. Trigger download
     const link = document.createElement('a');
-    link.download = `${useStore.getState().projectName || 'project'}.png`;
+    const projectName = useStore.getState().projectName || 'project';
+    link.download = `${projectName.trim().replace(/\s+/g, '-')}.png`;
     link.href = dataURL;
     document.body.appendChild(link);
     link.click();
@@ -373,7 +435,7 @@ export const Canvas: React.FC = () => {
     const stage = stageRef.current;
     if (!stage) return;
 
-    // 1. Grid Exclusions & Selection Exclusions
+    // 1. Save current state and selection
     const wasGridVisible = useStore.getState().gridVisible;
     const selectedId = useStore.getState().selectedId;
     const selectedIds = useStore.getState().selectedIds;
@@ -381,7 +443,7 @@ export const Canvas: React.FC = () => {
     const selectedDimensionId = useStore.getState().selectedDimensionId;
     const selectedAttachmentId = useStore.getState().selectedAttachmentId;
 
-    // Temporarily hide things
+    // 2. Hide UI elements
     useStore.getState().setGridVisible(false);
     useStore.getState().setSelectedId(null);
     useStore.getState().setSelectedIds([]);
@@ -389,13 +451,70 @@ export const Canvas: React.FC = () => {
     useStore.getState().setSelectedDimensionId(null);
     useStore.getState().setSelectedAttachmentId(null);
 
+    // 3. Calculate Bounding Box
+    const { rooms, furniture, dimensions: savedDimensions } = useStore.getState();
+    const allPoints: { x: number; y: number }[] = [];
+    rooms.forEach(r => allPoints.push(...r.points));
+    furniture.forEach(f => {
+      const vertices = getFurnitureVertices(f);
+      allPoints.push(...vertices);
+    });
+    savedDimensions.forEach(d => {
+      allPoints.push(d.p1);
+      allPoints.push(d.p2);
+    });
+
+    if (allPoints.length === 0) {
+      useStore.getState().setGridVisible(wasGridVisible);
+      return;
+    }
+
+    const minX = Math.min(...allPoints.map(p => p.x));
+    const minY = Math.min(...allPoints.map(p => p.y));
+    const maxX = Math.max(...allPoints.map(p => p.x));
+    const maxY = Math.max(...allPoints.map(p => p.y));
+
+    const padding = 50;
+    const exportArea = {
+      x: minX - padding,
+      y: minY - padding,
+      width: (maxX - minX) + padding * 2,
+      height: (maxY - minY) + padding * 2
+    };
+
+    // 4. Temporarily add white background
+    const bgLayer = stage.findOne('#background-layer') as Konva.Layer;
+    const whiteRect = new Konva.Rect({
+      x: exportArea.x,
+      y: exportArea.y,
+      width: exportArea.width,
+      height: exportArea.height,
+      fill: 'white',
+      listening: false,
+    });
+    
+    if (bgLayer) {
+      bgLayer.add(whiteRect);
+      whiteRect.moveToBottom();
+    }
+
     // Wait for React to re-render
-    await new Promise(resolve => setTimeout(resolve, 50));
+    await new Promise(resolve => setTimeout(resolve, 60));
 
-    // 2. High-Res Export
-    const dataURL = stage.toDataURL({ pixelRatio: 3 });
+    // 5. High-Res Export
+    const currentScale = stage.scaleX();
+    const currentPos = stage.position();
 
-    // 3. Restore
+    const dataURL = stage.toDataURL({
+      x: exportArea.x * currentScale + currentPos.x,
+      y: exportArea.y * currentScale + currentPos.y,
+      width: exportArea.width * currentScale,
+      height: exportArea.height * currentScale,
+      pixelRatio: Math.max(1, 3 / currentScale),
+    });
+
+    // 6. Restore
+    whiteRect.destroy();
     useStore.getState().setGridVisible(wasGridVisible);
     useStore.getState().setSelectedId(selectedId);
     useStore.getState().setSelectedIds(selectedIds);
@@ -403,7 +522,7 @@ export const Canvas: React.FC = () => {
     useStore.getState().setSelectedDimensionId(selectedDimensionId);
     useStore.getState().setSelectedAttachmentId(selectedAttachmentId);
 
-    // 4. Print Logic
+    // 7. Print Logic
     const iframe = document.createElement('iframe');
     iframe.style.position = 'fixed';
     iframe.style.right = '0';
