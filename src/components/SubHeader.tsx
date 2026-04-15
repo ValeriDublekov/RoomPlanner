@@ -15,7 +15,9 @@ export const SubHeader: React.FC = () => {
     setSnapToImage,
     wallThickness,
     setWallThickness,
-    setShow3d
+    setShow3d,
+    showAutoDimensions,
+    setShowAutoDimensions
   } = useStore();
 
   return (
@@ -75,6 +77,16 @@ export const SubHeader: React.FC = () => {
                 className="w-3.5 h-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
               />
               <span className="text-[10px] font-bold text-slate-600 uppercase tracking-wider group-hover:text-slate-900">Snap Grid (S)</span>
+            </label>
+
+            <label className="flex items-center gap-2 cursor-pointer group">
+              <input
+                type="checkbox"
+                checked={showAutoDimensions}
+                onChange={(e) => setShowAutoDimensions(e.target.checked)}
+                className="w-3.5 h-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+              />
+              <span className="text-[10px] font-bold text-slate-600 uppercase tracking-wider group-hover:text-slate-900">Auto Dim</span>
             </label>
 
             {activeLayer === 'room' && (

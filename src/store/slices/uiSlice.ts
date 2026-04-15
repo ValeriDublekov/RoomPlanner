@@ -11,6 +11,7 @@ export interface UISlice {
   snapToGrid: boolean;
   snapToImage: boolean;
   gridVisible: boolean;
+  showAutoDimensions: boolean;
   isAltPressed: boolean;
   edgeMap: EdgeMap | null;
   show3d: boolean;
@@ -33,6 +34,7 @@ export interface UISlice {
   setSnapToGrid: (enabled: boolean) => void;
   setSnapToImage: (enabled: boolean) => void;
   setGridVisible: (visible: boolean) => void;
+  setShowAutoDimensions: (visible: boolean) => void;
   setIsAltPressed: (pressed: boolean) => void;
   setEdgeMap: (map: EdgeMap | null) => void;
   setShow3d: (show: boolean) => void;
@@ -54,6 +56,7 @@ export const createUISlice: StateCreator<AppState, [], [], UISlice> = (set, get)
   snapToGrid: true,
   snapToImage: true,
   gridVisible: true,
+  showAutoDimensions: false,
   isAltPressed: false,
   edgeMap: null,
   show3d: false,
@@ -76,6 +79,7 @@ export const createUISlice: StateCreator<AppState, [], [], UISlice> = (set, get)
   setSnapToGrid: (snapToGrid) => set({ snapToGrid }),
   setSnapToImage: (snapToImage) => set({ snapToImage }),
   setGridVisible: (gridVisible) => set({ gridVisible }),
+  setShowAutoDimensions: (showAutoDimensions) => set({ showAutoDimensions }),
   setIsAltPressed: (isAltPressed) => set({ isAltPressed }),
   setEdgeMap: (edgeMap) => set({ edgeMap }),
   setShow3d: (show3d) => set({ show3d }),

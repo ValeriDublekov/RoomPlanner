@@ -13,7 +13,7 @@ export interface RoomObject {
   defaultWallColor?: string;
 }
 
-export type FurnitureType = 'bed' | 'desk' | 'wardrobe' | 'dresser' | 'chair' | 'shelf' | 'electronics' | 'table' | 'sofa' | 'armchair' | 'nightstand' | 'toilet' | 'bathtub' | 'generic';
+export type FurnitureType = 'bed' | 'desk' | 'wardrobe' | 'dresser' | 'chair' | 'shelf' | 'electronics' | 'table' | 'sofa' | 'armchair' | 'nightstand' | 'toilet' | 'bathtub' | 'light' | 'generic';
 
 export interface FurnitureObject {
   id: string;
@@ -33,6 +33,7 @@ export interface FurnitureObject {
   svgPath?: string;
   catalogId?: string;
   hideStand?: boolean; // For electronics/TV
+  showLabel?: boolean; // Explicitly show name label
   children?: FurnitureObject[]; // For groups
 }
 

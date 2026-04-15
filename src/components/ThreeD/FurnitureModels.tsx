@@ -389,6 +389,42 @@ export const Table3D: React.FC<ModelProps & { isRound?: boolean }> = ({ width, d
   );
 };
 
+export const Light3D: React.FC<ModelProps> = ({ width, depth, height, color }) => {
+  return (
+    <group>
+      {/* Base */}
+      <mesh position={[width / 2, 2, depth / 2]} castShadow receiveShadow>
+        <cylinderGeometry args={[width * 0.2, width * 0.25, 4, 16]} />
+        <meshStandardMaterial color="#334155" metalness={0.8} roughness={0.2} />
+      </mesh>
+      {/* Stem */}
+      <mesh position={[width / 2, height / 2, depth / 2]} castShadow receiveShadow>
+        <cylinderGeometry args={[2, 2, height, 8]} />
+        <meshStandardMaterial color="#334155" metalness={0.8} roughness={0.2} />
+      </mesh>
+      {/* Shade */}
+      <mesh position={[width / 2, height - 10, depth / 2]} castShadow receiveShadow>
+        <cylinderGeometry args={[width * 0.4, width * 0.5, 20, 16, 1, true]} />
+        <meshStandardMaterial color={color} side={2} transparent opacity={0.9} />
+      </mesh>
+      {/* Light Source (Visual) */}
+      <mesh position={[width / 2, height - 10, depth / 2]}>
+        <sphereGeometry args={[5, 16, 16]} />
+        <meshStandardMaterial color="#fff" emissive="#fff" emissiveIntensity={2} />
+      </mesh>
+      {/* Actual PointLight */}
+      <pointLight 
+        position={[width / 2, height - 10, depth / 2]} 
+        intensity={1.5} 
+        distance={500} 
+        decay={2} 
+        castShadow 
+        shadow-mapSize={[1024, 1024]}
+      />
+    </group>
+  );
+};
+
 export const GenericFurniture3D: React.FC<ModelProps> = ({ width, depth, height, color }) => (
   <mesh position={[width / 2, height / 2, depth / 2]} castShadow receiveShadow>
     <boxGeometry args={[width, height, depth]} />

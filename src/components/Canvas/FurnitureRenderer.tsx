@@ -132,23 +132,45 @@ export const FurnitureRenderer: React.FC<FurnitureRendererProps> = ({
       )}
 
       {/* Dimensions Text */}
-      {(() => {
+      {(shape.showLabel || isSelected) && (() => {
         const normRot = (shape.rotation % 360 + 360) % 360;
         let textRotation = 0;
         if (normRot > 90 && normRot <= 270) {
           textRotation = 180;
         }
 
+        const labelText = `${shape.name}\n${(shape.width / pixelsPerCm).toFixed(0)} x ${(shape.height / pixelsPerCm).toFixed(0)} cm`;
+        const fontSize = 10 / scale;
+        const padding = 4 / scale;
+        
+        // Approximate dimensions
+        const lines = labelText.split('\n');
+        const maxChars = Math.max(...lines.map(l => l.length));
+        const approxWidth = (maxChars * 6 + padding * 2) / scale;
+        const approxHeight = (lines.length * fontSize * 1.2 + padding * 2);
+
         return (
           <Group x={shape.width / 2} y={shape.height / 2} rotation={textRotation}>
+            <Rect
+              x={-approxWidth / 2}
+              y={-approxHeight / 2}
+              width={approxWidth}
+              height={approxHeight}
+              fill="white"
+              opacity={0.8}
+              cornerRadius={4 / scale}
+              listening={false}
+            />
             <Text
-              text={`${shape.name}\n${(shape.width / pixelsPerCm).toFixed(0)} x ${(shape.height / pixelsPerCm).toFixed(0)} cm`}
-              width={shape.width * 0.9}
-              offsetX={shape.width * 0.45}
-              offsetY={10 / scale}
+              text={labelText}
+              x={-approxWidth / 2}
+              y={-approxHeight / 2}
+              width={approxWidth}
+              height={approxHeight}
               align="center"
-              fontSize={10 / scale}
-              fill="#64748b"
+              verticalAlign="middle"
+              fontSize={fontSize}
+              fill={isSelected ? "#4f46e5" : "#64748b"}
               fontStyle="bold"
               listening={false}
             />
