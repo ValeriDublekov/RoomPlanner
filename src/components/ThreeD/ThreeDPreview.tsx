@@ -19,7 +19,7 @@ const SceneBackground = ({ isExporting }: { isExporting: boolean }) => {
   return null;
 };
 
-const Furniture = ({ item, pixelsPerCm }: { item: FurnitureObject, pixelsPerCm: number }) => {
+const Furniture = ({ item, pixelsPerCm, isChild = false, parentWidth = 0, parentDepth = 0 }: { item: FurnitureObject, pixelsPerCm: number, isChild?: boolean, parentWidth?: number, parentDepth?: number }) => {
   const width = item.width / pixelsPerCm;
   const depth = item.height / pixelsPerCm;
   const height = (item.height3d || 75 * pixelsPerCm) / pixelsPerCm;
@@ -27,15 +27,13 @@ const Furniture = ({ item, pixelsPerCm }: { item: FurnitureObject, pixelsPerCm: 
   
   const rotationRad = -(item.rotation * Math.PI) / 180;
 
-  if (item.type === 'group' && item.children) {
-    return (
-      <group position={[item.x / pixelsPerCm, elevation, item.y / pixelsPerCm]} rotation={[0, rotationRad, 0]}>
-        {item.children.map(child => (
-          <Furniture key={child.id} item={child} pixelsPerCm={pixelsPerCm} />
-        ))}
-      </group>
-    );
-  }
+  // Calculate position relative to parent center if it's a child, otherwise world position
+  const centerX = isChild 
+    ? (item.x + item.width / 2 - parentWidth / 2) / pixelsPerCm
+    : (item.x + item.width / 2) / pixelsPerCm;
+  const centerZ = isChild
+    ? -(item.y + item.height / 2 - parentDepth / 2) / pixelsPerCm
+    : (item.y + item.height / 2) / pixelsPerCm;
 
   const renderFurniture = () => {
     const props = { 
@@ -53,7 +51,7 @@ const Furniture = ({ item, pixelsPerCm }: { item: FurnitureObject, pixelsPerCm: 
       case 'dresser': return <Dresser3D {...props} />;
       case 'chair': return <Chair3D {...props} />;
       case 'shelf': return <Shelf3D {...props} />;
-      case 'electronics': return <Electronics3D {...props} />;
+      case 'electronics': return <Electronics3D {...props} hideStand={item.hideStand} />;
       case 'table': return <Table3D {...props} isRound={item.type === 'circle'} />;
       case 'sofa': return <Sofa3D {...props} />;
       case 'armchair': return <Sofa3D {...props} width={props.width} depth={props.depth} />;
@@ -61,7 +59,6 @@ const Furniture = ({ item, pixelsPerCm }: { item: FurnitureObject, pixelsPerCm: 
       case 'toilet': return <Toilet3D {...props} />;
       case 'bathtub': return <Bathtub3D {...props} />;
       default: {
-        // Fallback for catalogId if furnitureType is still generic
         const cid = item.catalogId || '';
         if (cid.includes('sofa')) return <Sofa3D {...props} />;
         if (cid.includes('nightstand')) return <Nightstand3D {...props} />;
@@ -73,9 +70,31 @@ const Furniture = ({ item, pixelsPerCm }: { item: FurnitureObject, pixelsPerCm: 
     }
   };
 
+  if (item.type === 'group' && item.children) {
+    return (
+      <group position={[centerX, elevation, centerZ]} rotation={[0, rotationRad, 0]}>
+        {item.children.map(child => (
+          <Furniture 
+            key={child.id} 
+            item={child} 
+            pixelsPerCm={pixelsPerCm} 
+            isChild={true} 
+            parentWidth={item.width} 
+            parentDepth={item.height} 
+          />
+        ))}
+      </group>
+    );
+  }
+
   return (
-    <group position={[item.x / pixelsPerCm, elevation, item.y / pixelsPerCm]} rotation={[0, rotationRad, 0]}>
-      {renderFurniture()}
+    <group 
+      position={[centerX, elevation, centerZ]} 
+      rotation={[0, rotationRad, 0]}
+    >
+      <group position={[-width / 2, 0, -depth / 2]}>
+        {renderFurniture()}
+      </group>
     </group>
   );
 };

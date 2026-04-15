@@ -32,6 +32,7 @@ export interface FurnitureObject {
   secondaryColor?: string;
   svgPath?: string;
   catalogId?: string;
+  hideStand?: boolean; // For electronics/TV
   children?: FurnitureObject[]; // For groups
 }
 

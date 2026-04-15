@@ -1,6 +1,7 @@
 import { StateCreator } from 'zustand';
 import { AppState } from '../../store';
 import { HistoryEntry, Vector2d } from '../../types';
+import { rotatePoint } from '../../lib/geometry';
 
 export interface ProjectSlice {
   projectName: string;
@@ -28,6 +29,7 @@ export interface ProjectSlice {
   loadState: (data: any) => void;
   saveProject: () => Promise<void>;
   newProject: () => void;
+  version: number;
 }
 
 export const createProjectSlice: StateCreator<AppState, [], [], ProjectSlice> = (set, get) => ({
@@ -42,6 +44,7 @@ export const createProjectSlice: StateCreator<AppState, [], [], ProjectSlice> = 
   calibrationPoints: null,
   tempCalibrationDist: null,
   history: [],
+  version: 2,
 
   setPixelsPerCm: (pixelsPerCm) => set({ pixelsPerCm }),
   setProjectName: (projectName) => set({ projectName }),
@@ -87,6 +90,34 @@ export const createProjectSlice: StateCreator<AppState, [], [], ProjectSlice> = 
   loadState: (data) => {
     if (!data) return;
     
+    // Migration for center-based rotation (Version 2)
+    const currentVersion = data.version || 1;
+    
+    const migrateFurniture = (items: any[]): any[] => {
+      return items.map((f: any) => {
+        let updated = { ...f };
+        if (f.children) {
+          updated.children = migrateFurniture(f.children);
+        }
+        
+        if (currentVersion < 2 && f.rotation !== 0) {
+          const center = rotatePoint(
+            { x: f.width / 2, y: f.height / 2 },
+            { x: 0, y: 0 },
+            f.rotation
+          );
+          updated.x = f.x + center.x - f.width / 2;
+          updated.y = f.y + center.y - f.height / 2;
+        }
+        return updated;
+      });
+    };
+
+    let furniture = data.furniture || [];
+    if (currentVersion < 2) {
+      furniture = migrateFurniture(furniture);
+    }
+
     // Ensure all attachments have default curtain colors if missing
     const wallAttachments = (data.wallAttachments || []).map((a: any) => ({
       ...a,
@@ -96,7 +127,9 @@ export const createProjectSlice: StateCreator<AppState, [], [], ProjectSlice> = 
 
     set({
       ...data,
+      furniture,
       wallAttachments,
+      version: 2,
       history: [], // Clear history on load
       selectedId: null,
       selectedRoomId: null,
@@ -108,6 +141,7 @@ export const createProjectSlice: StateCreator<AppState, [], [], ProjectSlice> = 
   saveProject: async () => {
     const state = get();
     const data = {
+      version: 2,
       projectName: state.projectName,
       pixelsPerCm: state.pixelsPerCm,
       rooms: state.rooms,

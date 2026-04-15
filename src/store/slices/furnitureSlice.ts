@@ -121,20 +121,29 @@ export const createFurnitureSlice: StateCreator<AppState, [], [], FurnitureSlice
 
     state.saveHistory();
 
+    const groupCenter = { x: group.x + group.width / 2, y: group.y + group.height / 2 };
+
     const newItems = group.children.map(child => {
-      const rad = (group.rotation * Math.PI) / 180;
-      const cos = Math.cos(rad);
-      const sin = Math.sin(rad);
-      const rx = child.x;
-      const ry = child.y;
-      const rotatedX = rx * cos - ry * sin;
-      const rotatedY = rx * sin + ry * cos;
+      // Child center relative to group center
+      const childCenterLocal = {
+        x: child.x + child.width / 2 - group.width / 2,
+        y: child.y + child.height / 2 - group.height / 2
+      };
+      
+      // Rotate child center by group rotation
+      const rotatedCenter = rotatePoint(childCenterLocal, { x: 0, y: 0 }, group.rotation);
+      
+      // World position of child center
+      const worldCenter = {
+        x: groupCenter.x + rotatedCenter.x,
+        y: groupCenter.y + rotatedCenter.y
+      };
       
       return {
         ...child,
         id: Math.random().toString(36).substr(2, 9),
-        x: group.x + rotatedX,
-        y: group.y + rotatedY,
+        x: worldCenter.x - child.width / 2,
+        y: worldCenter.y - child.height / 2,
         rotation: (child.rotation + group.rotation) % 360
       };
     });

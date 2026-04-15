@@ -26,38 +26,21 @@ export const FurnitureRenderer: React.FC<FurnitureRendererProps> = ({
         {shape.children?.map((child) => (
           <Group
             key={child.id}
-            x={child.x}
-            y={child.y}
+            x={child.x + child.width / 2}
+            y={child.y + child.height / 2}
             width={child.width}
             height={child.height}
+            offsetX={child.width / 2}
+            offsetY={child.height / 2}
             rotation={child.rotation}
           >
-            <Rect
-              width={child.width}
-              height={child.height}
-              fill={child.color || "#f8fafc"}
-              stroke="#cbd5e1"
-              strokeWidth={1 / scale}
-              cornerRadius={4 / scale}
+            <FurnitureRenderer
+              shape={child}
+              isSelected={false}
+              isColliding={false}
+              scale={scale}
+              pixelsPerCm={pixelsPerCm}
             />
-            {child.svgPath && (() => {
-              const tempPath = new Konva.Path({ data: child.svgPath });
-              const pathRect = tempPath.getSelfRect();
-              const sX = child.width / (pathRect.width || 100);
-              const sY = child.height / (pathRect.height || 100);
-              return (
-                <Path
-                  data={child.svgPath}
-                  fill={child.color || "#f8fafc"}
-                  stroke="#64748b"
-                  strokeWidth={1 / (scale * sX)}
-                  scaleX={sX}
-                  scaleY={sY}
-                  x={-pathRect.x * sX}
-                  y={-pathRect.y * sY}
-                />
-              );
-            })()}
           </Group>
         ))}
         <Rect

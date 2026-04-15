@@ -113,6 +113,24 @@ export const FurnitureEditor: React.FC<FurnitureEditorProps> = ({
         </div>
       </div>
 
+      {selectedFurniture.furnitureType === 'electronics' && (
+        <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
+          <input
+            type="checkbox"
+            id="hideStand"
+            checked={selectedFurniture.hideStand || false}
+            onChange={(e) => {
+              saveHistory();
+              updateFurniture(selectedFurniture.id, { hideStand: e.target.checked });
+            }}
+            className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500"
+          />
+          <label htmlFor="hideStand" className="text-xs font-bold text-slate-700 uppercase tracking-wider cursor-pointer">
+            Wall Mounted (Hide Stand)
+          </label>
+        </div>
+      )}
+
       <div className="space-y-1.5">
         <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Main Color / Material</label>
         <div className="flex gap-2 flex-wrap">

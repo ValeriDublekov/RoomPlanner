@@ -324,23 +324,28 @@ export const Shelf3D: React.FC<ModelProps> = ({ width, depth, height, color }) =
   );
 };
 
-export const Electronics3D: React.FC<ModelProps> = ({ width, depth, height, color }) => {
+export const Electronics3D: React.FC<ModelProps & { hideStand?: boolean }> = ({ width, depth, height, color, hideStand }) => {
+  const standHeight = hideStand ? 0 : 10;
   return (
     <group>
       {/* Screen */}
-      <mesh position={[width / 2, height / 2 + 10, depth / 2]} castShadow receiveShadow>
-        <boxGeometry args={[width, height - 10, 2]} />
+      <mesh position={[width / 2, (height - standHeight) / 2 + standHeight, depth / 2]} castShadow receiveShadow>
+        <boxGeometry args={[width, height - standHeight, 2]} />
         <meshStandardMaterial color="#0f172a" roughness={0.1} metalness={0.8} />
       </mesh>
       {/* Stand */}
-      <mesh position={[width / 2, 5, depth / 2]} castShadow receiveShadow>
-        <boxGeometry args={[width * 0.3, 10, 2]} />
-        <meshStandardMaterial color="#334155" roughness={0.5} />
-      </mesh>
-      <mesh position={[width / 2, 1, depth / 2]} castShadow receiveShadow>
-        <boxGeometry args={[width * 0.4, 2, depth]} />
-        <meshStandardMaterial color="#334155" roughness={0.5} />
-      </mesh>
+      {!hideStand && (
+        <>
+          <mesh position={[width / 2, 5, depth / 2]} castShadow receiveShadow>
+            <boxGeometry args={[width * 0.3, 10, 2]} />
+            <meshStandardMaterial color="#334155" roughness={0.5} />
+          </mesh>
+          <mesh position={[width / 2, 1, depth / 2]} castShadow receiveShadow>
+            <boxGeometry args={[width * 0.4, 2, depth]} />
+            <meshStandardMaterial color="#334155" roughness={0.5} />
+          </mesh>
+        </>
+      )}
     </group>
   );
 };
