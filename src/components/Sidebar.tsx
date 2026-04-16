@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { MousePointer2, Pencil, Square, Ruler, DoorOpen, Layout, Circle, BookPlus } from 'lucide-react';
+import { MousePointer2, Pencil, Square, Ruler, DoorOpen, Layout, Circle, BookPlus, LogIn, LogOut, User as UserIcon, Cloud, Download, Upload } from 'lucide-react';
 import { useStore } from '../store';
 import { ToolButton } from './Sidebar/ToolButton';
 import { FileActions } from './Sidebar/FileActions';
 import { CatalogModal } from './Sidebar/CatalogModal';
+import { AlertModal } from './Dialogs/AlertModal';
+import { loginWithGoogle, logout } from '../firebase';
 
 const tools = [
   { id: 'select', icon: MousePointer2, label: 'Select (V)' },
@@ -37,35 +39,12 @@ export const Sidebar: React.FC = () => {
     setSelectedRoomId,
     setSelectedDimensionId,
     setSelectedAttachmentId,
+    currentUser,
+    isAuthLoading,
   } = useStore();
 
   const [isCatalogOpen, setIsCatalogOpen] = useState(false);
-
-  const handleLoad = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      try {
-        const json = JSON.parse(event.target?.result as string);
-        loadState(json);
-        
-        // Auto-fit after load
-        setTimeout(() => {
-          const canvas = document.querySelector('.flex-1.relative');
-          if (canvas) {
-            useStore.getState().fitToScreen(canvas.clientWidth, canvas.clientHeight);
-          }
-        }, 100);
-      } catch (err) {
-        console.error('Failed to load room plan:', err);
-        alert('Invalid room plan file.');
-      }
-    };
-    reader.readAsText(file);
-    e.target.value = '';
-  };
+  const [alertInfo, setAlertInfo] = useState<{ isOpen: boolean; title: string; message: string }>({ isOpen: false, title: '', message: '' });
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -81,6 +60,12 @@ export const Sidebar: React.FC = () => {
   return (
     <aside className="w-64 bg-white border-r border-slate-200 flex flex-col h-full shadow-sm z-10">
       <CatalogModal isOpen={isCatalogOpen} onClose={() => setIsCatalogOpen(false)} />
+      <AlertModal
+        isOpen={alertInfo.isOpen}
+        title={alertInfo.title}
+        message={alertInfo.message}
+        onClose={() => setAlertInfo({ ...alertInfo, isOpen: false })}
+      />
       
       <nav className="flex-1 overflow-y-auto px-4 py-6 space-y-8">
         <div>
@@ -127,9 +112,47 @@ export const Sidebar: React.FC = () => {
       </nav>
 
       <div className="p-4 border-t border-slate-100 space-y-4 bg-slate-50/50">
+        {/* Auth Section */}
+        <div className="px-2 pb-2">
+          {isAuthLoading ? (
+            <div className="h-10 flex items-center justify-center">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-600"></div>
+            </div>
+          ) : currentUser ? (
+            <div className="space-y-3">
+              <div className="flex items-center gap-3 px-2">
+                {currentUser.photoURL ? (
+                  <img src={currentUser.photoURL} alt="" className="w-8 h-8 rounded-full border border-slate-200" referrerPolicy="no-referrer" />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600">
+                    <UserIcon size={16} />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-bold text-slate-900 truncate">{currentUser.displayName || 'User'}</p>
+                  <p className="text-[10px] text-slate-500 truncate">{currentUser.email}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => logout()}
+                className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-200 transition-colors border border-slate-200 bg-white"
+              >
+                <LogOut size={14} />
+                Logout
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => loginWithGoogle()}
+              className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-bold transition-all bg-white text-slate-700 hover:bg-slate-50 border border-slate-200 shadow-sm"
+            >
+              <LogIn size={18} className="text-indigo-600" />
+              Login with Google
+            </button>
+          )}
+        </div>
+
         <FileActions
-          onSave={saveProject}
-          onLoad={handleLoad}
           onImageUpload={handleImageUpload}
           backgroundImage={backgroundImage}
           backgroundVisible={backgroundVisible}
@@ -137,7 +160,6 @@ export const Sidebar: React.FC = () => {
           backgroundOpacity={backgroundOpacity}
           setBackgroundOpacity={setBackgroundOpacity}
           removeBackgroundImage={() => setBackgroundImage(null)}
-          hideGlobalActions={true}
           hideImageActions={activeLayer !== 'blueprint'}
         />
 

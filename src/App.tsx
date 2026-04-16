@@ -3,6 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { useEffect } from 'react';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from './firebase';
 import { Sidebar } from './components/Sidebar';
 import { RightSidebar } from './components/RightSidebar';
 import { Canvas } from './components/Canvas';
@@ -13,6 +16,16 @@ import { useStore } from './store';
 
 export default function App() {
   const show3d = useStore(state => state.show3d);
+  const setCurrentUser = useStore(state => state.setCurrentUser);
+  const setIsAuthLoading = useStore(state => state.setIsAuthLoading);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setCurrentUser(user);
+      setIsAuthLoading(false);
+    });
+    return () => unsubscribe();
+  }, [setCurrentUser, setIsAuthLoading]);
 
   return (
     <div className="flex h-screen w-full bg-slate-100 overflow-hidden font-sans antialiased text-slate-900">

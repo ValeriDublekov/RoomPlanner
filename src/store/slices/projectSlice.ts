@@ -2,9 +2,13 @@ import { StateCreator } from 'zustand';
 import { AppState } from '../../store';
 import { HistoryEntry, Vector2d } from '../../types';
 import { rotatePoint } from '../../lib/geometry';
+import { doc, setDoc, addDoc, collection, serverTimestamp, query, where, getDocs } from 'firebase/firestore';
+import { db } from '../../firebase';
 
 export interface ProjectSlice {
+  projectId: string | null;
   projectName: string;
+  cloudName: string | null;
   pixelsPerCm: number;
   backgroundImage: string | null;
   backgroundVisible: boolean;
@@ -27,13 +31,17 @@ export interface ProjectSlice {
   undo: () => void;
   saveHistory: () => void;
   loadState: (data: any) => void;
-  saveProject: () => Promise<void>;
+  saveProject: (forceOverwriteId?: string, nameOverride?: string) => Promise<void>;
+  saveProjectAs: (nameOverride?: string) => Promise<void>;
   newProject: () => void;
+  isSaving: boolean;
   version: number;
 }
 
 export const createProjectSlice: StateCreator<AppState, [], [], ProjectSlice> = (set, get) => ({
+  projectId: null,
   projectName: 'New Project',
+  cloudName: null,
   pixelsPerCm: 1,
   backgroundImage: null,
   backgroundVisible: true,
@@ -44,6 +52,7 @@ export const createProjectSlice: StateCreator<AppState, [], [], ProjectSlice> = 
   calibrationPoints: null,
   tempCalibrationDist: null,
   history: [],
+  isSaving: false,
   version: 2,
 
   setPixelsPerCm: (pixelsPerCm) => set({ pixelsPerCm }),
@@ -127,6 +136,7 @@ export const createProjectSlice: StateCreator<AppState, [], [], ProjectSlice> = 
 
     set({
       ...data,
+      projectId: null, // Reset projectId when loading from a local file
       furniture,
       wallAttachments,
       version: 2,
@@ -138,9 +148,11 @@ export const createProjectSlice: StateCreator<AppState, [], [], ProjectSlice> = 
     });
   },
 
-  saveProject: async () => {
+  saveProject: async (forceOverwriteId?: string, nameOverride?: string) => {
     const state = get();
-    const data = {
+    const { currentUser } = state;
+
+    const projectData = {
       version: 2,
       projectName: state.projectName,
       pixelsPerCm: state.pixelsPerCm,
@@ -156,35 +168,114 @@ export const createProjectSlice: StateCreator<AppState, [], [], ProjectSlice> = 
       backgroundRotation: state.backgroundRotation,
       backgroundOpacity: state.backgroundOpacity,
     };
-    
-    const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${state.projectName || 'project'}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+
+    const jsonString = JSON.stringify(projectData);
+
+    // If user is logged in, save to Firestore
+    if (currentUser) {
+      set({ isSaving: true });
+      try {
+        let targetId = forceOverwriteId || state.projectId;
+        const nameToSave = nameOverride || state.cloudName || state.projectName || 'Untitled Project';
+
+        if (targetId) {
+          // Update existing project
+          await setDoc(doc(db, 'projects', targetId), {
+            userId: currentUser.uid,
+            name: nameToSave,
+            data: jsonString,
+            updatedAt: serverTimestamp(),
+          }, { merge: true });
+          
+          set({ 
+            projectId: targetId, 
+            cloudName: nameToSave 
+          });
+          console.log('Project updated in Firestore');
+        } else {
+          // New project
+          const docRef = await addDoc(collection(db, 'projects'), {
+            userId: currentUser.uid,
+            name: nameToSave,
+            data: jsonString,
+            updatedAt: serverTimestamp(),
+            createdAt: serverTimestamp(),
+          });
+          
+          set({ 
+            projectId: docRef.id, 
+            cloudName: nameToSave 
+          });
+          console.log('New project created in Firestore:', docRef.id);
+        }
+        set({ isSaving: false });
+        return;
+      } catch (error) {
+        console.error('Error saving to Firestore:', error);
+        set({ isSaving: false });
+      }
+    }
+
+    // Fallback or not logged in: Local download
+    try {
+      const blob = new Blob([jsonString], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const downloadName = nameOverride || state.projectName || 'project';
+      a.download = `${downloadName}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Error during local save:', err);
+    }
+  },
+
+  saveProjectAs: async (nameOverride?: string) => {
+    // Clear projectId to force the "new project" logic in saveProject
+    set({ projectId: null });
+    await get().saveProject(undefined, nameOverride);
   },
 
   newProject: () => {
-    if (confirm('Are you sure you want to start a new project? All unsaved changes will be lost.')) {
-      set({
-        projectName: 'New Project',
-        rooms: [],
-        furniture: [],
-        dimensions: [],
-        wallAttachments: [],
-        roomPoints: [],
-        measurePoints: [],
-        history: [],
-        backgroundImage: null,
-        selectedId: null,
-        selectedRoomId: null,
-        selectedAttachmentId: null,
-        selectedDimensionId: null,
-        scale: 1,
-        position: { x: 0, y: 0 }
-      });
-    }
+    set({
+      projectId: null,
+      projectName: 'New Project',
+      cloudName: null,
+      rooms: [],
+      furniture: [],
+      dimensions: [],
+      wallAttachments: [],
+      roomPoints: [],
+      measurePoints: [],
+      history: [],
+      backgroundImage: null,
+      selectedId: null,
+      selectedIds: [],
+      selectedRoomId: null,
+      selectedAttachmentId: null,
+      selectedDimensionId: null,
+      scale: 1,
+      position: { x: 0, y: 0 },
+      wallThickness: 20,
+      wallHeight: 250,
+      backgroundVisible: true,
+      backgroundOpacity: 0.5,
+      backgroundPosition: { x: 0, y: 0 },
+      backgroundScale: 1,
+      backgroundRotation: 0,
+      calibrationPoints: null,
+      tempCalibrationDist: null,
+      pixelsPerCm: 1,
+      mode: 'select',
+      activeLayer: 'furniture',
+      show3d: false,
+      selectedWallIndex: null,
+      dimensionInput: '',
+      lastMeasurement: null,
+      clipboard: null,
+    });
   },
 });

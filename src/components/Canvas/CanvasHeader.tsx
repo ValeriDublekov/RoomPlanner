@@ -1,7 +1,9 @@
 import React from 'react';
-import { Undo2, Download, Upload, Layout, FilePlus, RotateCcw, Grid, BookOpen, Box, Maximize } from 'lucide-react';
+import { Undo2, Download, Upload, Layout, FilePlus, RotateCcw, Grid, BookOpen, Box, Maximize, Cloud, Save } from 'lucide-react';
 import { useStore } from '../../store';
 import { UserManualModal } from '../UserManualModal';
+import { CloudLoadModal } from '../Sidebar/CloudLoadModal';
+import { SaveModal } from '../Sidebar/SaveModal';
 
 interface CanvasHeaderProps {
   onExport: () => void;
@@ -15,6 +17,7 @@ export const CanvasHeader: React.FC<CanvasHeaderProps> = ({ onExport, onPrint })
     saveProject,
     loadState,
     projectName,
+    cloudName,
     setProjectName,
     newProject,
     resetView,
@@ -23,39 +26,69 @@ export const CanvasHeader: React.FC<CanvasHeaderProps> = ({ onExport, onPrint })
     gridVisible,
     setGridVisible,
     setShow3d,
-    setPixelsPerCm
+    setPixelsPerCm,
+    currentUser
   } = useStore();
 
   const [showNewConfirm, setShowNewConfirm] = React.useState(false);
   const [showManual, setShowManual] = React.useState(false);
+  const [isCloudLoadOpen, setIsCloudLoadOpen] = React.useState(false);
+  const [isSaveModalOpen, setIsSaveModalOpen] = React.useState(false);
 
   const handleLoad = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.json';
-    input.onchange = (e: any) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        try {
-          const json = JSON.parse(event.target?.result as string);
-          loadState(json);
-          
-          // Auto-fit after load
-          setTimeout(() => {
-            const canvas = document.querySelector('.flex-1.relative');
-            if (canvas) {
-              fitToScreen(canvas.clientWidth, canvas.clientHeight);
-            }
-          }, 100);
-        } catch (err) {
-          console.error('Failed to load:', err);
-        }
+    if (currentUser) {
+      setIsCloudLoadOpen(true);
+    } else {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.json';
+      input.onchange = (e: any) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          try {
+            const json = JSON.parse(event.target?.result as string);
+            loadState(json);
+            
+            // Auto-fit after load
+            setTimeout(() => {
+              const canvas = document.querySelector('.flex-1.relative');
+              if (canvas) {
+                fitToScreen(canvas.clientWidth, canvas.clientHeight);
+              }
+            }, 100);
+          } catch (err) {
+            console.error('Failed to load:', err);
+          }
+        };
+        reader.readAsText(file);
       };
-      reader.readAsText(file);
-    };
-    input.click();
+      input.click();
+    }
+  };
+
+  const handleSave = () => {
+    if (currentUser) {
+      const state = useStore.getState();
+      if (state.projectId) {
+        // Already in cloud, save directly
+        saveProject();
+      } else {
+        // New project, show options
+        setIsSaveModalOpen(true);
+      }
+    } else {
+      saveProject();
+    }
+  };
+
+  const handleSaveAs = () => {
+    if (currentUser) {
+      setIsSaveModalOpen(true);
+    } else {
+      saveProject();
+    }
   };
 
   return (
@@ -65,13 +98,22 @@ export const CanvasHeader: React.FC<CanvasHeaderProps> = ({ onExport, onPrint })
           <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white shadow-sm">
             <Layout size={18} />
           </div>
-          <input
-            type="text"
-            value={projectName}
-            onChange={(e) => setProjectName(e.target.value)}
-            placeholder="Project Name"
-            className="text-sm font-bold text-slate-700 bg-transparent border-none p-0 focus:ring-0 outline-none w-64 placeholder:text-slate-300"
-          />
+          <div className="flex flex-col">
+            <input
+              type="text"
+              value={projectName}
+              onChange={(e) => setProjectName(e.target.value)}
+              placeholder="Project Name"
+              className="text-sm font-bold text-slate-700 bg-transparent border-none p-0 focus:ring-0 outline-none w-64 placeholder:text-slate-300"
+              title={cloudName ? `Filename: ${cloudName}` : 'Scale project'}
+            />
+            {cloudName && (
+              <div className="flex items-center gap-1 text-[9px] text-slate-400 font-bold tracking-wider">
+                <Cloud size={10} className="text-indigo-400" />
+                <span>File: {cloudName}</span>
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="h-8 w-px bg-slate-100" />
@@ -169,6 +211,8 @@ export const CanvasHeader: React.FC<CanvasHeaderProps> = ({ onExport, onPrint })
 
       <div className="flex items-center gap-3">
         <UserManualModal isOpen={showManual} onClose={() => setShowManual(false)} />
+        <CloudLoadModal isOpen={isCloudLoadOpen} onClose={() => setIsCloudLoadOpen(false)} />
+        <SaveModal isOpen={isSaveModalOpen} onClose={() => setIsSaveModalOpen(false)} />
         
         <div className="relative">
           {showNewConfirm && (
@@ -227,12 +271,28 @@ export const CanvasHeader: React.FC<CanvasHeaderProps> = ({ onExport, onPrint })
           Load
         </button>
         <button
-          onClick={saveProject}
-          className="flex items-center gap-2 px-5 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold hover:bg-indigo-700 transition-all shadow-md hover:shadow-lg active:scale-95 uppercase tracking-wider"
+          onClick={handleSave}
+          disabled={useStore.getState().isSaving}
+          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold hover:bg-indigo-700 transition-all shadow-md hover:shadow-lg active:scale-95 uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <Download size={16} />
-          Save
+          {useStore(state => state.isSaving) ? (
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+          ) : (
+            currentUser ? <Cloud size={16} /> : <Download size={16} />
+          )}
+          {useStore(state => state.isSaving) ? 'Saving...' : 'Save'}
         </button>
+
+        {currentUser && (
+          <button
+            onClick={handleSaveAs}
+            disabled={useStore.getState().isSaving}
+            className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-xl text-xs font-bold hover:bg-amber-600 transition-all shadow-md hover:shadow-lg active:scale-95 uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Save size={16} />
+            Save As
+          </button>
+        )}
       </div>
     </div>
   );

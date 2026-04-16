@@ -5,8 +5,9 @@ import { RoomSlice, createRoomSlice } from './store/slices/roomSlice';
 import { FurnitureSlice, createFurnitureSlice } from './store/slices/furnitureSlice';
 import { DimensionSlice, createDimensionSlice } from './store/slices/dimensionSlice';
 import { ProjectSlice, createProjectSlice } from './store/slices/projectSlice';
+import { AuthSlice, createAuthSlice } from './store/slices/authSlice';
 
-export type AppState = UISlice & RoomSlice & FurnitureSlice & DimensionSlice & ProjectSlice;
+export type AppState = UISlice & RoomSlice & FurnitureSlice & DimensionSlice & ProjectSlice & AuthSlice;
 
 export const useStore = create<AppState>()(
   persist(
@@ -16,10 +17,12 @@ export const useStore = create<AppState>()(
       ...createFurnitureSlice(...a),
       ...createDimensionSlice(...a),
       ...createProjectSlice(...a),
+      ...createAuthSlice(...a),
     }),
     {
       name: 'floor-plan-storage',
       partialize: (state) => ({
+        projectId: state.projectId,
         projectName: state.projectName,
         pixelsPerCm: state.pixelsPerCm,
         rooms: state.rooms,
