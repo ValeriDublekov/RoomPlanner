@@ -4,6 +4,8 @@ import { OrbitControls, Environment, ContactShadows } from '@react-three/drei';
 import * as THREE from 'three';
 import { useStore } from '../../store';
 import { FurnitureObject } from '../../types';
+import { FPVControls } from './FPVControls';
+import { Camera, MousePointer2, Box } from 'lucide-react';
 import { WallSegments } from './RoomElements';
 import { 
   Bed3D, Desk3D, Wardrobe3D, Dresser3D, Chair3D, 
@@ -103,6 +105,7 @@ const Furniture = ({ item, pixelsPerCm, isChild = false, parentWidth = 0, parent
 export const ThreeDPreview: React.FC = () => {
   const { rooms, furniture, pixelsPerCm, setShow3d, wallThickness, wallHeight, setWallHeight, wallAttachments } = useStore();
   const [isExporting, setIsExporting] = useState(false);
+  const [viewMode, setViewMode] = useState<'dollhouse' | 'first-person'>('dollhouse');
 
   const handleExport = async (isPrint = false) => {
     setIsExporting(true);
@@ -186,6 +189,26 @@ export const ThreeDPreview: React.FC = () => {
           <h2 className="text-white font-bold">3D Preview</h2>
         </div>
         <div className="flex items-center gap-3">
+          <div className="flex bg-slate-700/50 p-1 rounded-xl border border-slate-600 mr-2">
+            <button
+              onClick={() => setViewMode('dollhouse')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${
+                viewMode === 'dollhouse' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Box size={14} />
+              Dollhouse
+            </button>
+            <button
+              onClick={() => setViewMode('first-person')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${
+                viewMode === 'first-person' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Camera size={14} />
+              1st Person
+            </button>
+          </div>
           <button 
             onClick={() => handleExport(false)}
             className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-bold transition-all flex items-center gap-2"
@@ -213,14 +236,21 @@ export const ThreeDPreview: React.FC = () => {
         <Canvas 
           shadows
           gl={{ preserveDrawingBuffer: true }}
-          camera={{ position: [center.x + 400, 400, center.z + 400], fov: 45, near: 1, far: 10000 }}
+          camera={viewMode === 'dollhouse' 
+            ? { position: [center.x + 400, 400, center.z + 400], fov: 45, near: 1, far: 10000 }
+            : { position: [center.x, 160, center.z], fov: 60, near: 0.1, far: 10000 }
+          }
           onCreated={({ gl }) => {
             gl.setClearColor('#0f172a');
             gl.shadowMap.type = THREE.PCFShadowMap;
           }}
         >
           <SceneBackground isExporting={isExporting} />
-          <OrbitControls target={center} makeDefault />
+          {viewMode === 'dollhouse' ? (
+            <OrbitControls target={center} makeDefault />
+          ) : (
+            <FPVControls initialPosition={center} />
+          )}
           
           <ambientLight intensity={0.5} />
           <directionalLight 
@@ -288,20 +318,46 @@ export const ThreeDPreview: React.FC = () => {
             />
           </div>
 
-          <div className="bg-slate-800/80 backdrop-blur-md px-6 py-3 rounded-2xl border border-slate-700 text-white text-[10px] font-bold uppercase tracking-wider flex gap-6">
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 bg-indigo-500 rounded-full"></span>
-              Left Click: Rotate
+          {viewMode === 'dollhouse' ? (
+            <div className="bg-slate-800/80 backdrop-blur-md px-6 py-3 rounded-2xl border border-slate-700 text-white text-[10px] font-bold uppercase tracking-wider flex gap-6">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 bg-indigo-500 rounded-full"></span>
+                Left Click: Rotate
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 bg-indigo-500 rounded-full"></span>
+                Right Click: Pan
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 bg-indigo-500 rounded-full"></span>
+                Scroll: Zoom
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 bg-indigo-500 rounded-full"></span>
-              Right Click: Pan
+          ) : (
+            <div className="bg-slate-800/80 backdrop-blur-md px-6 py-3 rounded-2xl border border-slate-700 text-white text-[10px] font-bold uppercase tracking-wider flex flex-col gap-2 items-center">
+              <div className="flex gap-6">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 bg-indigo-500 rounded-full"></span>
+                  WASD / Arrows: Move
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 bg-indigo-500 rounded-full"></span>
+                  Mouse: Look
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 bg-indigo-500 rounded-full"></span>
+                  ESC: Release Mouse
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 bg-indigo-500 rounded-full"></span>
+                  Scroll: Zoom FOV
+                </div>
+              </div>
+              <div className="text-indigo-400 animate-pulse">
+                Click on the scene to start Looking
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 bg-indigo-500 rounded-full"></span>
-              Scroll: Zoom
-            </div>
-          </div>
+          )}
         </div>
       </div>
     </div>
