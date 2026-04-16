@@ -1,5 +1,5 @@
 import React from 'react';
-import { Undo2, Download, Upload, Layout, FilePlus, RotateCcw, Grid, BookOpen, Box, Maximize, Cloud, Save } from 'lucide-react';
+import { Undo2, Download, Upload, Layout, FilePlus, RotateCcw, Grid, BookOpen, Box, Maximize, Cloud, Save, Menu, ChevronDown, Printer } from 'lucide-react';
 import { useStore } from '../../store';
 import { UserManualModal } from '../UserManualModal';
 import { CloudLoadModal } from '../Sidebar/CloudLoadModal';
@@ -27,13 +27,24 @@ export const CanvasHeader: React.FC<CanvasHeaderProps> = ({ onExport, onPrint })
     setGridVisible,
     setShow3d,
     setPixelsPerCm,
-    currentUser
+    currentUser,
+    isSaving
   } = useStore();
 
   const [showNewConfirm, setShowNewConfirm] = React.useState(false);
   const [showManual, setShowManual] = React.useState(false);
   const [isCloudLoadOpen, setIsCloudLoadOpen] = React.useState(false);
   const [isSaveModalOpen, setIsSaveModalOpen] = React.useState(false);
+  const [isFileMenuOpen, setIsFileMenuOpen] = React.useState(false);
+
+  // Close menu when clicking outside
+  React.useEffect(() => {
+    const handleClickOutside = () => setIsFileMenuOpen(false);
+    if (isFileMenuOpen) {
+      window.addEventListener('click', handleClickOutside);
+    }
+    return () => window.removeEventListener('click', handleClickOutside);
+  }, [isFileMenuOpen]);
 
   const handleLoad = () => {
     if (currentUser) {
@@ -99,20 +110,22 @@ export const CanvasHeader: React.FC<CanvasHeaderProps> = ({ onExport, onPrint })
             <Layout size={18} />
           </div>
           <div className="flex flex-col">
-            <input
-              type="text"
-              value={projectName}
-              onChange={(e) => setProjectName(e.target.value)}
-              placeholder="Project Name"
-              className="text-sm font-bold text-slate-700 bg-transparent border-none p-0 focus:ring-0 outline-none w-64 placeholder:text-slate-300"
-              title={cloudName ? `Filename: ${cloudName}` : 'Scale project'}
-            />
-            {cloudName && (
-              <div className="flex items-center gap-1 text-[9px] text-slate-400 font-bold tracking-wider">
-                <Cloud size={10} className="text-indigo-400" />
-                <span>File: {cloudName}</span>
-              </div>
-            )}
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={projectName}
+                onChange={(e) => setProjectName(e.target.value)}
+                placeholder="Project Name"
+                className="text-sm font-bold text-slate-700 bg-transparent border-none p-0 focus:ring-0 outline-none w-48 placeholder:text-slate-300"
+                title={cloudName ? `Filename: ${cloudName}` : 'Scale project'}
+              />
+              {cloudName && (
+                <div className="flex items-center gap-1.5 px-2 py-0.5 bg-indigo-50 rounded-full border border-indigo-100 text-[9px] text-indigo-500 font-bold tracking-wider">
+                  <Cloud size={10} className="text-indigo-400" />
+                  <span className="truncate max-w-[120px]">{cloudName}</span>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -215,84 +228,111 @@ export const CanvasHeader: React.FC<CanvasHeaderProps> = ({ onExport, onPrint })
         <SaveModal isOpen={isSaveModalOpen} onClose={() => setIsSaveModalOpen(false)} />
         
         <div className="relative">
-          {showNewConfirm && (
-            <div className="absolute bottom-full right-0 mb-2 bg-white border border-slate-200 rounded-xl shadow-xl p-3 z-50 w-48 animate-in fade-in slide-in-from-bottom-2">
-              <p className="text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-2">Reset Project?</p>
-              <div className="flex gap-2">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsFileMenuOpen(!isFileMenuOpen);
+            }}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all uppercase tracking-wider border ${
+              isFileMenuOpen 
+                ? 'bg-indigo-50 border-indigo-200 text-indigo-600' 
+                : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            <Menu size={16} />
+            File
+            <ChevronDown size={14} className={`transition-transform duration-200 ${isFileMenuOpen ? 'rotate-180' : ''}`} />
+          </button>
+
+          {isFileMenuOpen && (
+            <div className="absolute top-full right-0 mt-2 w-56 bg-white border border-slate-200 rounded-xl shadow-xl py-2 z-50 animate-in fade-in slide-in-from-top-2">
+              {/* New Project */}
+              <div className="px-2 pb-2 mb-2 border-b border-slate-100">
                 <button
-                  onClick={() => {
-                    newProject();
-                    setShowNewConfirm(false);
-                  }}
-                  className="flex-1 px-2 py-1.5 bg-red-500 text-white rounded-lg text-[10px] font-bold hover:bg-red-600 transition-colors uppercase tracking-wider"
+                  onClick={() => setShowNewConfirm(true)}
+                  className="w-full flex items-center gap-3 px-3 py-2 text-slate-600 hover:bg-slate-50 rounded-lg text-xs font-bold transition-colors uppercase tracking-wider group"
                 >
-                  Yes
+                  <FilePlus size={16} className="text-slate-400 group-hover:text-indigo-500" />
+                  New Project
+                </button>
+                {showNewConfirm && (
+                  <div className="mt-2 p-2 bg-red-50 rounded-lg border border-red-100 italic">
+                    <p className="text-[10px] font-bold text-red-600 uppercase tracking-wider mb-2 text-center">Reset everything?</p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          newProject();
+                          setShowNewConfirm(false);
+                          setIsFileMenuOpen(false);
+                        }}
+                        className="flex-1 px-2 py-1 bg-red-500 text-white rounded text-[10px] font-bold"
+                      >
+                        YES
+                      </button>
+                      <button
+                        onClick={() => setShowNewConfirm(false)}
+                        className="flex-1 px-2 py-1 bg-slate-200 text-slate-600 rounded text-[10px] font-bold"
+                      >
+                        NO
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Load/Save Group */}
+              <div className="px-2 pb-2 mb-2 border-b border-slate-100 flex flex-col gap-1">
+                <button
+                  onClick={handleLoad}
+                  className="w-full flex items-center gap-3 px-3 py-2 text-slate-600 hover:bg-slate-50 rounded-lg text-xs font-bold transition-colors uppercase tracking-wider group"
+                >
+                  <Upload size={16} className="text-slate-400 group-hover:text-indigo-500" />
+                  Load
                 </button>
                 <button
-                  onClick={() => setShowNewConfirm(false)}
-                  className="flex-1 px-2 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[10px] font-bold hover:bg-slate-200 transition-colors uppercase tracking-wider"
+                  onClick={handleSave}
+                  disabled={isSaving}
+                  className="w-full flex items-center gap-3 px-3 py-2 text-slate-600 hover:bg-slate-50 rounded-lg text-xs font-bold transition-colors uppercase tracking-wider group disabled:opacity-50"
                 >
-                  No
+                  {isSaving ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-500"></div>
+                  ) : (
+                    currentUser ? <Cloud size={16} className="text-slate-400 group-hover:text-indigo-500" /> : <Save size={16} className="text-slate-400 group-hover:text-indigo-500" />
+                  )}
+                  {isSaving ? 'Saving...' : 'Save'}
+                </button>
+                {currentUser && (
+                  <button
+                    onClick={handleSaveAs}
+                    disabled={isSaving}
+                    className="w-full flex items-center gap-3 px-3 py-2 text-slate-600 hover:bg-slate-50 rounded-lg text-xs font-bold transition-colors uppercase tracking-wider group disabled:opacity-50"
+                  >
+                    <Save size={16} className="text-slate-400 group-hover:text-indigo-500" />
+                    Save As...
+                  </button>
+                )}
+              </div>
+
+              {/* Export/Print Group */}
+              <div className="px-2 flex flex-col gap-1">
+                <button
+                  onClick={onExport}
+                  className="w-full flex items-center gap-3 px-3 py-2 text-slate-600 hover:bg-slate-50 rounded-lg text-xs font-bold transition-colors uppercase tracking-wider group"
+                >
+                  <Download size={16} className="text-slate-400 group-hover:text-indigo-500" />
+                  Export PNG
+                </button>
+                <button
+                  onClick={onPrint}
+                  className="w-full flex items-center gap-3 px-3 py-2 text-slate-600 hover:bg-slate-50 rounded-lg text-xs font-bold transition-colors uppercase tracking-wider group"
+                >
+                  <Printer size={16} className="text-slate-400 group-hover:text-indigo-500" />
+                  Print Plan
                 </button>
               </div>
             </div>
           )}
-          <button
-            onClick={() => setShowNewConfirm(true)}
-            className="flex items-center gap-2 px-3 py-2 text-slate-600 hover:bg-slate-50 rounded-xl text-xs font-bold transition-all uppercase tracking-wider border border-transparent hover:border-slate-200"
-            title="New Project"
-          >
-            <FilePlus size={16} />
-            New
-          </button>
         </div>
-
-        <button
-          onClick={onPrint}
-          className="flex items-center gap-2 px-3 py-2 text-slate-600 hover:bg-slate-50 rounded-xl text-xs font-bold transition-all uppercase tracking-wider border border-transparent hover:border-slate-200"
-          title="Print Plan"
-        >
-          <Layout size={16} />
-          Print
-        </button>
-        <button
-          onClick={onExport}
-          className="flex items-center gap-2 px-3 py-2 text-slate-600 hover:bg-slate-50 rounded-xl text-xs font-bold transition-all uppercase tracking-wider border border-transparent hover:border-slate-200"
-          title="Export as PNG"
-        >
-          <Download size={16} />
-          Export
-        </button>
-        <button
-          onClick={handleLoad}
-          className="flex items-center gap-2 px-4 py-2 text-slate-600 hover:bg-slate-50 rounded-xl text-xs font-bold transition-all uppercase tracking-wider border border-transparent hover:border-slate-200"
-        >
-          <Upload size={16} />
-          Load
-        </button>
-        <button
-          onClick={handleSave}
-          disabled={useStore.getState().isSaving}
-          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold hover:bg-indigo-700 transition-all shadow-md hover:shadow-lg active:scale-95 uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {useStore(state => state.isSaving) ? (
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-          ) : (
-            currentUser ? <Cloud size={16} /> : <Download size={16} />
-          )}
-          {useStore(state => state.isSaving) ? 'Saving...' : 'Save'}
-        </button>
-
-        {currentUser && (
-          <button
-            onClick={handleSaveAs}
-            disabled={useStore.getState().isSaving}
-            className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-xl text-xs font-bold hover:bg-amber-600 transition-all shadow-md hover:shadow-lg active:scale-95 uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Save size={16} />
-            Save As
-          </button>
-        )}
       </div>
     </div>
   );
