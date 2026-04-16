@@ -14,7 +14,9 @@ The application is structured into logical modules to ensure maintainability and
       RoomItem.tsx        # Renders completed room polygons
     /Sidebar
       CatalogModal.tsx    # Modal for browsing and customizing furniture items
-      FileActions.tsx     # Save/Load and background image controls
+      CloudLoadModal.tsx  # Cloud project browser with search, rename, delete
+      SaveModal.tsx       # Unified saving interface (Cloud/Local)
+      FileActions.tsx     # Background image controls
       PropertyEditor.tsx  # Editor for selected furniture or rooms
       ToolButton.tsx      # Reusable button for the tool navigation
     /ThreeD
@@ -32,6 +34,7 @@ The application is structured into logical modules to ensure maintainability and
   /lib
     geometry.ts           # Math, geometry, and coordinate formatting utilities
     utils.ts              # UI utility functions (e.g., tailwind-merge)
+  firebase.ts             # Firebase Initialization (Auth, Firestore)
   store.ts                # Zustand state management
   types.ts                # Explicit TypeScript interfaces and types
 ```
@@ -57,6 +60,17 @@ The global state is managed in `src/store.ts`. Key state slices include:
 - **Data**: `rooms`, `furniture`, `dimensions`, `roomPoints` (active drawing).
 - **Selection**: `selectedId`, `selectedRoomId`.
 - **History**: `history` stack for undo.
+- **Authentication**: `currentUser` state from Firebase Auth.
+
+## Persistence & Cloud Integration
+
+The application uses **Firebase** for cloud storage and authentication:
+
+1. **Authentication:** Integrated via `firebase/auth`. Supports Google Login to identify users and secure their data.
+2. **Database:** **Cloud Firestore** is used to store project JSON data.
+   - **Collection:** `projects`
+   - **Schema:** Defined in `firebase-blueprint.json`. Documents include `userId`, `name`, `data` (JSON-serialized project state), and `updatedAt`.
+3. **Security:** Protected by **Firestore Security Rules** (`firestore.rules`) ensuring users can only access their own data.
 
 ## Rendering Optimization (Konva Stage)
 

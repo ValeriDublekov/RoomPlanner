@@ -5,6 +5,7 @@ This document defines the consistent behavior for 2D and 3D geometry, alignment,
 ## 1. Coordinate System
 - **2D Canvas:** standard Cartesian with (0,0) at top-left.
 - **3D World:** Y-up. X and Z correspond to 2D X and Y.
+- **Persistence:** Projects are persisted as JSON objects. For cloud-enabled environments, these are stored in **Firebase Firestore** under the `projects` collection, keyed by `userId`.
 - **Scale:** Defined by `pixelsPerCm`. All internal logic should use centimeters where possible, converting to pixels only for rendering.
 
 ## 2. Room Geometry

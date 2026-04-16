@@ -9,6 +9,7 @@
 *   **Context-Aware Interface**: The UI intelligently adapts, showing specific settings like "Wall Thickness" only when relevant (e.g., in Room Layout mode), reducing visual clutter.
 *   **Precision Tools**: Includes Ortho Mode (horizontal/vertical locking with 90° snapping), 10cm Grid Snapping, and a dedicated Calibration tool to ensure every centimeter in the app matches reality.
 *   **Area Calculation**: Automatic m² calculation for rooms using the Shoelace algorithm, displayed with a clean visual halo for readability.
+*   **Cloud Project Storage**: Securely save and manage multiple projects in the cloud using **Firebase Firestore**. Includes user authentication via **Firebase Auth** (Google Login), allowing access to projects from any device. Supports project versioning, "Save As" for different file names, and project management (Rename/Delete).
 *   **3D Dollhouse Preview**: A high-fidelity 3D visualization mode using `@react-three/fiber` that features:
     *   **Dollhouse Cutaway View**: Walls are rendered at a standard 210cm height with architectural section caps for better interior visibility.
     *   **Logical Wall Openings**: Intelligent wall splitting that creates real openings for doors and windows (with semi-transparent glass).

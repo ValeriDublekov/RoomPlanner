@@ -57,8 +57,12 @@ Welcome to RoomPlanner! This guide will help you understand the workflow and fea
 
 ## Saving & Loading
 *   **Project Name**: Edit the project name in the top header.
-*   **Save**: Downloads a `.json` file containing all your project data, including the background image.
-*   **Load**: Upload a previously saved `.json` file to continue your work.
+*   **Cloud Save (Recommended)**: Log in with Google to save your projects to the cloud. This allows you to:
+    *   Access projects from any device.
+    *   Maintain multiple versions using **Save As**.
+    *   Manage projects (Rename/Delete) via the **Load** menu.
+*   **Local Save**: Download a `.json` file to your computer.
+*   **Load**: Open a saved project from the cloud or upload a `.json` file.
 
 ---
 *Tip: Use the Layers toggle in the sidebar to switch between different parts of your project. Each layer has specific tools associated with it.*
