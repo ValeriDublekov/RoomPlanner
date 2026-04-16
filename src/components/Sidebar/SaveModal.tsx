@@ -10,9 +10,10 @@ import { AlertModal } from '../Dialogs/AlertModal';
 interface SaveModalProps {
   isOpen: boolean;
   onClose: () => void;
+  thumbnail?: string | null;
 }
 
-export const SaveModal: React.FC<SaveModalProps> = ({ isOpen, onClose }) => {
+export const SaveModal: React.FC<SaveModalProps> = ({ isOpen, onClose, thumbnail }) => {
   const { currentUser, saveProject, saveProjectAs, isSaving, projectName, cloudName, projectId, setProjectName } = useStore();
   const [overwriteConfirm, setOverwriteConfirm] = useState<{ isOpen: boolean; existingId: string | null; pendingName?: string }>({ isOpen: false, existingId: null });
   const [namePrompt, setNamePrompt] = useState<{ isOpen: boolean; mode: 'cloud' | 'local' | 'cloud-as' }>({ isOpen: false, mode: 'cloud' });
@@ -27,7 +28,7 @@ export const SaveModal: React.FC<SaveModalProps> = ({ isOpen, onClose }) => {
   const handleSaveCloud = () => {
     // If we already have a projectId, just save (update)
     if (projectId) {
-      saveProject();
+      saveProject(undefined, undefined, thumbnail || undefined);
       onClose();
       return;
     }
@@ -61,7 +62,7 @@ export const SaveModal: React.FC<SaveModalProps> = ({ isOpen, onClose }) => {
           const existingDoc = querySnapshot.docs[0];
           // If it's the SAME project we are already working on, just save
           if (projectId === existingDoc.id && namePrompt.mode === 'cloud') {
-            await saveProject(undefined, newName);
+            await saveProject(undefined, newName, thumbnail || undefined);
             onClose();
           } else {
             // Collision with another project
@@ -69,9 +70,9 @@ export const SaveModal: React.FC<SaveModalProps> = ({ isOpen, onClose }) => {
           }
         } else {
           if (namePrompt.mode === 'cloud-as') {
-            await saveProjectAs(newName);
+            await saveProjectAs(newName, thumbnail || undefined);
           } else {
-            await saveProject(undefined, newName);
+            await saveProject(undefined, newName, thumbnail || undefined);
           }
           onClose();
         }
@@ -84,7 +85,7 @@ export const SaveModal: React.FC<SaveModalProps> = ({ isOpen, onClose }) => {
 
   const confirmOverwrite = async () => {
     if (overwriteConfirm.existingId) {
-      await saveProject(overwriteConfirm.existingId, overwriteConfirm.pendingName);
+      await saveProject(overwriteConfirm.existingId, overwriteConfirm.pendingName, thumbnail || undefined);
     }
     setOverwriteConfirm({ isOpen: false, existingId: null });
     onClose();

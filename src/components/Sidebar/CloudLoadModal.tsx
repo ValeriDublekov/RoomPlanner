@@ -17,12 +17,15 @@ interface ProjectSummary {
   name: string;
   updatedAt: any;
   data: string;
+  thumbnail?: string;
 }
 
 export const CloudLoadModal: React.FC<CloudLoadModalProps> = ({ isOpen, onClose }) => {
   const { currentUser, loadState, fitToScreen } = useStore();
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [hoveredProject, setHoveredProject] = useState<ProjectSummary | null>(null);
+  const [previewPos, setPreviewPos] = useState({ x: 0, y: 0 });
   const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; project: ProjectSummary | null }>({ isOpen: false, project: null });
   const [renamePrompt, setRenamePrompt] = useState<{ isOpen: boolean; project: ProjectSummary | null }>({ isOpen: false, project: null });
   const [alertInfo, setAlertInfo] = useState<{ isOpen: boolean; title: string; message: string }>({ isOpen: false, title: '', message: '' });
@@ -52,6 +55,7 @@ export const CloudLoadModal: React.FC<CloudLoadModalProps> = ({ isOpen, onClose 
           name: data.name,
           updatedAt: data.updatedAt,
           data: data.data,
+          thumbnail: data.thumbnail,
         });
       });
       setProjects(fetchedProjects);
@@ -234,7 +238,13 @@ export const CloudLoadModal: React.FC<CloudLoadModalProps> = ({ isOpen, onClose 
                 <div
                   key={project.id}
                   onClick={() => handleSelectProject(project)}
-                  className="w-full flex items-center gap-4 p-4 rounded-2xl border border-slate-100 bg-white hover:border-indigo-200 hover:bg-indigo-50/30 transition-all text-left group cursor-pointer"
+                  onMouseEnter={(e) => {
+                    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                    setPreviewPos({ x: rect.right + 20, y: rect.top });
+                    setHoveredProject(project);
+                  }}
+                  onMouseLeave={() => setHoveredProject(null)}
+                  className="w-full flex items-center gap-4 p-4 rounded-2xl border border-slate-100 bg-white hover:border-indigo-200 hover:bg-indigo-50/30 transition-all text-left group cursor-pointer relative"
                 >
                   <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-white group-hover:text-indigo-600 transition-colors">
                     <FileText size={20} />
@@ -303,6 +313,40 @@ export const CloudLoadModal: React.FC<CloudLoadModalProps> = ({ isOpen, onClose 
         message={alertInfo.message}
         onClose={() => setAlertInfo({ ...alertInfo, isOpen: false })}
       />
+
+      {/* Floating Preview */}
+      {hoveredProject && (
+        <div 
+          className="fixed z-[150] w-64 p-2 bg-white rounded-2xl shadow-2xl border border-slate-100 animate-in fade-in zoom-in-95 duration-200 pointer-events-none"
+          style={{ 
+            left: `${previewPos.x}px`, 
+            top: `${Math.min(previewPos.y, window.innerHeight - 300)}px` 
+          }}
+        >
+          <div className="flex flex-col gap-2">
+            <div className="aspect-video w-full bg-slate-50 rounded-xl overflow-hidden border border-slate-100 flex items-center justify-center">
+              {hoveredProject.thumbnail ? (
+                <img 
+                  src={hoveredProject.thumbnail} 
+                  alt={hoveredProject.name} 
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="flex flex-col items-center gap-2 opacity-30">
+                  <Monitor size={32} className="text-slate-400" />
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">No Preview</span>
+                </div>
+              )}
+            </div>
+            <div className="px-1">
+              <h4 className="text-xs font-bold text-slate-800 tracking-tight">{hoveredProject.name}</h4>
+              <p className="text-[9px] text-slate-400 font-medium">
+                Last modified: {hoveredProject.updatedAt?.toDate()?.toLocaleDateString()}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -31,8 +31,8 @@ export interface ProjectSlice {
   undo: () => void;
   saveHistory: () => void;
   loadState: (data: any) => void;
-  saveProject: (forceOverwriteId?: string, nameOverride?: string) => Promise<void>;
-  saveProjectAs: (nameOverride?: string) => Promise<void>;
+  saveProject: (forceOverwriteId?: string, nameOverride?: string, thumbnailOverride?: string) => Promise<void>;
+  saveProjectAs: (nameOverride?: string, thumbnailOverride?: string) => Promise<void>;
   newProject: () => void;
   isSaving: boolean;
   version: number;
@@ -148,7 +148,7 @@ export const createProjectSlice: StateCreator<AppState, [], [], ProjectSlice> = 
     });
   },
 
-  saveProject: async (forceOverwriteId?: string, nameOverride?: string) => {
+  saveProject: async (forceOverwriteId?: string, nameOverride?: string, thumbnailOverride?: string) => {
     const state = get();
     const { currentUser } = state;
 
@@ -178,14 +178,20 @@ export const createProjectSlice: StateCreator<AppState, [], [], ProjectSlice> = 
         let targetId = forceOverwriteId || state.projectId;
         const nameToSave = nameOverride || state.cloudName || state.projectName || 'Untitled Project';
 
+        const savePayload: any = {
+          userId: currentUser.uid,
+          name: nameToSave,
+          data: jsonString,
+          updatedAt: serverTimestamp(),
+        };
+
+        if (thumbnailOverride) {
+          savePayload.thumbnail = thumbnailOverride;
+        }
+
         if (targetId) {
           // Update existing project
-          await setDoc(doc(db, 'projects', targetId), {
-            userId: currentUser.uid,
-            name: nameToSave,
-            data: jsonString,
-            updatedAt: serverTimestamp(),
-          }, { merge: true });
+          await setDoc(doc(db, 'projects', targetId), savePayload, { merge: true });
           
           set({ 
             projectId: targetId, 
@@ -194,13 +200,8 @@ export const createProjectSlice: StateCreator<AppState, [], [], ProjectSlice> = 
           console.log('Project updated in Firestore');
         } else {
           // New project
-          const docRef = await addDoc(collection(db, 'projects'), {
-            userId: currentUser.uid,
-            name: nameToSave,
-            data: jsonString,
-            updatedAt: serverTimestamp(),
-            createdAt: serverTimestamp(),
-          });
+          savePayload.createdAt = serverTimestamp();
+          const docRef = await addDoc(collection(db, 'projects'), savePayload);
           
           set({ 
             projectId: docRef.id, 
@@ -233,10 +234,10 @@ export const createProjectSlice: StateCreator<AppState, [], [], ProjectSlice> = 
     }
   },
 
-  saveProjectAs: async (nameOverride?: string) => {
+  saveProjectAs: async (nameOverride?: string, thumbnailOverride?: string) => {
     // Clear projectId to force the "new project" logic in saveProject
     set({ projectId: null });
-    await get().saveProject(undefined, nameOverride);
+    await get().saveProject(undefined, nameOverride, thumbnailOverride);
   },
 
   newProject: () => {

@@ -210,5 +210,89 @@ export const useCanvasExport = (stageRef: React.RefObject<Konva.Stage>) => {
     doc.close();
   };
 
-  return { handleExport, handlePrint };
+  const getStageThumbnail = async () => {
+    const stage = stageRef.current;
+    if (!stage) return null;
+
+    const wasGridVisible = useStore.getState().gridVisible;
+    const selectedId = useStore.getState().selectedId;
+    const selectedIds = useStore.getState().selectedIds;
+    const selectedRoomId = useStore.getState().selectedRoomId;
+    const selectedDimensionId = useStore.getState().selectedDimensionId;
+    const selectedAttachmentId = useStore.getState().selectedAttachmentId;
+
+    useStore.getState().setGridVisible(false);
+    useStore.getState().setSelectedId(null);
+    useStore.getState().setSelectedIds([]);
+    useStore.getState().setSelectedRoomId(null);
+    useStore.getState().setSelectedDimensionId(null);
+    useStore.getState().setSelectedAttachmentId(null);
+
+    const { rooms, furniture, dimensions: savedDimensions } = useStore.getState();
+    const allPoints: { x: number; y: number }[] = [];
+    rooms.forEach(r => allPoints.push(...r.points));
+    furniture.forEach(f => allPoints.push(...getFurnitureVertices(f)));
+    savedDimensions.forEach(d => { allPoints.push(d.p1); allPoints.push(d.p2); });
+
+    if (allPoints.length === 0) {
+      useStore.getState().setGridVisible(wasGridVisible);
+      return null;
+    }
+
+    const minX = Math.min(...allPoints.map(p => p.x));
+    const minY = Math.min(...allPoints.map(p => p.y));
+    const maxX = Math.max(...allPoints.map(p => p.x));
+    const maxY = Math.max(...allPoints.map(p => p.y));
+
+    const padding = 20;
+    const exportArea = {
+      x: minX - padding,
+      y: minY - padding,
+      width: (maxX - minX) + padding * 2,
+      height: (maxY - minY) + padding * 2
+    };
+
+    const bgLayer = stage.findOne('#background-layer') as Konva.Layer;
+    const whiteRect = new Konva.Rect({
+      x: exportArea.x,
+      y: exportArea.y,
+      width: exportArea.width,
+      height: exportArea.height,
+      fill: 'white',
+      listening: false,
+    });
+    
+    if (bgLayer) {
+      bgLayer.add(whiteRect);
+      whiteRect.moveToBottom();
+    }
+
+    // Short delay for batchDraw
+    await new Promise(resolve => setTimeout(resolve, 50));
+
+    const currentScale = stage.scaleX();
+    const currentPos = stage.position();
+
+    // Generate lower resolution thumbnail
+    const dataURL = stage.toDataURL({
+      x: exportArea.x * currentScale + currentPos.x,
+      y: exportArea.y * currentScale + currentPos.y,
+      width: exportArea.width * currentScale,
+      height: exportArea.height * currentScale,
+      pixelRatio: 0.5, // Reduced quality for thumbnail
+      quality: 0.5,
+    });
+
+    whiteRect.destroy();
+    useStore.getState().setGridVisible(wasGridVisible);
+    useStore.getState().setSelectedId(selectedId);
+    useStore.getState().setSelectedIds(selectedIds);
+    useStore.getState().setSelectedRoomId(selectedRoomId);
+    useStore.getState().setSelectedDimensionId(selectedDimensionId);
+    useStore.getState().setSelectedAttachmentId(selectedAttachmentId);
+
+    return dataURL;
+  };
+
+  return { handleExport, handlePrint, getStageThumbnail };
 };

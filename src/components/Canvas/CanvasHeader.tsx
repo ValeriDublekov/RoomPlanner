@@ -8,9 +8,10 @@ import { SaveModal } from '../Sidebar/SaveModal';
 interface CanvasHeaderProps {
   onExport: () => void;
   onPrint: () => void;
+  getThumbnail?: () => Promise<string | null>;
 }
 
-export const CanvasHeader: React.FC<CanvasHeaderProps> = ({ onExport, onPrint }) => {
+export const CanvasHeader: React.FC<CanvasHeaderProps> = ({ onExport, onPrint, getThumbnail }) => {
   const { 
     undo, 
     history, 
@@ -36,6 +37,7 @@ export const CanvasHeader: React.FC<CanvasHeaderProps> = ({ onExport, onPrint })
   const [isCloudLoadOpen, setIsCloudLoadOpen] = React.useState(false);
   const [isSaveModalOpen, setIsSaveModalOpen] = React.useState(false);
   const [isFileMenuOpen, setIsFileMenuOpen] = React.useState(false);
+  const [pendingThumbnail, setPendingThumbnail] = React.useState<string | null>(null);
 
   // Close menu when clicking outside
   React.useEffect(() => {
@@ -79,12 +81,15 @@ export const CanvasHeader: React.FC<CanvasHeaderProps> = ({ onExport, onPrint })
     }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    const thumbnail = getThumbnail ? await getThumbnail() : null;
+    setPendingThumbnail(thumbnail);
+    
     if (currentUser) {
       const state = useStore.getState();
       if (state.projectId) {
         // Already in cloud, save directly
-        saveProject();
+        saveProject(undefined, undefined, thumbnail || undefined);
       } else {
         // New project, show options
         setIsSaveModalOpen(true);
@@ -94,7 +99,9 @@ export const CanvasHeader: React.FC<CanvasHeaderProps> = ({ onExport, onPrint })
     }
   };
 
-  const handleSaveAs = () => {
+  const handleSaveAs = async () => {
+    const thumbnail = getThumbnail ? await getThumbnail() : null;
+    setPendingThumbnail(thumbnail);
     if (currentUser) {
       setIsSaveModalOpen(true);
     } else {
@@ -225,7 +232,14 @@ export const CanvasHeader: React.FC<CanvasHeaderProps> = ({ onExport, onPrint })
       <div className="flex items-center gap-3">
         <UserManualModal isOpen={showManual} onClose={() => setShowManual(false)} />
         <CloudLoadModal isOpen={isCloudLoadOpen} onClose={() => setIsCloudLoadOpen(false)} />
-        <SaveModal isOpen={isSaveModalOpen} onClose={() => setIsSaveModalOpen(false)} />
+        <SaveModal 
+          isOpen={isSaveModalOpen} 
+          onClose={() => {
+            setIsSaveModalOpen(false);
+            setPendingThumbnail(null);
+          }} 
+          thumbnail={pendingThumbnail}
+        />
         
         <div className="relative">
           <button
