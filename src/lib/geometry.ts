@@ -159,14 +159,10 @@ export const getSnappedPosition = (
 
   // 2. If no vector vertex found within threshold, check Edge Map (Image Snapping)
   if (minDist === threshold && edgeMap && bgTransform) {
-    const radius = 8; // Search radius in pixels
-    
-    // Convert world position to image pixel coordinates
-    // pos = bgPos + pixelCoord * bgScale (ignoring rotation for simplicity in first pass, 
-    // but let's try to handle basic scale/offset)
+    // Search radius in image pixels, derived from the world-space threshold
+    const radius = Math.max(5, threshold / bgTransform.scale);
     
     // Inverse transform: world -> image space
-    // We need to account for rotation too if we want it to be perfect
     const rad = (bgTransform.rotation * Math.PI) / 180;
     const cos = Math.cos(-rad);
     const sin = Math.sin(-rad);
@@ -184,14 +180,13 @@ export const getSnappedPosition = (
     
     let bestImgX = -1;
     let bestImgY = -1;
-    let minImgDist = radius;
-    let maxNeighbors = 0;
+    let minScore = Infinity;
 
     for (let y = startY; y <= endY; y++) {
       for (let x = startX; x <= endX; x++) {
         if (x >= 0 && x < edgeMap.width && y >= 0 && y < edgeMap.height) {
           if (edgeMap.data[y * edgeMap.width + x] === 1) {
-            // Count neighbors to find intersections/corners
+            // Count neighbors to detect intersections/corners
             let neighbors = 0;
             for (let ny = -1; ny <= 1; ny++) {
               for (let nx = -1; nx <= 1; nx++) {
@@ -206,17 +201,14 @@ export const getSnappedPosition = (
 
             const d = Math.sqrt(Math.pow(x - imgX, 2) + Math.pow(y - imgY, 2));
             
-            // Prioritize points with more than 2 neighbors (intersections/corners)
-            // or just the closest point if no intersection found yet
-            if (neighbors > 2) {
-              if (neighbors > maxNeighbors || (neighbors === maxNeighbors && d < minImgDist)) {
-                maxNeighbors = neighbors;
-                minImgDist = d;
-                bestImgX = x;
-                bestImgY = y;
-              }
-            } else if (maxNeighbors <= 2 && d < minImgDist) {
-              minImgDist = d;
+            // Core Logic Fix: Prioritize distance primarily.
+            // Give a small "gravitational bonus" to intersections (neighbors > 2).
+            // This prevents jumping to distant corners while staying close to the cursor.
+            const gravityBonus = neighbors > 2 ? 2.0 : 0.0;
+            const score = d - gravityBonus;
+
+            if (score < minScore) {
+              minScore = score;
               bestImgX = x;
               bestImgY = y;
             }
