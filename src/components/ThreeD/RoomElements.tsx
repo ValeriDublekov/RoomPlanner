@@ -44,6 +44,32 @@ export const Floor: React.FC<{ room: RoomObject, pixelsPerCm: number }> = ({ roo
   );
 };
 
+export const Ceiling: React.FC<{ room: RoomObject, pixelsPerCm: number, height: number }> = ({ room, pixelsPerCm, height }) => {
+  const ceilingShape = useMemo(() => {
+    const s = new THREE.Shape();
+    if (room.points.length === 0) return s;
+    s.moveTo(room.points[0].x / pixelsPerCm, -room.points[0].y / pixelsPerCm);
+    for (let i = 1; i < room.points.length; i++) {
+      s.lineTo(room.points[i].x / pixelsPerCm, -room.points[i].y / pixelsPerCm);
+    }
+    s.closePath();
+    return s;
+  }, [room.points, pixelsPerCm]);
+
+  return (
+    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, height, 0]}>
+      <shapeGeometry args={[ceilingShape]} />
+      <meshStandardMaterial 
+        color="#f8fafc" 
+        roughness={1} 
+        side={THREE.DoubleSide}
+        emissive="#ffffff"
+        emissiveIntensity={0.1}
+      />
+    </mesh>
+  );
+};
+
 const Curtain: React.FC<{
   length: number;
   height: number;

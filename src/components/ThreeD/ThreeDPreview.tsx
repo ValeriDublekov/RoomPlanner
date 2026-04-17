@@ -1,12 +1,12 @@
 import React, { useMemo, Suspense, useState, useEffect } from 'react';
-import { Canvas, useThree } from '@react-three/fiber';
+import { Canvas, useThree, useFrame } from '@react-three/fiber';
 import { OrbitControls, Environment, ContactShadows } from '@react-three/drei';
 import * as THREE from 'three';
 import { useStore } from '../../store';
 import { FurnitureObject } from '../../types';
 import { FPVControls } from './FPVControls';
 import { Camera, MousePointer2, Box } from 'lucide-react';
-import { WallSegments } from './RoomElements';
+import { WallSegments, Ceiling } from './RoomElements';
 import { 
   Bed3D, Desk3D, Wardrobe3D, Dresser3D, Chair3D, 
   Shelf3D, Electronics3D, Table3D, GenericFurniture3D,
@@ -19,6 +19,31 @@ const SceneBackground = ({ isExporting }: { isExporting: boolean }) => {
     gl.setClearColor(isExporting ? '#ffffff' : '#0f172a');
   }, [isExporting, gl]);
   return null;
+};
+
+const Flashlight = () => {
+  const { camera } = useThree();
+  const lightRef = React.useRef<THREE.PointLight>(null);
+
+  useFrame(() => {
+    if (lightRef.current) {
+      lightRef.current.position.copy(camera.position);
+    }
+  });
+
+  return (
+    <group>
+      <pointLight 
+        ref={lightRef} 
+        intensity={200} 
+        distance={2000} 
+        decay={2} 
+        color="#ffffff" 
+        castShadow
+      />
+      <ambientLight intensity={0.2} />
+    </group>
+  );
 };
 
 const Furniture = ({ item, pixelsPerCm, isChild = false, parentWidth = 0, parentDepth = 0 }: { item: FurnitureObject, pixelsPerCm: number, isChild?: boolean, parentWidth?: number, parentDepth?: number }) => {
@@ -106,6 +131,10 @@ export const ThreeDPreview: React.FC = () => {
   const { rooms, furniture, pixelsPerCm, setShow3d, wallThickness, wallHeight, setWallHeight, wallAttachments } = useStore();
   const [isExporting, setIsExporting] = useState(false);
   const [viewMode, setViewMode] = useState<'dollhouse' | 'first-person'>('dollhouse');
+
+  useEffect(() => {
+    console.log(`[3D Preview] Switched to ${viewMode} view`);
+  }, [viewMode]);
 
   const handleExport = async (isPrint = false) => {
     setIsExporting(true);
@@ -267,6 +296,7 @@ export const ThreeDPreview: React.FC = () => {
             shadow-camera-far={5000}
           />
           <Environment preset="city" />
+          {viewMode === 'first-person' && <Flashlight />}
 
           <Suspense fallback={null}>
             <group>
@@ -276,14 +306,22 @@ export const ThreeDPreview: React.FC = () => {
               </mesh>
 
               {rooms.map(room => (
-                <WallSegments 
-                  key={room.id} 
-                  room={room} 
-                  pixelsPerCm={pixelsPerCm} 
-                  wallThickness={wallThickness} 
-                  wallHeight={wallHeight}
-                  attachments={wallAttachments}
-                />
+                <React.Fragment key={room.id}>
+                  <WallSegments 
+                    room={room} 
+                    pixelsPerCm={pixelsPerCm} 
+                    wallThickness={wallThickness} 
+                    wallHeight={wallHeight}
+                    attachments={wallAttachments}
+                  />
+                  {viewMode === 'first-person' && (
+                    <Ceiling 
+                      room={room} 
+                      pixelsPerCm={pixelsPerCm} 
+                      height={wallHeight} 
+                    />
+                  )}
+                </React.Fragment>
               ))}
 
               {furniture.map(item => (
@@ -319,7 +357,7 @@ export const ThreeDPreview: React.FC = () => {
           </div>
 
           {viewMode === 'dollhouse' ? (
-            <div className="bg-slate-800/80 backdrop-blur-md px-6 py-3 rounded-2xl border border-slate-700 text-white text-[10px] font-bold uppercase tracking-wider flex gap-6">
+            <div className="bg-slate-800/80 backdrop-blur-md px-6 py-3 rounded-2xl border border-slate-700 text-white text-[10px] font-bold uppercase tracking-wider flex gap-6 pointer-events-none">
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 bg-indigo-500 rounded-full"></span>
                 Left Click: Rotate
@@ -334,7 +372,7 @@ export const ThreeDPreview: React.FC = () => {
               </div>
             </div>
           ) : (
-            <div className="bg-slate-800/80 backdrop-blur-md px-6 py-3 rounded-2xl border border-slate-700 text-white text-[10px] font-bold uppercase tracking-wider flex flex-col gap-2 items-center">
+            <div className="bg-slate-800/80 backdrop-blur-md px-6 py-3 rounded-2xl border border-slate-700 text-white text-[10px] font-bold uppercase tracking-wider flex flex-col gap-2 items-center pointer-events-none">
               <div className="flex gap-6">
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 bg-indigo-500 rounded-full"></span>

@@ -9,7 +9,7 @@ interface FPVControlsProps {
 }
 
 export const FPVControls: React.FC<FPVControlsProps> = ({ initialPosition }) => {
-  const { camera } = useThree();
+  const { camera, gl } = useThree();
   const { rooms, wallAttachments, pixelsPerCm } = useStore();
   const velocity = useRef(new THREE.Vector3());
   const direction = useRef(new THREE.Vector3());
@@ -24,6 +24,15 @@ export const FPVControls: React.FC<FPVControlsProps> = ({ initialPosition }) => 
     camera.position.set(initialPosition.x, 160, initialPosition.z);
     camera.lookAt(initialPosition.x + 100, 160, initialPosition.z);
   }, [camera, initialPosition]);
+
+  useEffect(() => {
+    return () => {
+      // Exit pointer lock on unmount to prevent errors or unexpected behavior
+      if (document.pointerLockElement === gl.domElement) {
+        document.exitPointerLock();
+      }
+    };
+  }, [gl.domElement]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -161,5 +170,5 @@ export const FPVControls: React.FC<FPVControlsProps> = ({ initialPosition }) => 
     camera.position.y = 160;
   });
 
-  return <PointerLockControls />;
+  return <PointerLockControls domElement={gl.domElement} />;
 };
