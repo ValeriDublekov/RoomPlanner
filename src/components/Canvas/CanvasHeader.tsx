@@ -240,6 +240,32 @@ export const CanvasHeader: React.FC<CanvasHeaderProps> = ({ onExport, onPrint, g
           }} 
           thumbnail={pendingThumbnail}
         />
+
+        <div className="flex items-center gap-1">
+          <button
+            onClick={handleLoad}
+            className="flex items-center gap-2 px-3 py-2 text-slate-600 hover:bg-slate-50 rounded-xl transition-all text-xs font-bold uppercase tracking-wider"
+            title="Quick Load"
+          >
+            <Upload size={16} className="text-slate-400" />
+            Load
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={isSaving}
+            className="flex items-center gap-2 px-3 py-2 text-slate-600 hover:bg-slate-50 rounded-xl transition-all disabled:opacity-50 text-xs font-bold uppercase tracking-wider"
+            title="Quick Save"
+          >
+            {isSaving ? (
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-500"></div>
+            ) : (
+              currentUser ? <Cloud size={16} className="text-indigo-400" /> : <Save size={16} className="text-slate-400" />
+            )}
+            {isSaving ? 'Saving...' : 'Save'}
+          </button>
+        </div>
+
+        <div className="h-6 w-px bg-slate-200" />
         
         <div className="relative">
           <button
