@@ -65,6 +65,7 @@ export const FurnitureEditor: React.FC<FurnitureEditorProps> = ({
           <option value="toilet">Toilet</option>
           <option value="bathtub">Bathtub</option>
           <option value="light">Light / Lamp</option>
+          <option value="picture">Picture / Wall Art</option>
         </select>
       </div>
 
@@ -114,8 +115,52 @@ export const FurnitureEditor: React.FC<FurnitureEditorProps> = ({
         </div>
       </div>
 
-      {(selectedFurniture.furnitureType === 'electronics' || selectedFurniture.furnitureType === 'shelf') && (
+      {(selectedFurniture.furnitureType === 'electronics' || selectedFurniture.furnitureType === 'shelf' || selectedFurniture.furnitureType === 'picture') && (
         <div className="space-y-3 pt-2">
+          {selectedFurniture.furnitureType === 'picture' && (
+            <div className="space-y-2.5 p-3 bg-slate-50 rounded-2xl border border-slate-200">
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Select Artwork</label>
+              <div className="grid grid-cols-4 gap-2">
+                {[
+                  { id: 'minimal-1', name: 'Abstract Geometric', url: 'https://picsum.photos/seed/minimal-1/400/300' },
+                  { id: 'minimal-2', name: 'Modern Lines', url: 'https://picsum.photos/seed/minimal-2/400/300' },
+                  { id: 'minimal-3', name: 'Monochrome Landscape', url: 'https://picsum.photos/seed/minimal-3/400/300' },
+                  { id: 'minimal-4', name: 'Circular Forms', url: 'https://picsum.photos/seed/minimal-4/400/300' },
+                  { id: 'minimal-5', name: 'Vertical Stripes', url: 'https://picsum.photos/seed/minimal-5/400/300' },
+                  { id: 'minimal-6', name: 'Soft Gradient', url: 'https://picsum.photos/seed/minimal-6/400/300' },
+                  { id: 'minimal-7', name: 'Minimal Dot', url: 'https://picsum.photos/seed/minimal-7/400/300' },
+                ].map((art) => (
+                  <button
+                    key={art.id}
+                    onClick={() => updateFurniture(selectedFurniture.id, { imageUrl: art.url })}
+                    className={cn(
+                      "aspect-[4/3] rounded-lg border-2 transition-all bg-white flex items-center justify-center overflow-hidden group",
+                      selectedFurniture.imageUrl === art.url ? "border-indigo-500 scale-105 shadow-md" : "border-transparent hover:border-slate-300"
+                    )}
+                    title={art.name}
+                  >
+                    <img 
+                      src={art.url} 
+                      alt={art.name} 
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                      referrerPolicy="no-referrer"
+                    />
+                  </button>
+                ))}
+              </div>
+              <div className="pt-1.5">
+                <label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest ml-1">Custom Image URL</label>
+                <input
+                  type="text"
+                  value={selectedFurniture.imageUrl || ''}
+                  onChange={(e) => updateFurniture(selectedFurniture.id, { imageUrl: e.target.value })}
+                  placeholder="https://example.com/image.jpg"
+                  className="w-full mt-1 bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-[10px] outline-none focus:ring-2 focus:ring-indigo-500/20"
+                />
+              </div>
+            </div>
+          )}
+
           {selectedFurniture.furnitureType === 'electronics' && (
             <label className="flex items-center gap-3 cursor-pointer group p-3 bg-slate-50 rounded-2xl border border-slate-100 hover:border-indigo-200 transition-all">
               <input

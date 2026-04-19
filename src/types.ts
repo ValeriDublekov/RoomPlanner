@@ -13,7 +13,7 @@ export interface RoomObject {
   defaultWallColor?: string;
 }
 
-export type FurnitureType = 'bed' | 'desk' | 'wardrobe' | 'dresser' | 'chair' | 'shelf' | 'electronics' | 'table' | 'sofa' | 'armchair' | 'nightstand' | 'toilet' | 'bathtub' | 'light' | 'generic';
+export type FurnitureType = 'bed' | 'desk' | 'wardrobe' | 'dresser' | 'chair' | 'shelf' | 'electronics' | 'table' | 'sofa' | 'armchair' | 'nightstand' | 'toilet' | 'bathtub' | 'light' | 'picture' | 'generic';
 
 export interface FurnitureObject {
   id: string;
@@ -30,6 +30,7 @@ export interface FurnitureObject {
   points?: Vector2d[];
   color?: string;
   secondaryColor?: string;
+  imageUrl?: string; // For pictures/posters
   svgPath?: string;
   catalogId?: string;
   hasDoors?: boolean; // For shelves/cabinets
@@ -50,6 +51,7 @@ export interface CatalogItem {
   defaultElevation?: number; // in cm
   defaultColor: string;
   defaultHasDoors?: boolean;
+  defaultImageUrl?: string;
   svgPath?: string;
 }
 

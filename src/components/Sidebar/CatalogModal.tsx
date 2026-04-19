@@ -51,6 +51,7 @@ export const CatalogModal: React.FC<CatalogModalProps> = ({ isOpen, onClose }) =
       rotation: 0,
       color: selectedItem.defaultColor,
       hasDoors: selectedItem.defaultHasDoors,
+      imageUrl: selectedItem.defaultImageUrl,
       svgPath: selectedItem.svgPath
     });
     setMode('place-furniture');

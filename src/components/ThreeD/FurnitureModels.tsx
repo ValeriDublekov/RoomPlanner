@@ -11,6 +11,7 @@ interface ModelProps {
   color: string;
   secondaryColor?: string;
   hasDoors?: boolean;
+  imageUrl?: string;
 }
 
 const WoodMaterial: React.FC<{ color: string, opacity?: number, transparent?: boolean }> = ({ color, opacity = 1, transparent = false }) => {
@@ -384,6 +385,31 @@ export const Shelf3D: React.FC<ModelProps> = ({ width, depth, height, color, sec
           })}
         </group>
       )}
+    </group>
+  );
+};
+
+export const Picture3D: React.FC<ModelProps> = ({ width, depth, height, color, imageUrl }) => {
+  const texture = imageUrl ? useTexture(imageUrl) : null;
+  const frameThickness = 2; // 2cm frame
+  
+  return (
+    <group>
+      {/* Frame */}
+      <mesh position={[width / 2, height / 2, depth / 2]} castShadow receiveShadow>
+        <boxGeometry args={[width, height, depth]} />
+        <meshStandardMaterial color={color} roughness={0.5} />
+      </mesh>
+      
+      {/* Canvas/Image */}
+      <mesh position={[width / 2, height / 2, depth - 0.1]} castShadow receiveShadow>
+        <boxGeometry args={[width - frameThickness * 2, height - frameThickness * 2, 0.2]} />
+        {texture ? (
+          <meshStandardMaterial map={texture} roughness={0.3} />
+        ) : (
+          <meshStandardMaterial color="#ffffff" roughness={1} />
+        )}
+      </mesh>
     </group>
   );
 };

@@ -10,7 +10,8 @@ import { WallSegments, Ceiling } from './RoomElements';
 import { 
   Bed3D, Desk3D, Wardrobe3D, Dresser3D, Chair3D, 
   Shelf3D, Electronics3D, Table3D, GenericFurniture3D,
-  Sofa3D, Nightstand3D, Toilet3D, Bathtub3D, Light3D
+  Sofa3D, Nightstand3D, Toilet3D, Bathtub3D, Light3D,
+  Picture3D
 } from './FurnitureModels';
 
 const SceneBackground = ({ isExporting }: { isExporting: boolean }) => {
@@ -93,6 +94,7 @@ const Furniture = ({ item, pixelsPerCm, isChild = false, parentWidth = 0, parent
       case 'toilet': return <Toilet3D {...props} />;
       case 'bathtub': return <Bathtub3D {...props} />;
       case 'light': return <Light3D {...props} />;
+      case 'picture': return <Picture3D {...props} imageUrl={item.imageUrl} />;
       default: {
         const cid = item.catalogId || '';
         if (cid.includes('sofa')) return <Sofa3D {...props} />;
