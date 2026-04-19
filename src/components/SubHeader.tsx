@@ -21,13 +21,13 @@ export const SubHeader: React.FC = () => {
   } = useStore();
 
   return (
-    <div className="h-12 bg-slate-50 border-b border-slate-200 flex items-center justify-between px-6 z-10">
-      <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2 mr-2">
+    <div className="min-h-[3rem] py-1 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between px-4 md:px-6 z-10 gap-y-2">
+      <div className="flex flex-wrap items-center gap-4">
+        <div className="flex items-center gap-2 mr-1">
           <Layers size={14} className="text-slate-400" />
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Layers</span>
+          <span className="hidden sm:inline text-[10px] font-bold text-slate-400 uppercase tracking-widest">Layers</span>
         </div>
-        <div className="flex bg-slate-200/50 p-1 rounded-xl gap-1">
+        <div className="flex flex-wrap bg-slate-200/50 p-1 rounded-xl gap-1">
           {(['blueprint', 'room', 'furniture', 'annotation'] as const).map((layer) => (
             <button
               key={layer}

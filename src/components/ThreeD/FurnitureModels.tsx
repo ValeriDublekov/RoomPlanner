@@ -1,7 +1,8 @@
 import React from 'react';
-import { useTexture } from '@react-three/drei';
+import { useTexture, Edges } from '@react-three/drei';
 import * as THREE from 'three';
 import { WOOD_GRAIN } from '../../constants';
+import { useStore } from '../../store';
 
 interface ModelProps {
   width: number;
@@ -9,13 +10,47 @@ interface ModelProps {
   height: number;
   color: string;
   secondaryColor?: string;
+  hasDoors?: boolean;
 }
 
 const WoodMaterial: React.FC<{ color: string, opacity?: number, transparent?: boolean }> = ({ color, opacity = 1, transparent = false }) => {
+  const edgeMode = useStore(state => state.edgeMode3d);
   const texture = useTexture(WOOD_GRAIN);
   texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
   texture.repeat.set(0.02, 0.02);
+  
+  if (edgeMode) {
+    return (
+      <>
+        <meshBasicMaterial color="black" transparent={transparent} opacity={opacity} />
+        <Edges color="white" threshold={20} />
+      </>
+    );
+  }
+  
   return <meshStandardMaterial color={color} map={texture} roughness={0.8} opacity={opacity} transparent={transparent} />;
+};
+
+const SmartMaterial = (props: any) => {
+  const edgeMode = useStore(state => state.edgeMode3d);
+  if (edgeMode) {
+    // In Edge Mode, we strictly want black surfaces and white outlines.
+    // We ignore color, map and emissive to prevent surfaces from appearing white/textured.
+    const { color, map, emissive, emissiveIntensity, transparent, opacity, side, ...otherProps } = props;
+    return (
+      <>
+        <meshBasicMaterial 
+          color="black" 
+          transparent={transparent} 
+          opacity={opacity} 
+          side={side || THREE.FrontSide} 
+          {...otherProps} 
+        />
+        <Edges color="white" threshold={20} />
+      </>
+    );
+  }
+  return <meshStandardMaterial {...props} />;
 };
 
 export const Bed3D: React.FC<ModelProps> = ({ width, depth, height, color, secondaryColor }) => {
@@ -35,17 +70,17 @@ export const Bed3D: React.FC<ModelProps> = ({ width, depth, height, color, secon
       {/* Mattress */}
       <mesh position={[width / 2, frameHeight + mattressHeight / 2, depth / 2]} castShadow receiveShadow>
         <boxGeometry args={[width - mattressInset, mattressHeight, depth - mattressInset]} />
-        <meshStandardMaterial color={mattressColor} roughness={0.9} />
+        <SmartMaterial color={mattressColor} roughness={0.9} />
       </mesh>
       
       {/* Pillows */}
       <mesh position={[width * 0.25, frameHeight + mattressHeight + 2, depth * 0.15]} castShadow receiveShadow>
         <boxGeometry args={[width * 0.3, 5, depth * 0.2]} />
-        <meshStandardMaterial color={mattressColor} roughness={1} />
+        <SmartMaterial color={mattressColor} roughness={1} />
       </mesh>
       <mesh position={[width * 0.75, frameHeight + mattressHeight + 2, depth * 0.15]} castShadow receiveShadow>
         <boxGeometry args={[width * 0.3, 5, depth * 0.2]} />
-        <meshStandardMaterial color={mattressColor} roughness={1} />
+        <SmartMaterial color={mattressColor} roughness={1} />
       </mesh>
     </group>
   );
@@ -61,21 +96,21 @@ export const Sofa3D: React.FC<ModelProps> = ({ width, depth, height, color }) =>
       {/* Base/Seat */}
       <mesh position={[width / 2, seatHeight / 2, depth / 2]} castShadow receiveShadow>
         <boxGeometry args={[width, seatHeight, depth]} />
-        <meshStandardMaterial color={color} roughness={0.9} />
+        <SmartMaterial color={color} roughness={0.9} />
       </mesh>
       {/* Backrest */}
       <mesh position={[width / 2, height / 2 + seatHeight / 2, backDepth / 2]} castShadow receiveShadow>
         <boxGeometry args={[width, height - seatHeight, backDepth]} />
-        <meshStandardMaterial color={color} roughness={0.9} />
+        <SmartMaterial color={color} roughness={0.9} />
       </mesh>
       {/* Arms */}
       <mesh position={[armWidth / 2, height * 0.7 / 2, depth / 2]} castShadow receiveShadow>
         <boxGeometry args={[armWidth, height * 0.7, depth]} />
-        <meshStandardMaterial color={color} roughness={0.9} />
+        <SmartMaterial color={color} roughness={0.9} />
       </mesh>
       <mesh position={[width - armWidth / 2, height * 0.7 / 2, depth / 2]} castShadow receiveShadow>
         <boxGeometry args={[armWidth, height * 0.7, depth]} />
-        <meshStandardMaterial color={color} roughness={0.9} />
+        <SmartMaterial color={color} roughness={0.9} />
       </mesh>
     </group>
   );
@@ -89,7 +124,7 @@ export const Nightstand3D: React.FC<ModelProps> = ({ width, depth, height, color
     </mesh>
     <mesh position={[width / 2, height * 0.7, depth + 0.5]} castShadow receiveShadow>
       <boxGeometry args={[width - 4, 2, 1]} />
-      <meshStandardMaterial color="#94a3b8" />
+      <SmartMaterial color="#94a3b8" />
     </mesh>
   </group>
 );
@@ -99,12 +134,12 @@ export const Toilet3D: React.FC<ModelProps> = ({ width, depth, height, color }) 
     {/* Tank */}
     <mesh position={[width / 2, height * 0.8, depth * 0.2]} castShadow receiveShadow>
       <boxGeometry args={[width, height * 0.4, depth * 0.3]} />
-      <meshStandardMaterial color={color} roughness={0.1} />
+      <SmartMaterial color={color} roughness={0.1} />
     </mesh>
     {/* Bowl */}
     <mesh position={[width / 2, height * 0.3, depth * 0.6]} castShadow receiveShadow>
       <cylinderGeometry args={[width / 2, width / 3, height * 0.6, 16]} />
-      <meshStandardMaterial color={color} roughness={0.1} />
+      <SmartMaterial color={color} roughness={0.1} />
     </mesh>
   </group>
 );
@@ -113,11 +148,11 @@ export const Bathtub3D: React.FC<ModelProps> = ({ width, depth, height, color })
   <group>
     <mesh position={[width / 2, height / 2, depth / 2]} castShadow receiveShadow>
       <boxGeometry args={[width, height, depth]} />
-      <meshStandardMaterial color={color} roughness={0.1} />
+      <SmartMaterial color={color} roughness={0.1} />
     </mesh>
     <mesh position={[width / 2, height * 0.6, depth / 2]}>
       <boxGeometry args={[width - 10, height * 0.8, depth - 10]} />
-      <meshStandardMaterial color="#e2e8f0" roughness={0.1} />
+      <SmartMaterial color="#e2e8f0" roughness={0.1} />
     </mesh>
   </group>
 );
@@ -143,7 +178,7 @@ export const Desk3D: React.FC<ModelProps> = ({ width, depth, height, color }) =>
       ].map((pos, i) => (
         <mesh key={i} position={[pos[0], (height - topThickness) / 2, pos[1]]} castShadow receiveShadow>
           <cylinderGeometry args={[legRadius, legRadius, height - topThickness, 16]} />
-          <meshStandardMaterial color="#334155" roughness={0.5} />
+          <SmartMaterial color="#334155" roughness={0.5} />
         </mesh>
       ))}
     </group>
@@ -176,7 +211,7 @@ export const Wardrobe3D: React.FC<ModelProps> = ({ width, depth, height, color, 
           {/* Handle */}
           <mesh position={[i % 2 === 0 ? doorWidth / 3 : -doorWidth / 3, 0, 1]} castShadow receiveShadow>
             <cylinderGeometry args={[handleRadius, handleRadius, handleHeight, 8]} />
-            <meshStandardMaterial color="#94a3b8" metalness={0.8} roughness={0.2} />
+            <SmartMaterial color="#94a3b8" metalness={0.8} roughness={0.2} />
           </mesh>
         </group>
       ))}
@@ -207,7 +242,7 @@ export const Dresser3D: React.FC<ModelProps> = ({ width, depth, height, color, s
           {/* Handle */}
           <mesh position={[0, 0, 1]} castShadow receiveShadow>
             <boxGeometry args={[10, 1, 1]} />
-            <meshStandardMaterial color="#94a3b8" metalness={0.8} roughness={0.2} />
+            <SmartMaterial color="#94a3b8" metalness={0.8} roughness={0.2} />
           </mesh>
         </group>
       ))}
@@ -225,7 +260,7 @@ export const Chair3D: React.FC<ModelProps> = ({ width, depth, height, color }) =
       {/* Seat */}
       <mesh position={[width / 2, seatHeight, depth / 2]} castShadow receiveShadow>
         <boxGeometry args={[width, 5, depth]} />
-        <meshStandardMaterial color={color} roughness={0.6} />
+        <SmartMaterial color={color} roughness={0.6} />
       </mesh>
       
       {/* Legs */}
@@ -237,26 +272,29 @@ export const Chair3D: React.FC<ModelProps> = ({ width, depth, height, color }) =
       ].map((pos, i) => (
         <mesh key={i} position={[pos[0], seatHeight / 2, pos[1]]} castShadow receiveShadow>
           <cylinderGeometry args={[legRadius, legRadius, seatHeight, 16]} />
-          <meshStandardMaterial color="#334155" roughness={0.5} />
+          <SmartMaterial color="#334155" roughness={0.5} />
         </mesh>
       ))}
       
       {/* Backrest */}
       <mesh position={[width / 2, seatHeight + backrestHeight / 2, 2.5]} castShadow receiveShadow>
         <boxGeometry args={[width, backrestHeight, 5]} />
-        <meshStandardMaterial color={color} roughness={0.6} />
+        <SmartMaterial color={color} roughness={0.6} />
       </mesh>
     </group>
   );
 };
 
-export const Shelf3D: React.FC<ModelProps> = ({ width, depth, height, color }) => {
+export const Shelf3D: React.FC<ModelProps> = ({ width, depth, height, color, secondaryColor, hasDoors }) => {
   const isWallShelf = height < 100;
   const numShelves = isWallShelf ? 0 : (height > 100 ? 5 : 3);
   const shelfSpacing = isWallShelf ? 0 : (height - 4) / numShelves;
   
-  const numVerticalDividers = isWallShelf ? Math.floor(width / 30) : 0;
-  const dividerSpacing = isWallShelf ? width / (numVerticalDividers + 1) : 0;
+  const numVerticalDividers = (isWallShelf || hasDoors) ? Math.floor((width - 1) / 50) : 0;
+  const dividerSpacing = width / (numVerticalDividers + 1);
+  const numSections = numVerticalDividers + 1;
+  const sectionWidth = width / numSections;
+  const doorColor = secondaryColor || color;
 
   return (
     <group>
@@ -293,10 +331,10 @@ export const Shelf3D: React.FC<ModelProps> = ({ width, depth, height, color }) =
         </mesh>
       ))}
 
-      {/* Vertical Dividers (for wall shelves) */}
-      {isWallShelf && Array.from({ length: numVerticalDividers }).map((_, i) => (
+      {/* Vertical Dividers */}
+      {(isWallShelf || hasDoors) && Array.from({ length: numVerticalDividers }).map((_, i) => (
         <mesh key={i} position={[(i + 1) * dividerSpacing, height / 2, depth / 2]} castShadow receiveShadow>
-          <boxGeometry args={[2, height - 4, depth - 1]} />
+          <boxGeometry args={[1.5, height - 2, depth - 1]} />
           <WoodMaterial color={color} />
         </mesh>
       ))}
@@ -320,6 +358,32 @@ export const Shelf3D: React.FC<ModelProps> = ({ width, depth, height, color }) =
         <boxGeometry args={[width - 2, height, 1]} />
         <WoodMaterial color={color} opacity={0.5} transparent />
       </mesh>
+
+      {/* Doors */}
+      {hasDoors && (
+        <group position={[0, height / 2, depth]}>
+          {Array.from({ length: numSections }).map((_, i) => {
+            const xPos = i * sectionWidth + sectionWidth / 2;
+            // Alternate handle position for double doors effect
+            const handleSide = (i % 2 === 0) ? 1 : -1;
+            const handleX = handleSide * (sectionWidth / 2 - 4);
+            
+            return (
+              <group key={i} position={[xPos, 0, 0]}>
+                <mesh position={[0, 0, 0.5]} castShadow receiveShadow>
+                  <boxGeometry args={[sectionWidth - 0.5, height - 1, 1]} />
+                  <WoodMaterial color={doorColor} />
+                </mesh>
+                {/* Handle */}
+                <mesh position={[handleX, 0, 1.1]} castShadow receiveShadow>
+                  <boxGeometry args={[1, 12, 1]} />
+                  <SmartMaterial color="#94a3b8" metalness={1} roughness={0.1} />
+                </mesh>
+              </group>
+            );
+          })}
+        </group>
+      )}
     </group>
   );
 };
@@ -331,18 +395,18 @@ export const Electronics3D: React.FC<ModelProps & { hideStand?: boolean }> = ({ 
       {/* Screen */}
       <mesh position={[width / 2, (height - standHeight) / 2 + standHeight, depth / 2]} castShadow receiveShadow>
         <boxGeometry args={[width, height - standHeight, 2]} />
-        <meshStandardMaterial color="#0f172a" roughness={0.1} metalness={0.8} />
+        <SmartMaterial color="#0f172a" roughness={0.1} metalness={0.8} />
       </mesh>
       {/* Stand */}
       {!hideStand && (
         <>
           <mesh position={[width / 2, 5, depth / 2]} castShadow receiveShadow>
             <boxGeometry args={[width * 0.3, 10, 2]} />
-            <meshStandardMaterial color="#334155" roughness={0.5} />
+            <SmartMaterial color="#334155" roughness={0.5} />
           </mesh>
           <mesh position={[width / 2, 1, depth / 2]} castShadow receiveShadow>
             <boxGeometry args={[width * 0.4, 2, depth]} />
-            <meshStandardMaterial color="#334155" roughness={0.5} />
+            <SmartMaterial color="#334155" roughness={0.5} />
           </mesh>
         </>
       )}
@@ -370,7 +434,7 @@ export const Table3D: React.FC<ModelProps & { isRound?: boolean }> = ({ width, d
       {isRound ? (
         <mesh position={[width / 2, (height - topThickness) / 2, depth / 2]} castShadow receiveShadow>
           <cylinderGeometry args={[legRadius * 2, legRadius * 2, height - topThickness, 16]} />
-          <meshStandardMaterial color="#334155" roughness={0.5} />
+          <SmartMaterial color="#334155" roughness={0.5} />
         </mesh>
       ) : (
         [
@@ -381,7 +445,7 @@ export const Table3D: React.FC<ModelProps & { isRound?: boolean }> = ({ width, d
         ].map((pos, i) => (
           <mesh key={i} position={[pos[0], (height - topThickness) / 2, pos[1]]} castShadow receiveShadow>
             <boxGeometry args={[legRadius * 2, height - topThickness, legRadius * 2]} />
-            <meshStandardMaterial color="#334155" roughness={0.5} />
+            <SmartMaterial color="#334155" roughness={0.5} />
           </mesh>
         ))
       )}
@@ -390,37 +454,40 @@ export const Table3D: React.FC<ModelProps & { isRound?: boolean }> = ({ width, d
 };
 
 export const Light3D: React.FC<ModelProps> = ({ width, depth, height, color }) => {
+  const edgeMode = useStore(state => state.edgeMode3d);
   return (
     <group>
       {/* Base */}
       <mesh position={[width / 2, 2, depth / 2]} castShadow receiveShadow>
         <cylinderGeometry args={[width * 0.2, width * 0.25, 4, 16]} />
-        <meshStandardMaterial color="#334155" metalness={0.8} roughness={0.2} />
+        <SmartMaterial color="#334155" metalness={0.8} roughness={0.2} />
       </mesh>
       {/* Stem */}
       <mesh position={[width / 2, height / 2, depth / 2]} castShadow receiveShadow>
         <cylinderGeometry args={[2, 2, height, 8]} />
-        <meshStandardMaterial color="#334155" metalness={0.8} roughness={0.2} />
+        <SmartMaterial color="#334155" metalness={0.8} roughness={0.2} />
       </mesh>
       {/* Shade */}
       <mesh position={[width / 2, height - 10, depth / 2]} castShadow receiveShadow>
         <cylinderGeometry args={[width * 0.4, width * 0.5, 20, 16, 1, true]} />
-        <meshStandardMaterial color={color} side={2} transparent opacity={0.9} />
+        <SmartMaterial color={color} side={2} transparent opacity={0.9} />
       </mesh>
       {/* Light Source (Visual) */}
       <mesh position={[width / 2, height - 10, depth / 2]}>
         <sphereGeometry args={[5, 16, 16]} />
-        <meshStandardMaterial color="#fff" emissive="#fff" emissiveIntensity={2} />
+        <SmartMaterial color="#fff" emissive="#fff" emissiveIntensity={2} />
       </mesh>
       {/* Actual PointLight */}
-      <pointLight 
-        position={[width / 2, height - 10, depth / 2]} 
-        intensity={1.5} 
-        distance={500} 
-        decay={2} 
-        castShadow 
-        shadow-mapSize={[1024, 1024]}
-      />
+      {!edgeMode && (
+        <pointLight 
+          position={[width / 2, height - 10, depth / 2]} 
+          intensity={1.5} 
+          distance={500} 
+          decay={2} 
+          castShadow 
+          shadow-mapSize={[1024, 1024]}
+        />
+      )}
     </group>
   );
 };
@@ -428,6 +495,6 @@ export const Light3D: React.FC<ModelProps> = ({ width, depth, height, color }) =
 export const GenericFurniture3D: React.FC<ModelProps> = ({ width, depth, height, color }) => (
   <mesh position={[width / 2, height / 2, depth / 2]} castShadow receiveShadow>
     <boxGeometry args={[width, height, depth]} />
-    <WoodMaterial color={color} />
+    <SmartMaterial color={color} />
   </mesh>
 );

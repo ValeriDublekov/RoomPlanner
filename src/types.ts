@@ -32,6 +32,7 @@ export interface FurnitureObject {
   secondaryColor?: string;
   svgPath?: string;
   catalogId?: string;
+  hasDoors?: boolean; // For shelves/cabinets
   hideStand?: boolean; // For electronics/TV
   showLabel?: boolean; // Explicitly show name label
   children?: FurnitureObject[]; // For groups
@@ -48,6 +49,7 @@ export interface CatalogItem {
   height3d?: number; // in cm
   defaultElevation?: number; // in cm
   defaultColor: string;
+  defaultHasDoors?: boolean;
   svgPath?: string;
 }
 

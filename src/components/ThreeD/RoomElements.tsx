@@ -1,9 +1,23 @@
 import React, { useMemo } from 'react';
 import * as THREE from 'three';
-import { useTexture } from '@react-three/drei';
+import { useTexture, Edges } from '@react-three/drei';
 import { RoomObject, WallAttachment } from '../../types';
 import { FLOOR_TEXTURES } from '../../constants';
 import { getOutwardNormal } from '../../lib/geometry';
+import { useStore } from '../../store';
+
+const SmartMaterial = (props: any) => {
+  const edgeMode = useStore(state => state.edgeMode3d);
+  if (edgeMode) {
+    return (
+      <>
+        <meshBasicMaterial color="black" transparent={props.transparent} opacity={props.opacity} side={props.side || THREE.FrontSide} />
+        <Edges color="white" threshold={20} />
+      </>
+    );
+  }
+  return <meshStandardMaterial {...props} />;
+};
 
 export const Floor: React.FC<{ room: RoomObject, pixelsPerCm: number }> = ({ room, pixelsPerCm }) => {
   const floorShape = useMemo(() => {
@@ -34,7 +48,7 @@ export const Floor: React.FC<{ room: RoomObject, pixelsPerCm: number }> = ({ roo
   return (
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.1, 0]} receiveShadow>
       <shapeGeometry args={[floorShape]} />
-      <meshStandardMaterial 
+      <SmartMaterial 
         color={texture ? (room.floorColor || "#ffffff") : (room.floorColor || "#e2e8f0")} 
         map={texture} 
         roughness={0.9} 
@@ -59,7 +73,7 @@ export const Ceiling: React.FC<{ room: RoomObject, pixelsPerCm: number, height: 
   return (
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, height, 0]}>
       <shapeGeometry args={[ceilingShape]} />
-      <meshStandardMaterial 
+      <SmartMaterial 
         color="#f8fafc" 
         roughness={1} 
         side={THREE.DoubleSide}
@@ -95,7 +109,7 @@ const Curtain: React.FC<{
 
   return (
     <mesh geometry={geometry}>
-      <meshStandardMaterial 
+      <SmartMaterial 
         color={color} 
         transparent 
         opacity={opacity} 
@@ -335,13 +349,13 @@ export const WallSegments: React.FC<{
           >
             <boxGeometry args={[seg.length, seg.height, seg.depth || wallThickness]} />
             {seg.type === 'wall' ? (
-              <meshStandardMaterial color={seg.color} roughness={1} />
+              <SmartMaterial color={seg.color} roughness={1} />
             ) : seg.type === 'glass' ? (
-              <meshStandardMaterial color="#93c5fd" transparent opacity={0.4} roughness={0.1} metalness={0.5} />
+              <SmartMaterial color="#93c5fd" transparent opacity={0.4} roughness={0.1} metalness={0.5} />
             ) : seg.type === 'frame' ? (
-              <meshStandardMaterial color={seg.color} roughness={0.5} />
+              <SmartMaterial color={seg.color} roughness={0.5} />
             ) : (
-              <meshStandardMaterial color={seg.color} transparent opacity={seg.opacity || 1} roughness={1} />
+              <SmartMaterial color={seg.color} transparent opacity={seg.opacity || 1} roughness={1} />
             )}
           </mesh>
         );

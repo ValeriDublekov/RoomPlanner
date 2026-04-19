@@ -15,10 +15,17 @@ import {
 
 const SceneBackground = ({ isExporting }: { isExporting: boolean }) => {
   const { gl } = useThree();
+  const edgeMode3d = useStore(state => state.edgeMode3d);
+  
   useEffect(() => {
-    gl.setClearColor(isExporting ? '#ffffff' : '#0f172a');
-  }, [isExporting, gl]);
-  return null;
+    if (edgeMode3d) {
+      gl.setClearColor('#000000');
+    } else {
+      gl.setClearColor(isExporting ? '#ffffff' : '#0f172a');
+    }
+  }, [isExporting, gl, edgeMode3d]);
+  
+  return edgeMode3d ? <color attach="background" args={['#000000']} /> : null;
 };
 
 const Flashlight = () => {
@@ -77,7 +84,7 @@ const Furniture = ({ item, pixelsPerCm, isChild = false, parentWidth = 0, parent
       case 'wardrobe': return <Wardrobe3D {...props} />;
       case 'dresser': return <Dresser3D {...props} />;
       case 'chair': return <Chair3D {...props} />;
-      case 'shelf': return <Shelf3D {...props} />;
+      case 'shelf': return <Shelf3D {...props} hasDoors={item.hasDoors} />;
       case 'electronics': return <Electronics3D {...props} hideStand={item.hideStand} />;
       case 'table': return <Table3D {...props} isRound={item.type === 'circle'} />;
       case 'sofa': return <Sofa3D {...props} />;
@@ -128,7 +135,7 @@ const Furniture = ({ item, pixelsPerCm, isChild = false, parentWidth = 0, parent
 };
 
 export const ThreeDPreview: React.FC = () => {
-  const { rooms, furniture, pixelsPerCm, setShow3d, wallThickness, wallHeight, setWallHeight, wallAttachments } = useStore();
+  const { rooms, furniture, pixelsPerCm, setShow3d, wallThickness, wallHeight, setWallHeight, wallAttachments, edgeMode3d, setEdgeMode3d } = useStore();
   const [isExporting, setIsExporting] = useState(false);
   const [viewMode, setViewMode] = useState<'dollhouse' | 'first-person'>('dollhouse');
 
@@ -138,8 +145,8 @@ export const ThreeDPreview: React.FC = () => {
 
   const handleExport = async (isPrint = false) => {
     setIsExporting(true);
-    // Wait for a few frames to ensure the background color change is applied
-    await new Promise(resolve => setTimeout(resolve, 100));
+    // Wait for a few frames to ensure any background/state changes are applied
+    await new Promise(resolve => setTimeout(resolve, 150));
 
     const canvas = document.querySelector('.three-canvas canvas') as HTMLCanvasElement;
     if (canvas) {
@@ -186,7 +193,8 @@ export const ThreeDPreview: React.FC = () => {
         const link = document.createElement('a');
         const projectName = useStore.getState().projectName || 'project';
         const sanitizedName = projectName.toLowerCase().replace(/\s+/g, '-');
-        link.download = `${sanitizedName}-3d-${new Date().getTime()}.png`;
+        const typePrefix = useStore.getState().edgeMode3d ? 'edge-map' : '3d';
+        link.download = `${sanitizedName}-${typePrefix}-${new Date().getTime()}.png`;
         link.href = dataURL;
         link.click();
       }
@@ -243,7 +251,16 @@ export const ThreeDPreview: React.FC = () => {
             className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-bold transition-all flex items-center gap-2"
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
-            Export Image
+            {edgeMode3d ? 'Save Edge Map' : 'Export Image'}
+          </button>
+          <button 
+            onClick={() => setEdgeMode3d(!edgeMode3d)}
+            className={`px-4 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${
+              edgeMode3d ? 'bg-white text-slate-900 shadow-inner' : 'bg-slate-700 hover:bg-slate-600 text-white'
+            }`}
+          >
+            <Box size={16} />
+            {edgeMode3d ? 'Standard View' : 'AI Edge Map'}
           </button>
           <button 
             onClick={() => handleExport(true)}
@@ -281,29 +298,35 @@ export const ThreeDPreview: React.FC = () => {
             <FPVControls initialPosition={center} />
           )}
           
-          <ambientLight intensity={0.5} />
-          <directionalLight 
-            castShadow 
-            intensity={1.5} 
-            position={[center.x + 1000, 2000, center.z + 1000]} 
-            shadow-bias={-0.0001}
-            shadow-mapSize={[2048, 2048]}
-            shadow-camera-left={-2000}
-            shadow-camera-right={2000}
-            shadow-camera-top={2000}
-            shadow-camera-bottom={-2000}
-            shadow-camera-near={1}
-            shadow-camera-far={5000}
-          />
-          <Environment preset="city" />
-          {viewMode === 'first-person' && <Flashlight />}
+          {!edgeMode3d && (
+            <>
+              <ambientLight intensity={0.5} />
+              <directionalLight 
+                castShadow 
+                intensity={1.5} 
+                position={[center.x + 1000, 2000, center.z + 1000]} 
+                shadow-bias={-0.0001}
+                shadow-mapSize={[2048, 2048]}
+                shadow-camera-left={-2000}
+                shadow-camera-right={2000}
+                shadow-camera-top={2000}
+                shadow-camera-bottom={-2000}
+                shadow-camera-near={1}
+                shadow-camera-far={5000}
+              />
+              <Environment preset="city" />
+              {viewMode === 'first-person' && <Flashlight />}
+            </>
+          )}
 
           <Suspense fallback={null}>
             <group>
-              <mesh rotation={[-Math.PI / 2, 0, 0]} position={[center.x, -0.2, center.z]} receiveShadow>
-                <planeGeometry args={[10000, 10000]} />
-                <meshStandardMaterial color="#f8fafc" roughness={1} />
-              </mesh>
+              {!edgeMode3d && (
+                <mesh rotation={[-Math.PI / 2, 0, 0]} position={[center.x, -0.2, center.z]} receiveShadow>
+                  <planeGeometry args={[10000, 10000]} />
+                  <meshStandardMaterial color="#f8fafc" roughness={1} />
+                </mesh>
+              )}
 
               {rooms.map(room => (
                 <React.Fragment key={room.id}>
@@ -330,13 +353,15 @@ export const ThreeDPreview: React.FC = () => {
             </group>
           </Suspense>
 
-          <ContactShadows 
-            position={[center.x, 0, center.z]} 
-            opacity={0.4} 
-            scale={5000} 
-            blur={2} 
-            far={20} 
-          />
+          {!edgeMode3d && (
+            <ContactShadows 
+              position={[center.x, 0, center.z]} 
+              opacity={0.4} 
+              scale={5000} 
+              blur={2} 
+              far={20} 
+            />
+          )}
         </Canvas>
 
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-4">

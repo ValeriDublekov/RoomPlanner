@@ -50,6 +50,7 @@ export const CatalogModal: React.FC<CatalogModalProps> = ({ isOpen, onClose }) =
       elevation: elevationPx,
       rotation: 0,
       color: selectedItem.defaultColor,
+      hasDoors: selectedItem.defaultHasDoors,
       svgPath: selectedItem.svgPath
     });
     setMode('place-furniture');
@@ -82,6 +83,7 @@ export const CatalogModal: React.FC<CatalogModalProps> = ({ isOpen, onClose }) =
       elevation: elevationPx,
       rotation: 0,
       color: item.defaultColor,
+      hasDoors: item.defaultHasDoors,
       svgPath: item.svgPath
     });
     setMode('place-furniture');

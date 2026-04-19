@@ -15,6 +15,7 @@ export interface UISlice {
   isAltPressed: boolean;
   edgeMap: EdgeMap | null;
   show3d: boolean;
+  edgeMode3d: boolean;
   isDraggingWall: boolean;
   isDraggingVertex: boolean;
   pendingFurniture: Omit<FurnitureObject, 'id'> | null;
@@ -38,6 +39,7 @@ export interface UISlice {
   setIsAltPressed: (pressed: boolean) => void;
   setEdgeMap: (map: EdgeMap | null) => void;
   setShow3d: (show: boolean) => void;
+  setEdgeMode3d: (enabled: boolean) => void;
   setIsDraggingWall: (isDragging: boolean) => void;
   setIsDraggingVertex: (isDragging: boolean) => void;
   setPendingFurniture: (furniture: Omit<FurnitureObject, 'id'> | null) => void;
@@ -60,6 +62,7 @@ export const createUISlice: StateCreator<AppState, [], [], UISlice> = (set, get)
   isAltPressed: false,
   edgeMap: null,
   show3d: false,
+  edgeMode3d: false,
   isDraggingWall: false,
   isDraggingVertex: false,
   pendingFurniture: null,
@@ -83,6 +86,7 @@ export const createUISlice: StateCreator<AppState, [], [], UISlice> = (set, get)
   setIsAltPressed: (isAltPressed) => set({ isAltPressed }),
   setEdgeMap: (edgeMap) => set({ edgeMap }),
   setShow3d: (show3d) => set({ show3d }),
+  setEdgeMode3d: (edgeMode3d) => set({ edgeMode3d }),
   setIsDraggingWall: (isDraggingWall) => set({ isDraggingWall }),
   setIsDraggingVertex: (isDraggingVertex) => set({ isDraggingVertex }),
   setPendingFurniture: (pendingFurniture) => set({ pendingFurniture }),

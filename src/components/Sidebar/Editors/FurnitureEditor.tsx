@@ -114,21 +114,37 @@ export const FurnitureEditor: React.FC<FurnitureEditorProps> = ({
         </div>
       </div>
 
-      {selectedFurniture.furnitureType === 'electronics' && (
-        <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
-          <input
-            type="checkbox"
-            id="hideStand"
-            checked={selectedFurniture.hideStand || false}
-            onChange={(e) => {
-              saveHistory();
-              updateFurniture(selectedFurniture.id, { hideStand: e.target.checked });
-            }}
-            className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500"
-          />
-          <label htmlFor="hideStand" className="text-xs font-bold text-slate-700 uppercase tracking-wider cursor-pointer">
-            Wall Mounted (Hide Stand)
-          </label>
+      {(selectedFurniture.furnitureType === 'electronics' || selectedFurniture.furnitureType === 'shelf') && (
+        <div className="space-y-3 pt-2">
+          {selectedFurniture.furnitureType === 'electronics' && (
+            <label className="flex items-center gap-3 cursor-pointer group p-3 bg-slate-50 rounded-2xl border border-slate-100 hover:border-indigo-200 transition-all">
+              <input
+                type="checkbox"
+                checked={selectedFurniture.hideStand || false}
+                onChange={(e) => updateFurniture(selectedFurniture.id, { hideStand: e.target.checked })}
+                className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+              />
+              <div className="flex flex-col">
+                <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Wall Mounted</span>
+                <span className="text-[10px] text-slate-500 font-medium">Hide stand in 3D view</span>
+              </div>
+            </label>
+          )}
+
+          {selectedFurniture.furnitureType === 'shelf' && (
+            <label className="flex items-center gap-3 cursor-pointer group p-3 bg-slate-50 rounded-2xl border border-slate-100 hover:border-indigo-200 transition-all">
+              <input
+                type="checkbox"
+                checked={selectedFurniture.hasDoors || false}
+                onChange={(e) => updateFurniture(selectedFurniture.id, { hasDoors: e.target.checked })}
+                className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+              />
+              <div className="flex flex-col">
+                <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">With Doors</span>
+                <span className="text-[10px] text-slate-500 font-medium">Turn shelf into a cabinet</span>
+              </div>
+            </label>
+          )}
         </div>
       )}
 
@@ -170,7 +186,7 @@ export const FurnitureEditor: React.FC<FurnitureEditorProps> = ({
         </div>
       </div>
 
-      {(selectedFurniture.furnitureType === 'wardrobe' || selectedFurniture.furnitureType === 'dresser' || selectedFurniture.furnitureType === 'bed') && (
+      {(selectedFurniture.furnitureType === 'wardrobe' || selectedFurniture.furnitureType === 'dresser' || selectedFurniture.furnitureType === 'bed' || (selectedFurniture.furnitureType === 'shelf' && selectedFurniture.hasDoors)) && (
         <div className="space-y-1.5 p-3 bg-slate-50 rounded-xl border border-slate-200">
           <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">
             {selectedFurniture.furnitureType === 'bed' ? 'Mattress / Pillows Color' : 'Doors / Drawers Color'}
@@ -274,21 +290,6 @@ export const FurnitureEditor: React.FC<FurnitureEditorProps> = ({
             <span className="text-[10px] text-slate-500 font-medium">Always show name and dimensions</span>
           </div>
         </label>
-
-        {selectedFurniture.furnitureType === 'electronics' && (
-          <label className="flex items-center gap-3 cursor-pointer group p-3 bg-slate-50 rounded-2xl border border-slate-100 hover:border-indigo-200 transition-all">
-            <input
-              type="checkbox"
-              checked={selectedFurniture.hideStand || false}
-              onChange={(e) => updateFurniture(selectedFurniture.id, { hideStand: e.target.checked })}
-              className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-            />
-            <div className="flex flex-col">
-              <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Wall Mounted</span>
-              <span className="text-[10px] text-slate-500 font-medium">Hide stand in 3D view</span>
-            </div>
-          </label>
-        )}
       </div>
 
       <div className="space-y-1.5">
