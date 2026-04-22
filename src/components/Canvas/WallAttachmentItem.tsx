@@ -18,7 +18,7 @@ export const WallAttachmentItem: React.FC<WallAttachmentItemProps> = ({
   onSelect,
   scale,
 }) => {
-  const { rooms, wallThickness, pixelsPerCm, updateWallAttachment, saveHistory } = useStore();
+  const { rooms, wallThickness, pixelsPerCm, updateWallAttachment, saveHistory, activeLayer } = useStore();
   const groupRef = useRef<Konva.Group>(null);
   const trRef = useRef<Konva.Transformer>(null);
   const [isInteracting, setIsInteracting] = useState(false);
@@ -316,7 +316,7 @@ export const WallAttachmentItem: React.FC<WallAttachmentItemProps> = ({
         height={thicknessPx}
         offsetX={widthPx / 2}
         offsetY={finalOffsetY}
-        listening={useStore.getState().activeLayer === 'room'}
+        listening={activeLayer === 'room'}
       >
         {/* 
           The "Cutter" Rectangle 

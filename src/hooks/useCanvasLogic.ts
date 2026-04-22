@@ -1,8 +1,9 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import Konva from 'konva';
 import { useStore } from '../store';
-import { getDistance } from '../lib/geometry';
 import { useMouseSnapping } from './useMouseSnapping';
+import { getToolHandler } from '../lib/tools/registry';
+import { ToolContext } from '../lib/tools/types';
 
 export const useCanvasLogic = (
   stageRef: React.RefObject<Konva.Stage>,
@@ -13,20 +14,30 @@ export const useCanvasLogic = (
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const { getSnappedMousePos } = useMouseSnapping(mousePos, isCtrlPressed, isAltPressed);
   
+  const state = useStore();
   const {
     scale, setScale,
-    position, setPosition,
-    mode, setMode,
-    roomPoints, addRoomPoint, closeRoom,
-    dimensionInput, setDimensionInput,
-    addFurniture, setSelectedId,
-    setSelectedRoomId,
-    setSelectedDimensionId,
-    setSelectedAttachmentId,
-    addMeasurePoint,
-    addWallAttachment,
-    rooms
-  } = useStore();
+    setPosition,
+    mode, 
+    setDimensionInput,
+    addRoomPoint,
+    dimensionInput,
+    setContextMenu
+  } = state;
+
+  const currentTool = useMemo(() => getToolHandler(mode), [mode]);
+
+  const toolContext: ToolContext | null = useMemo(() => {
+    const stage = stageRef.current;
+    if (!stage) return null;
+    return {
+      state,
+      getSnappedMousePos,
+      mousePos,
+      stage,
+      scale
+    };
+  }, [state, getSnappedMousePos, mousePos, stageRef.current, scale]);
 
   const handleWheel = (e: Konva.KonvaEventObject<WheelEvent>) => {
     e.evt.preventDefault();
@@ -56,9 +67,8 @@ export const useCanvasLogic = (
 
   const handleMouseDown = (e: Konva.KonvaEventObject<MouseEvent>) => {
     if (e.evt.button !== 0) return;
-    const relPos = getSnappedMousePos();
-    if (mode === 'add-box' || mode === 'draw-circle') {
-      addRoomPoint(relPos);
+    if (currentTool.onMouseDown && toolContext) {
+      currentTool.onMouseDown(e, toolContext);
     }
   };
 
@@ -67,136 +77,43 @@ export const useCanvasLogic = (
     if (!stage) return;
     const pointer = stage.getPointerPosition();
     if (pointer) {
-      setMousePos({
+      const p = {
         x: (pointer.x - stage.x()) / stage.scaleX(),
         y: (pointer.y - stage.y()) / stage.scaleY(),
-      });
+      };
+      setMousePos(p);
+      if (currentTool.onMouseMove && toolContext) {
+        currentTool.onMouseMove(e, { ...toolContext, mousePos: p });
+      }
     }
   };
 
-  const handleMouseUp = () => {
-    if ((mode === 'add-box' || mode === 'draw-circle') && roomPoints.length === 1) {
-      const start = roomPoints[0];
-      const end = getSnappedMousePos();
-      const width = Math.abs(end.x - start.x);
-      const height = Math.abs(end.y - start.y);
-      if (width > 5 && height > 5) {
-        addFurniture({
-          type: mode === 'add-box' ? 'box' : 'circle',
-          name: mode === 'add-box' ? 'New Box' : 'New Circle',
-          x: Math.min(start.x, end.x),
-          y: Math.min(start.y, end.y),
-          width,
-          height,
-          rotation: 0
-        });
-        setMode('select');
-      }
-      useStore.setState({ roomPoints: [] });
+  const handleMouseUp = (e: Konva.KonvaEventObject<MouseEvent>) => {
+    if (currentTool.onMouseUp && toolContext) {
+      currentTool.onMouseUp(e, toolContext);
     }
   };
 
   const handleClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
     if (e.evt.button !== 0) return;
-    if ((mode === 'add-box' || mode === 'draw-circle') && roomPoints.length > 0) return;
-
-    useStore.getState().setContextMenu({ visible: false, x: 0, y: 0, targetId: null, targetType: null });
-    const relPos = getSnappedMousePos();
-
-    if (mode === 'calibrate') {
-      const { calibrationPoints, setCalibrationPoints } = useStore.getState();
-      if (!calibrationPoints) {
-        setCalibrationPoints([relPos]);
-      } else if (calibrationPoints.length === 1) {
-        const p1 = calibrationPoints[0];
-        const dist = getDistance(p1, relPos);
-        useStore.getState().setTempCalibrationDist(dist);
-        setCalibrationPoints(null);
-      }
-    } else if (mode === 'measure' || mode === 'dimension') {
-      addMeasurePoint(relPos);
-    } else if (mode === 'draw-room' || mode === 'draw-furniture') {
-      if (roomPoints.length >= 3) {
-        const threshold = 15 / scale;
-        if (getDistance(relPos, roomPoints[0]) < threshold) {
-          closeRoom();
-          return;
-        }
-      }
-      addRoomPoint(relPos);
-    } else if (mode === 'add-box' || mode === 'draw-circle') {
-      const size = 50 * useStore.getState().pixelsPerCm;
-      addFurniture({
-        type: mode === 'add-box' ? 'box' : 'circle',
-        name: mode === 'add-box' ? 'New Box' : 'New Circle',
-        x: relPos.x - size / 2,
-        y: relPos.y - size / 2,
-        width: size,
-        height: size,
-        rotation: 0
-      });
-      setMode('select');
-    } else if (mode === 'place-furniture') {
-      const pending = useStore.getState().pendingFurniture;
-      if (pending) {
-        addFurniture({
-          ...pending,
-          x: relPos.x - pending.width / 2,
-          y: relPos.y - pending.height / 2,
-        });
-        useStore.getState().setPendingFurniture(null);
-        setMode('select');
-      }
-    } else if (mode === 'select') {
-      if (e.target === stageRef.current) {
-        setSelectedId(null);
-        setSelectedRoomId(null);
-        setSelectedDimensionId(null);
-        setSelectedAttachmentId(null);
-      }
-    } else if (mode === 'add-door' || mode === 'add-window') {
-      let nearestWall = null;
-      let minDist = 20 / scale;
-      for (const room of rooms) {
-        for (let i = 0; i < room.points.length; i++) {
-          const p1 = room.points[i];
-          const p2 = room.points[(i + 1) % room.points.length];
-          const dx = p2.x - p1.x;
-          const dy = p2.y - p1.y;
-          const l2 = dx * dx + dy * dy;
-          if (l2 === 0) continue;
-          let t = ((relPos.x - p1.x) * dx + (relPos.y - p1.y) * dy) / l2;
-          t = Math.max(0, Math.min(1, t));
-          const projection = { x: p1.x + t * dx, y: p1.y + t * dy };
-          const d = getDistance(relPos, projection);
-          if (d < minDist) {
-            minDist = d;
-            nearestWall = { roomId: room.id, wallSegmentIndex: i, positionAlongWall: t };
-          }
-        }
-      }
-      if (nearestWall) {
-        addWallAttachment({
-          type: mode === 'add-door' ? 'door' : 'window',
-          roomId: nearestWall.roomId,
-          wallSegmentIndex: nearestWall.wallSegmentIndex,
-          positionAlongWall: nearestWall.positionAlongWall,
-          width: 80
-        });
-        setMode('select');
-      }
+    setContextMenu({ visible: false, x: 0, y: 0, targetId: null, targetType: null });
+    
+    if (currentTool.onClick && toolContext) {
+      currentTool.onClick(e, toolContext);
     }
   };
 
   const handleDimensionSubmit = useCallback(() => {
     const cm = parseFloat(dimensionInput);
     const pixelsPerCm = useStore.getState().pixelsPerCm;
-    if (isNaN(cm) || cm <= 0 || roomPoints.length === 0) return;
-    const lastPoint = roomPoints[roomPoints.length - 1];
+    if (isNaN(cm) || cm <= 0 || state.roomPoints.length === 0) return;
+    
+    const lastPoint = state.roomPoints[state.roomPoints.length - 1];
     const currentMouse = getSnappedMousePos(true);
     const dx = currentMouse.x - lastPoint.x;
     const dy = currentMouse.y - lastPoint.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
+    
     if (dist === 0) return;
     const targetPx = cm * pixelsPerCm;
     addRoomPoint({
@@ -204,7 +121,7 @@ export const useCanvasLogic = (
       y: lastPoint.y + (dy / dist) * targetPx,
     });
     setDimensionInput('');
-  }, [dimensionInput, roomPoints, getSnappedMousePos, addRoomPoint, setDimensionInput]);
+  }, [dimensionInput, state.roomPoints, getSnappedMousePos, addRoomPoint, setDimensionInput]);
 
   return {
     mousePos,

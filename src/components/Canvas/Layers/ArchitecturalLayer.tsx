@@ -89,13 +89,10 @@ export const ArchitecturalLayer: React.FC<ArchitecturalLayerProps> = ({ scale })
       {/* 2. Furniture (if in room mode, it's below attachments) */}
       {activeLayer === 'room' && furnitureElements}
 
-      {/* 3. Wall Attachments */}
-      {attachmentElements}
-
       {/* 4. Furniture (if NOT in room mode, it's above attachments) */}
       {activeLayer !== 'room' && furnitureElements}
 
-      {/* 5. Room Editor (Handles & Drag Distances) - Always on top of room elements */}
+      {/* 5. Room Editor (Handles & Drag Distances) */}
       {selectedRoomId && rooms.find(r => r.id === selectedRoomId) && (
         <RoomEditor
           room={rooms.find(r => r.id === selectedRoomId)!}
@@ -111,6 +108,9 @@ export const ArchitecturalLayer: React.FC<ArchitecturalLayerProps> = ({ scale })
           scale={scale}
         />
       ))}
+
+      {/* 6. Wall Attachments (Top priority for selection in room mode) */}
+      {attachmentElements}
     </Layer>
   );
 };

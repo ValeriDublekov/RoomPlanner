@@ -163,7 +163,7 @@ export const Canvas: React.FC = () => {
             onDragMove={handleDragMove}
             onDragEnd={handleDragEnd}
             onClick={handleClick}
-            onDblClick={() => {}}
+            onDblClick={(e) => {}}
             onMouseMove={handleMouseMove}
             bgImage={bgImage}
             bgRef={bgRef}

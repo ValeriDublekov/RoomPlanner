@@ -16,11 +16,11 @@ interface CanvasStageProps {
   position: { x: number; y: number };
   onWheel: (e: Konva.KonvaEventObject<WheelEvent>) => void;
   onMouseDown: (e: Konva.KonvaEventObject<MouseEvent>) => void;
-  onMouseUp: () => void;
+  onMouseUp: (e: Konva.KonvaEventObject<MouseEvent>) => void;
   onDragEnd: (e: Konva.KonvaEventObject<DragEvent>) => void;
   onDragMove?: (e: Konva.KonvaEventObject<DragEvent>) => void;
   onClick: (e: Konva.KonvaEventObject<MouseEvent>) => void;
-  onDblClick: () => void;
+  onDblClick: (e: Konva.KonvaEventObject<MouseEvent>) => void;
   onMouseMove: (e: Konva.KonvaEventObject<MouseEvent>) => void;
   bgImage: HTMLImageElement | undefined;
   bgRef: React.RefObject<Konva.Image>;
