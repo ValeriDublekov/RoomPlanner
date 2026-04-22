@@ -54,7 +54,7 @@ Defined in `src/types.ts`:
 
 The global state is managed in `src/store.ts`. Key state slices include:
 
-- **View State**: `scale`, `position` (panning), `gridVisible`.
+- **View State**: `scale`, `position` (panning), `gridVisible`, `viewport` (dynamic dimensions).
 - **App Mode & Layers**: `mode`, `activeLayer` (blueprint, room, furniture).
 - **Calibration**: `pixelsPerCm` (the core scale factor).
 - **Data**: `rooms`, `furniture`, `dimensions`, `roomPoints` (active drawing).
@@ -74,13 +74,12 @@ The application uses **Firebase** for cloud storage and authentication:
 
 ## Rendering Optimization (Konva Stage)
 
-The Konva Stage is organized into logical layers to optimize rendering and interaction. Tools are filtered based on the active layer to provide a cleaner UI:
+The Konva Stage is organized into logical layers to optimize rendering and interaction. **User Editor Modes** map to these layers bitwise or via visibility toggles:
 
 1. **BackgroundLayer**: Renders the blueprint image. Active tools: `select`, `calibrate`.
-2. **RoomLayer**: Renders completed room polygons. Active tools: `select`, `draw-room`.
-3. **FurnitureLayer**: Renders interactive furniture objects. Active tools: `select`, `add-box`, `draw-furniture`.
-4. **AnnotationLayer**: Used for dimension lines, labels, and the measurement tool preview. Active tools: `select`, `measure`, `dimension`.
-5. **InteractionLayer**: Renders active drawing elements (room points, calibration lines).
+2. **ContentLayer**: Renders completed room polygons, wall attachments, and interactive furniture objects. 
+3. **AnnotationLayer**: Internal layer for dimension lines and measurement previews. These tools are accessible within the `furniture` editor mode.
+4. **InteractionLayer**: Renders active drawing elements (room points, calibration lines).
 
 ## Key Features
 

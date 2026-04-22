@@ -13,7 +13,9 @@ Welcome to RoomPlanner! This guide will help you understand the workflow and fea
 *   **Draw Room (R)**: Click to place corners of your room. 
     *   **Precise Input**: While drawing, you can type a number (e.g., `300`) and press **Enter** to create a segment of exactly that length (in cm) in the direction of your mouse.
     *   **Close Room**: Click the starting point or double-click to finish the room.
-*   **Area Calculation**: Once a room is closed, its area in square meters (m²) is automatically calculated and displayed in the center. This is only visible while in the **Room Layer**.
+*   **Individual Wall Selection**: In **Select** mode, you can click directly on a wall segment to highlight it.
+*   **Wall Coloring**: Use the sidebar to set a **Default Wall Color** for the entire room, or select a specific wall to give it a unique color (accent wall).
+*   **Area Calculation**: Once a room is closed, its area in square meters (m²) is automatically calculated and displayed in the center. This label is hidden when the room is selected to avoid visual clutter.
 *   **Add Door/Window**: Select the tool and click on any wall to place an attachment.
     *   **Flip/Mirror**: Select a door or window to see flip controls in the sidebar. You can change the hinge side or the opening direction (In/Out).
     *   **Move**: Drag doors and windows along the wall. Distances to nearest perpendicular walls will be shown.
@@ -25,20 +27,16 @@ Welcome to RoomPlanner! This guide will help you understand the workflow and fea
 *   **Elevation**: Use the **Elevation** property to define the height from the floor. This is useful for wall-mounted TVs, shelves, or placing objects on top of others. In 2D, items with higher elevation are rendered on top of lower items.
 *   **Manipulate**: Select an object to move, rotate, or resize it using the handles.
     *   **Ortho Snapping**: If Ortho Mode is active, rotation will snap to 90-degree increments.
+*   **Measure (M)**: Use this tool to see the temporary distance between two points.
+*   **Dimension (D)**: Create permanent dimension labels that stay on your plan.
 
-### 4. Annotation Layer
-*   **Measure (M)**: Click two points to see the distance between them.
-*   **Dimension (D)**: Create permanent dimension lines for your plan.
-
-### 5. 3D Preview
-*   **Toggle 3D**: Click the **3D Preview (Box icon)** in the header to switch to a high-fidelity 3D view.
-*   **Dollhouse View**: The 3D mode uses a "Dollhouse" perspective with walls cut at 210cm for better visibility.
-*   **Wall Openings**: Doors and windows placed in 2D create real architectural openings in the 3D walls.
-*   **Controls**:
-    *   **Left Click**: Rotate the camera.
-    *   **Right Click**: Pan the view.
-    *   **Scroll**: Zoom in and out.
-*   **Back to 2D**: Click the "Back to 2D" button in the 3D header to return to drafting mode.
+### 4. View & Navigation
+*   **Editor Modes**: Use the horizontal switcher in the sub-header to toggle between **Blueprint**, **Room**, and **Furniture** editors.
+*   **3D Preview**: Access the 3D mode via the button in the **Editor Mode** switcher.
+*   **Viewport Tools**:
+    *   **Fit to Screen (Center Plan)**: Automatically scales and centers your entire drawing in the visible workspace.
+    *   **Reset Origin (0,0)**: Moves the camera to the project's coordinate origin.
+*   **Visibility**: Toggle the grid, background opacity, and auto-dimensions directly in the sub-header.
 
 ## Navigation & Shortcuts
 

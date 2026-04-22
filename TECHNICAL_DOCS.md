@@ -19,6 +19,10 @@ This document describes the technical implementation of the geometric calculatio
 - **Pixels per Cm (`pixelsPerCm`)**: A dynamic value determined during the calibration phase.
 - **Formula**: `cm = pixels / pixelsPerCm`.
 
+### Viewport Management
+- **Centralized Viewport**: The `uiSlice` maintains a `viewport` state (width/height) updated via `ResizeObserver` on the drawing area.
+- **Auto-Focus Logic**: Used in `ensureVisible` and `fitToScreen` to center objects while accounting for right-sidebar offsets and UI overlays to ensure the target is always in the clear drawing area.
+
 ---
 
 ## 2. Object Transformations
