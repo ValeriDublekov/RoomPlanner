@@ -4,7 +4,7 @@ import useImage from 'use-image';
 import { RoomObject } from '../../types';
 import { useStore } from '../../store';
 import { FLOOR_TEXTURES } from '../../constants';
-import { getSignedArea, getDistance, getOutwardNormal } from '../../lib/geometry';
+import { getSignedArea, getDistance, getOutwardNormal, getDistanceToSegment } from '../../lib/geometry';
 
 interface RoomItemProps {
   room: RoomObject;
@@ -42,9 +42,24 @@ export const RoomItem: React.FC<RoomItemProps> = ({
   const points = room.points.flatMap((p) => [p.x, p.y]);
 
   const showAutoDimensions = useStore((state) => state.showAutoDimensions);
+  const setSelectedRoomId = useStore((state) => state.setSelectedRoomId);
+  const setSelectedWallIndex = useStore((state) => state.setSelectedWallIndex);
+  const selectedWallIndex = useStore((state) => state.selectedWallIndex);
   
   const wallOpacity = activeLayer === 'room' ? 0.4 : (isDragging ? 0.2 : (isSelected ? 1 : 0.8));
   const floorOpacity = activeLayer === 'room' ? 0 : (isDragging ? 0.1 : 1);
+
+  const wallSegments = useMemo(() => {
+    const segments = [];
+    const count = room.isClosed ? room.points.length : room.points.length - 1;
+    for (let i = 0; i < count; i++) {
+      const p1 = room.points[i];
+      const p2 = room.points[(i + 1) % room.points.length];
+      const color = room.wallColors?.[i] || room.defaultWallColor || "#1e293b";
+      segments.push({ p1, p2, index: i, color });
+    }
+    return segments;
+  }, [room.points, room.isClosed, room.wallColors, room.defaultWallColor]);
 
   const autoDimensions = useMemo(() => {
     if ((!showAutoDimensions && !isSelected) || room.points.length < 2) return null;
@@ -138,14 +153,45 @@ export const RoomItem: React.FC<RoomItemProps> = ({
       id={room.id}
       onClick={(e) => {
         if (e.evt.button !== 0 || mode !== 'select') return;
+        e.cancelBubble = true;
+        
+        // Check if we clicked on a wall specifically
+        const stage = e.target.getStage();
+        const pointer = stage?.getPointerPosition();
+        if (pointer) {
+          const worldPos = {
+            x: (pointer.x - stage!.x()) / stage!.scaleX(),
+            y: (pointer.y - stage!.y()) / stage!.scaleY()
+          };
+          
+          let clickedWallIndex = -1;
+          for (const seg of wallSegments) {
+            const dist = getDistanceToSegment(worldPos, seg.p1, seg.p2).distance;
+            if (dist < wallThicknessCm) {
+              clickedWallIndex = seg.index;
+              break;
+            }
+          }
+          
+          if (clickedWallIndex !== -1) {
+            onSelect();
+            setSelectedWallIndex(clickedWallIndex);
+            return;
+          }
+        }
+        
         onSelect();
+        setSelectedWallIndex(null);
       }} 
-      onTap={() => {
-        if (mode === 'select') onSelect();
+      onTap={(e) => {
+        if (mode !== 'select') return;
+        e.cancelBubble = true;
+        onSelect();
+        setSelectedWallIndex(null);
       }} 
       listening={!isLocked}
     >
-      {/* 1. Walls (Clipped to only show outside the room) */}
+      {/* 1. Walls Background (The dark structure) */}
       <Group
         clipFunc={(ctx) => {
           if (!room.isClosed) return;
@@ -183,6 +229,38 @@ export const RoomItem: React.FC<RoomItemProps> = ({
           lineCap="butt"
           opacity={wallOpacity}
         />
+
+        {/* Individual Wall Coloring */}
+        {wallSegments.map((seg) => {
+          const isWallSelected = isSelected && selectedWallIndex === seg.index;
+          return (
+            <Line
+              key={`wall-color-${seg.index}`}
+              points={[seg.p1.x, seg.p1.y, seg.p2.x, seg.p2.y]}
+              stroke={isWallSelected ? "#4f46e5" : (room.wallColors?.[seg.index] || room.defaultWallColor || "#1e293b")}
+              strokeWidth={wallThicknessPx * 2 - 2}
+              opacity={wallOpacity}
+              lineCap="butt"
+              listening={false}
+            />
+          );
+        })}
+
+        {/* Selected Wall Highlight */}
+        {isSelected && selectedWallIndex !== null && wallSegments[selectedWallIndex] && (
+          <Line
+            points={[
+              wallSegments[selectedWallIndex].p1.x, 
+              wallSegments[selectedWallIndex].p1.y, 
+              wallSegments[selectedWallIndex].p2.x, 
+              wallSegments[selectedWallIndex].p2.y
+            ]}
+            stroke="#818cf8"
+            strokeWidth={wallThicknessPx * 2 + 4}
+            opacity={0.3}
+            listening={false}
+          />
+        )}
       </Group>
 
       {/* 2. Inner Room Area (The "Floor") - Only if closed */}

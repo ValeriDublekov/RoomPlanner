@@ -130,6 +130,15 @@ export const RoomEditor: React.FC<RoomEditorProps> = ({
                 setDragDistances([]);
                 useStore.getState().setIsDraggingWall(false);
               }}
+              onClick={(e) => {
+                if (e.evt.button === 0) {
+                  e.cancelBubble = true;
+                  useStore.getState().setSelectedWallIndex(idx);
+                }
+              }}
+              onTap={() => {
+                useStore.getState().setSelectedWallIndex(idx);
+              }}
             />
 
             {/* Split Handle (Plus icon in the middle) */}
