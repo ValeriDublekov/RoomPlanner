@@ -24,6 +24,7 @@ interface CanvasStageProps {
   onMouseDown: (e: Konva.KonvaEventObject<MouseEvent>) => void;
   onMouseUp: () => void;
   onDragEnd: (e: Konva.KonvaEventObject<DragEvent>) => void;
+  onDragMove?: (e: Konva.KonvaEventObject<DragEvent>) => void;
   onClick: (e: Konva.KonvaEventObject<MouseEvent>) => void;
   onDblClick: () => void;
   onMouseMove: (e: Konva.KonvaEventObject<MouseEvent>) => void;
@@ -43,6 +44,7 @@ export const CanvasStage: React.FC<CanvasStageProps> = ({
   onMouseDown,
   onMouseUp,
   onDragEnd,
+  onDragMove,
   onClick,
   onDblClick,
   onMouseMove,
@@ -244,6 +246,7 @@ export const CanvasStage: React.FC<CanvasStageProps> = ({
       onWheel={onWheel}
       onMouseDown={onMouseDown}
       onMouseUp={onMouseUp}
+      onDragMove={onDragMove}
       onDragEnd={onDragEnd}
       onClick={onClick}
       onDblClick={onDblClick}

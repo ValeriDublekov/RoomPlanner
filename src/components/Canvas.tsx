@@ -88,6 +88,12 @@ export const Canvas: React.FC = () => {
     return () => observer.disconnect();
   }, []);
 
+  const handleDragMove = (e: Konva.KonvaEventObject<DragEvent>) => {
+    if (e.target instanceof Konva.Stage) {
+      setPosition({ x: e.target.x(), y: e.target.y() });
+    }
+  };
+
   const handleDragEnd = (e: Konva.KonvaEventObject<DragEvent>) => {
     if (e.target instanceof Konva.Stage) {
       setPosition({ x: e.target.x(), y: e.target.y() });
@@ -113,6 +119,7 @@ export const Canvas: React.FC = () => {
             onWheel={handleWheel}
             onMouseDown={handleMouseDown}
             onMouseUp={handleMouseUp}
+            onDragMove={handleDragMove}
             onDragEnd={handleDragEnd}
             onClick={handleClick}
             onDblClick={() => {}}
