@@ -46,10 +46,12 @@ export interface UISlice {
   setIsDraggingVertex: (isDragging: boolean) => void;
   setPendingFurniture: (furniture: Omit<FurnitureObject, 'id'> | null) => void;
   setContextMenu: (menu: UISlice['contextMenu']) => void;
+  viewport: { width: number; height: number };
+  setViewport: (dimensions: { width: number; height: number }) => void;
   moveView: (dx: number, dy: number) => void;
   resetView: () => void;
-  fitToScreen: (width: number, height: number) => void;
-  ensureVisible: (targetBounds: { minX: number, minY: number, maxX: number, maxY: number }, viewWidth: number, viewHeight: number) => void;
+  fitToScreen: (width?: number, height?: number) => void;
+  ensureVisible: (targetBounds: { minX: number, minY: number, maxX: number, maxY: number }, viewWidth?: number, viewHeight?: number) => void;
 }
 
 export const createUISlice: StateCreator<AppState, [], [], UISlice> = (set, get) => ({
@@ -77,6 +79,8 @@ export const createUISlice: StateCreator<AppState, [], [], UISlice> = (set, get)
     targetId: null,
     targetType: null,
   },
+  viewport: { width: 0, height: 0 },
+  setViewport: (viewport) => set({ viewport }),
 
   setScale: (scale) => set({ scale }),
   setPosition: (position) => set({ position }),
@@ -104,7 +108,11 @@ export const createUISlice: StateCreator<AppState, [], [], UISlice> = (set, get)
   resetView: () => set({ scale: 1, position: { x: 0, y: 0 } }),
   
   fitToScreen: (width, height) => {
-    const { rooms, furniture } = get();
+    const { rooms, furniture, viewport } = get();
+    const w = width ?? viewport.width;
+    const h = height ?? viewport.height;
+    
+    if (w === 0 || h === 0) return;
     if (rooms.length === 0 && furniture.length === 0) {
       set({ scale: 1, position: { x: 0, y: 0 } });
       return;
@@ -127,8 +135,8 @@ export const createUISlice: StateCreator<AppState, [], [], UISlice> = (set, get)
     const contentHeight = maxY - minY;
     const padding = 50;
 
-    const scaleX = (width - padding * 2) / contentWidth;
-    const scaleY = (height - padding * 2) / contentHeight;
+    const scaleX = (w - padding * 2) / contentWidth;
+    const scaleY = (h - padding * 2) / contentHeight;
     const newScale = Math.min(scaleX, scaleY, 2);
 
     const centerX = (minX + maxX) / 2;
@@ -137,19 +145,23 @@ export const createUISlice: StateCreator<AppState, [], [], UISlice> = (set, get)
     set({
       scale: newScale,
       position: {
-        x: width / 2 - centerX * newScale,
-        y: height / 2 - centerY * newScale
+        x: w / 2 - centerX * newScale,
+        y: h / 2 - centerY * newScale
       }
     });
   },
 
   ensureVisible: (bounds, width, height) => {
-    const { scale, position } = get();
+    const { scale, position, viewport } = get();
+    const w = width ?? viewport.width;
+    const h = height ?? viewport.height;
+    
+    if (w === 0 || h === 0) return;
     // Sidebar on the right occupies space. On large screens it's relative, 
     // but on smaller it might be absolute or the layout might not have updated yet.
     // We add a significant right padding to account for the property editor.
     const padding = 60; 
-    const rightPadding = width > 1024 ? 60 : 400; // Account for right sidebar if it's likely absolute/overlapping
+    const rightPadding = w > 1024 ? 60 : 400; // Account for right sidebar if it's likely absolute/overlapping
     
     // Convert world bounds to screen bounds
     const screenMinX = bounds.minX * scale + position.x;
@@ -161,7 +173,7 @@ export const createUISlice: StateCreator<AppState, [], [], UISlice> = (set, get)
     let dy = 0;
 
     // Check right edge (property sidebar side)
-    const effectiveWidth = width - rightPadding;
+    const effectiveWidth = w - rightPadding;
     if (screenMaxX > effectiveWidth) {
       dx = effectiveWidth - screenMaxX;
     }
@@ -176,8 +188,8 @@ export const createUISlice: StateCreator<AppState, [], [], UISlice> = (set, get)
     }
     
     // Check bottom edge
-    if (screenMaxY > height - padding) {
-      dy = (height - padding) - screenMaxY;
+    if (screenMaxY > h - padding) {
+      dy = (h - padding) - screenMaxY;
     }
     
     // Check top edge

@@ -73,10 +73,7 @@ export const CanvasHeader: React.FC<CanvasHeaderProps> = ({ onExport, onPrint, g
             
             // Auto-fit after load
             setTimeout(() => {
-              const canvas = document.querySelector('.flex-1.relative');
-              if (canvas) {
-                fitToScreen(canvas.clientWidth, canvas.clientHeight);
-              }
+              fitToScreen();
             }, 100);
           } catch (err) {
             console.error('Failed to load:', err);
@@ -161,19 +158,14 @@ export const CanvasHeader: React.FC<CanvasHeaderProps> = ({ onExport, onPrint, g
           <button
             onClick={resetView}
             className="p-1.5 md:p-2 text-slate-500 hover:bg-white hover:text-indigo-600 rounded-md transition-all flex-shrink-0 shadow-none hover:shadow-sm"
-            title="Center View (0,0)"
+            title="Reset Origin (Go to 0,0)"
           >
             <RotateCcw size={18} />
           </button>
           <button
-            onClick={() => {
-              const canvas = document.querySelector('.flex-1.relative');
-              if (canvas) {
-                fitToScreen(canvas.clientWidth, canvas.clientHeight);
-              }
-            }}
+            onClick={() => fitToScreen()}
             className="p-1.5 md:p-2 text-slate-500 hover:bg-white hover:text-indigo-600 rounded-md transition-all flex-shrink-0 shadow-none hover:shadow-sm border-l border-slate-100"
-            title="Fit to Screen"
+            title="Fit to Screen (Center Plan)"
           >
             <Maximize size={18} />
           </button>

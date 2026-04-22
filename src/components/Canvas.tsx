@@ -28,7 +28,8 @@ export const Canvas: React.FC = () => {
     setEdgeMap, fitToScreen, finishRoom,
     selectedId, selectedRoomId, selectedDimensionId, selectedAttachmentId,
     wallAttachments, dimensions: savedDimensions,
-    ensureVisible
+    ensureVisible,
+    setViewport
   } = useStore();
 
   // Auto-focus selected object if it's covered by UI
@@ -62,18 +63,10 @@ export const Canvas: React.FC = () => {
           maxY: Math.max(d.p1.y, d.p2.y),
         };
       }
-    } else if (selectedAttachmentId) {
-      const a = wallAttachments.find(item => item.id === selectedAttachmentId);
-      if (a) {
-        // Wall attachments are small, just use center roughly
-        bounds = { minX: a.positionAlongWall, minY: 0, maxX: a.positionAlongWall, maxY: 0 }; 
-        // Note: we'd need world coordinates for a, but it's attached to room.
-        // For now let's focus on furniture and rooms which are main cases.
-      }
     }
 
     if (bounds) {
-      ensureVisible(bounds, dimensions.width, dimensions.height);
+      ensureVisible(bounds);
     }
   }, [selectedId, selectedRoomId, selectedDimensionId, selectedAttachmentId, dimensions.width, dimensions.height, furniture, rooms, savedDimensions, wallAttachments, ensureVisible]);
 
@@ -101,10 +94,10 @@ export const Canvas: React.FC = () => {
   // Auto-fit on initial load
   useEffect(() => {
     if (!hasAutoFitted && dimensions.width > 0 && (rooms.length > 0 || furniture.length > 0)) {
-      fitToScreen(dimensions.width, dimensions.height);
+      fitToScreen();
       setHasAutoFitted(true);
     }
-  }, [dimensions, rooms.length, furniture.length, hasAutoFitted, fitToScreen]);
+  }, [dimensions.width, dimensions.height, rooms.length, furniture.length, hasAutoFitted, fitToScreen]);
 
   useEffect(() => {
     if (activeLayer === 'blueprint' && bgTrRef.current && bgRef.current) {
@@ -127,10 +120,9 @@ export const Canvas: React.FC = () => {
     if (!containerRef.current) return;
     const observer = new ResizeObserver((entries) => {
       for (const entry of entries) {
-        setDimensions({
-          width: entry.contentRect.width,
-          height: entry.contentRect.height,
-        });
+        const { width, height } = entry.contentRect;
+        setDimensions({ width, height });
+        setViewport({ width, height });
       }
     });
     observer.observe(containerRef.current);
@@ -153,11 +145,11 @@ export const Canvas: React.FC = () => {
   const pixelsPerCmVal = useStore.getState().pixelsPerCm;
 
   return (
-    <div ref={containerRef} className="flex-1 bg-slate-50 relative overflow-hidden flex flex-col">
+    <div className="flex-1 bg-slate-50 relative overflow-hidden flex flex-col">
       <CanvasHeader onExport={handleExport} onPrint={handlePrint} getThumbnail={getStageThumbnail} />
       <SubHeader />
 
-      <div className="flex-1 relative">
+      <div ref={containerRef} className="flex-1 relative">
         {gridVisible && activeLayer !== 'blueprint' && <GridLayer scale={scale} position={position} />}
         {dimensions.width > 0 && dimensions.height > 0 && (
           <CanvasStage
