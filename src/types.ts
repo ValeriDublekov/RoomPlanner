@@ -77,7 +77,7 @@ export interface WallAttachment {
 }
 
 export type AppMode = 'select' | 'draw-room' | 'draw-furniture' | 'draw-circle' | 'calibrate' | 'add-box' | 'measure' | 'dimension' | 'add-door' | 'add-window' | 'place-furniture';
-export type LayerType = 'blueprint' | 'room' | 'furniture' | 'annotation';
+export type LayerType = 'blueprint' | 'room' | 'furniture';
 
 export interface EdgeMap {
   data: Uint8Array;

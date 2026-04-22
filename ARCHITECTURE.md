@@ -47,7 +47,7 @@ Defined in `src/types.ts`:
 - **RoomObject**: A polygon representing a room, defined by an array of points.
 - **FurnitureObject**: A rectangular or polygonal object with position, dimensions, rotation, and optional internal points.
 - **AppMode**: Current interaction mode (`select`, `draw-room`, `draw-furniture`, `calibrate`, `add-box`, `measure`, `dimension`).
-- **LayerType**: Logical layers (`blueprint`, `room`, `furniture`, `annotation`) used to organize rendering and interaction.
+- **LayerType**: Logical layers (`blueprint`, `room`, `furniture`) used to organize rendering and interaction.
 - **HistoryEntry**: A snapshot of the rooms, furniture, and dimensions for undo functionality.
 
 ## State Management (Zustand)

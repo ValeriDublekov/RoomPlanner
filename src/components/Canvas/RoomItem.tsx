@@ -29,6 +29,7 @@ export const RoomItem: React.FC<RoomItemProps> = ({
   const isDraggingWall = useStore((state) => state.isDraggingWall);
   const isDraggingVertex = useStore((state) => state.isDraggingVertex);
   const activeLayer = useStore((state) => state.activeLayer);
+  const mode = useStore((state) => state.mode);
   const isDragging = isDraggingWall || isDraggingVertex;
   
   const textureData = useMemo(() => FLOOR_TEXTURES.find(t => t.id === room.floorTexture), [room.floorTexture]);
@@ -136,10 +137,12 @@ export const RoomItem: React.FC<RoomItemProps> = ({
     <Group 
       id={room.id}
       onClick={(e) => {
-        if (e.evt.button !== 0) return;
+        if (e.evt.button !== 0 || mode !== 'select') return;
         onSelect();
       }} 
-      onTap={onSelect} 
+      onTap={() => {
+        if (mode === 'select') onSelect();
+      }} 
       listening={!isLocked}
     >
       {/* 1. Walls (Clipped to only show outside the room) */}

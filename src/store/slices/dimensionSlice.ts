@@ -67,5 +67,11 @@ export const createDimensionSlice: StateCreator<AppState, [], [], DimensionSlice
     };
   }),
 
-  setSelectedDimensionId: (selectedDimensionId) => set({ selectedDimensionId }),
+  setSelectedDimensionId: (selectedDimensionId) => set({ 
+    selectedDimensionId,
+    selectedId: null,
+    selectedIds: [],
+    selectedRoomId: null,
+    selectedAttachmentId: null
+  }),
 });

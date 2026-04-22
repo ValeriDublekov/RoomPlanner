@@ -76,8 +76,7 @@ export const Sidebar: React.FC = () => {
                 if (tool.id === 'select') return true;
                 if (activeLayer === 'blueprint') return tool.id === 'calibrate';
                 if (activeLayer === 'room') return tool.id === 'draw-room' || tool.id === 'add-door' || tool.id === 'add-window';
-                if (activeLayer === 'furniture') return tool.id === 'add-box' || tool.id === 'draw-circle' || tool.id === 'draw-furniture';
-                if (activeLayer === 'annotation') return tool.id === 'measure' || tool.id === 'dimension';
+                if (activeLayer === 'furniture') return tool.id === 'add-box' || tool.id === 'draw-circle' || tool.id === 'draw-furniture' || tool.id === 'measure' || tool.id === 'dimension';
                 return false;
               })
               .map((tool) => (

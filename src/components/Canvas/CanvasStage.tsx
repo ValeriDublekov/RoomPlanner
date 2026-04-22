@@ -145,11 +145,14 @@ export const CanvasStage: React.FC<CanvasStageProps> = ({
       scale={scale}
       isSelected={selectedDimensionId === dim.id}
       onSelect={() => {
-        setSelectedDimensionId(dim.id);
-        if (mode !== 'select') setMode('select');
+        if (activeLayer === 'furniture') {
+          setSelectedDimensionId(dim.id);
+          if (mode !== 'select') setMode('select');
+        }
       }}
+      isLocked={activeLayer !== 'furniture'}
     />
-  )), [savedDimensions, pixelsPerCmVal, scale, selectedDimensionId, setSelectedDimensionId, setMode, mode]);
+  )), [savedDimensions, pixelsPerCmVal, scale, selectedDimensionId, setSelectedDimensionId, setMode, mode, activeLayer]);
 
   const handleContextMenu = (e: Konva.KonvaEventObject<PointerEvent>) => {
     e.evt.preventDefault();

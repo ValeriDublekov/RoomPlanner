@@ -1,4 +1,5 @@
 import React from 'react';
+import { useStore } from '../../store';
 import { Line, Text, Group } from 'react-konva';
 import { DimensionObject, Vector2d } from '../../types';
 import { getDistance } from '../../lib/geometry';
@@ -9,6 +10,7 @@ interface DimensionItemProps {
   scale: number;
   isSelected?: boolean;
   onSelect?: () => void;
+  isLocked?: boolean;
 }
 
 export const DimensionItem: React.FC<DimensionItemProps> = ({ 
@@ -16,8 +18,10 @@ export const DimensionItem: React.FC<DimensionItemProps> = ({
   pixelsPerCm, 
   scale,
   isSelected,
-  onSelect
+  onSelect,
+  isLocked
 }) => {
+  const mode = useStore(state => state.mode);
   const { p1, p2 } = dimension;
   const dist = getDistance(p1, p2);
   const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x);
@@ -64,15 +68,16 @@ export const DimensionItem: React.FC<DimensionItemProps> = ({
       id={dimension.id}
       name="dimension-item"
       onClick={(e) => {
-        if (e.evt.button !== 0) return;
+        if (e.evt.button !== 0 || mode !== 'select') return;
         e.cancelBubble = true;
         if (onSelect) onSelect();
       }}
       onTap={(e) => {
+        if (mode !== 'select') return;
         e.cancelBubble = true;
         if (onSelect) onSelect();
       }}
-      listening={true}
+      listening={!isLocked}
     >
       {/* Hit area for easier selection */}
       <Line

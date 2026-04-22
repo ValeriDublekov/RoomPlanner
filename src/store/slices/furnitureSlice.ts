@@ -53,9 +53,21 @@ export const createFurnitureSlice: StateCreator<AppState, [], [], FurnitureSlice
     return { furniture: newFurniture };
   }),
 
-  setSelectedId: (selectedId) => set({ selectedId, selectedIds: selectedId ? [selectedId] : [] }),
+  setSelectedId: (selectedId) => set({ 
+    selectedId, 
+    selectedIds: selectedId ? [selectedId] : [],
+    selectedDimensionId: null,
+    selectedRoomId: null,
+    selectedAttachmentId: null
+  }),
   
-  setSelectedIds: (selectedIds) => set({ selectedIds, selectedId: selectedIds.length === 1 ? selectedIds[0] : null }),
+  setSelectedIds: (selectedIds) => set({ 
+    selectedIds, 
+    selectedId: selectedIds.length === 1 ? selectedIds[0] : null,
+    selectedDimensionId: null,
+    selectedRoomId: null,
+    selectedAttachmentId: null
+  }),
   
   groupSelected: () => set((state) => {
     if (state.selectedIds.length < 2) return state;
@@ -170,20 +182,20 @@ export const createFurnitureSlice: StateCreator<AppState, [], [], FurnitureSlice
           history: [...state.history, historyEntry].slice(-50)
         };
       }
+      
+      if (state.selectedDimensionId) {
+        return {
+          dimensions: state.dimensions.filter(d => d.id !== state.selectedDimensionId),
+          selectedDimensionId: null,
+          history: [...state.history, historyEntry].slice(-50)
+        };
+      }
     }
-    
+
     if (state.activeLayer === 'room' && state.selectedRoomId) {
       return {
         rooms: state.rooms.filter(r => r.id !== state.selectedRoomId),
         selectedRoomId: null,
-        history: [...state.history, historyEntry].slice(-50)
-      };
-    }
-
-    if (state.activeLayer === 'annotation' && state.selectedDimensionId) {
-      return {
-        dimensions: state.dimensions.filter(d => d.id !== state.selectedDimensionId),
-        selectedDimensionId: null,
         history: [...state.history, historyEntry].slice(-50)
       };
     }

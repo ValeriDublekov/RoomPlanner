@@ -32,6 +32,7 @@ export const FurnitureItem: React.FC<FurnitureItemProps> = ({
   allFurniture = [],
 }) => {
   const orthoMode = useStore(state => state.orthoMode);
+  const mode = useStore(state => state.mode);
   const shapeRef = useRef<Konva.Group>(null);
   const trRef = useRef<Konva.Transformer>(null);
 
@@ -108,18 +109,19 @@ export const FurnitureItem: React.FC<FurnitureItemProps> = ({
         offsetX={shape.width / 2}
         offsetY={shape.height / 2}
         rotation={shape.rotation}
-        draggable={!isLocked}
+        draggable={!isLocked && mode === 'select'}
         onClick={(e) => {
-          if (e.evt.button !== 0) return;
+          if (e.evt.button !== 0 || mode !== 'select') return;
           e.cancelBubble = true;
           onSelect(e.evt.ctrlKey || e.evt.metaKey);
         }}
         onTap={(e) => {
+          if (mode !== 'select') return;
           e.cancelBubble = true;
           onSelect(e.evt.ctrlKey || e.evt.metaKey);
         }}
         onDragStart={(e) => {
-          if (e.evt.button !== 0) return;
+          if (e.evt.button !== 0 || mode !== 'select') return;
           if (e.target === shapeRef.current) {
             onSelect(e.evt.ctrlKey || e.evt.metaKey);
             onStartChange();

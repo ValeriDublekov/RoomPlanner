@@ -28,7 +28,7 @@ export const SubHeader: React.FC = () => {
           <span className="hidden sm:inline text-[10px] font-bold text-slate-400 uppercase tracking-widest">Layers</span>
         </div>
         <div className="flex flex-wrap bg-slate-200/50 p-1 rounded-xl gap-1">
-          {(['blueprint', 'room', 'furniture', 'annotation'] as const).map((layer) => (
+          {(['blueprint', 'room', 'furniture'] as const).map((layer) => (
             <button
               key={layer}
               onClick={() => setActiveLayer(layer)}
