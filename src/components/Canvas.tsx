@@ -25,8 +25,57 @@ export const Canvas: React.FC = () => {
     rooms, furniture,
     dimensionInput,
     gridVisible, isAltPressed,
-    setEdgeMap, fitToScreen, finishRoom
+    setEdgeMap, fitToScreen, finishRoom,
+    selectedId, selectedRoomId, selectedDimensionId, selectedAttachmentId,
+    wallAttachments, dimensions: savedDimensions,
+    ensureVisible
   } = useStore();
+
+  // Auto-focus selected object if it's covered by UI
+  useEffect(() => {
+    if (dimensions.width === 0 || dimensions.height === 0) return;
+    
+    let bounds = null;
+    
+    if (selectedId) {
+      const f = furniture.find(item => item.id === selectedId);
+      if (f) {
+        bounds = { minX: f.x, minY: f.y, maxX: f.x + f.width, maxY: f.y + f.height };
+      }
+    } else if (selectedRoomId) {
+      const r = rooms.find(item => item.id === selectedRoomId);
+      if (r) {
+        bounds = {
+          minX: Math.min(...r.points.map(p => p.x)),
+          minY: Math.min(...r.points.map(p => p.y)),
+          maxX: Math.max(...r.points.map(p => p.x)),
+          maxY: Math.max(...r.points.map(p => p.y)),
+        };
+      }
+    } else if (selectedDimensionId) {
+      const d = savedDimensions.find(item => item.id === selectedDimensionId);
+      if (d) {
+        bounds = {
+          minX: Math.min(d.p1.x, d.p2.x),
+          minY: Math.min(d.p1.y, d.p2.y),
+          maxX: Math.max(d.p1.x, d.p2.x),
+          maxY: Math.max(d.p1.y, d.p2.y),
+        };
+      }
+    } else if (selectedAttachmentId) {
+      const a = wallAttachments.find(item => item.id === selectedAttachmentId);
+      if (a) {
+        // Wall attachments are small, just use center roughly
+        bounds = { minX: a.positionAlongWall, minY: 0, maxX: a.positionAlongWall, maxY: 0 }; 
+        // Note: we'd need world coordinates for a, but it's attached to room.
+        // For now let's focus on furniture and rooms which are main cases.
+      }
+    }
+
+    if (bounds) {
+      ensureVisible(bounds, dimensions.width, dimensions.height);
+    }
+  }, [selectedId, selectedRoomId, selectedDimensionId, selectedAttachmentId, dimensions.width, dimensions.height, furniture, rooms, savedDimensions, wallAttachments, ensureVisible]);
 
   const [hasAutoFitted, setHasAutoFitted] = useState(false);
   const [bgImage] = useImage(backgroundImage || '');

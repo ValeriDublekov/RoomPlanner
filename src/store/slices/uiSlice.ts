@@ -49,6 +49,7 @@ export interface UISlice {
   moveView: (dx: number, dy: number) => void;
   resetView: () => void;
   fitToScreen: (width: number, height: number) => void;
+  ensureVisible: (targetBounds: { minX: number, minY: number, maxX: number, maxY: number }, viewWidth: number, viewHeight: number) => void;
 }
 
 export const createUISlice: StateCreator<AppState, [], [], UISlice> = (set, get) => ({
@@ -140,5 +141,45 @@ export const createUISlice: StateCreator<AppState, [], [], UISlice> = (set, get)
         y: height / 2 - centerY * newScale
       }
     });
+  },
+
+  ensureVisible: (bounds, width, height) => {
+    const { scale, position } = get();
+    const padding = 60; // Extra padding to account for UI elements
+    
+    // Convert world bounds to screen bounds
+    const screenMinX = bounds.minX * scale + position.x;
+    const screenMinY = bounds.minY * scale + position.y;
+    const screenMaxX = bounds.maxX * scale + position.x;
+    const screenMaxY = bounds.maxY * scale + position.y;
+
+    let dx = 0;
+    let dy = 0;
+
+    // Check right edge
+    if (screenMaxX > width - padding) {
+      dx = (width - padding) - screenMaxX;
+    }
+    // Check left edge (lower priority than right edge if both don't fit, but right is what user complained about)
+    if (screenMinX < padding) {
+      dx = padding - screenMinX;
+    }
+    // Check bottom edge
+    if (screenMaxY > height - padding) {
+      dy = (height - padding) - screenMaxY;
+    }
+    // Check top edge
+    if (screenMinY < padding) {
+      dy = padding - screenMinY;
+    }
+
+    if (dx !== 0 || dy !== 0) {
+      set({
+        position: {
+          x: position.x + dx,
+          y: position.y + dy
+        }
+      });
+    }
   },
 });
