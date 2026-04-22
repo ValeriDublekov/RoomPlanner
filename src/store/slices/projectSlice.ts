@@ -57,7 +57,7 @@ export const createProjectSlice: StateCreator<AppState, [], [], ProjectSlice> = 
 
   setPixelsPerCm: (pixelsPerCm) => set({ pixelsPerCm }),
   setProjectName: (projectName) => set({ projectName }),
-  setBackgroundImage: (backgroundImage) => set({ backgroundImage }),
+  setBackgroundImage: (backgroundImage) => set({ backgroundImage, backgroundVisible: true }),
   setBackgroundVisible: (backgroundVisible) => set({ backgroundVisible }),
   setBackgroundOpacity: (backgroundOpacity) => set({ backgroundOpacity }),
   setBackgroundTransform: (transform) => set((state) => ({
@@ -99,8 +99,11 @@ export const createProjectSlice: StateCreator<AppState, [], [], ProjectSlice> = 
   loadState: (data) => {
     if (!data) return;
     
+    // Support both direct data and wrapped data
+    const projectData = typeof data === 'string' ? JSON.parse(data) : data;
+    
     // Migration for center-based rotation (Version 2)
-    const currentVersion = data.version || 1;
+    const currentVersion = projectData.version || 1;
     
     const migrateFurniture = (items: any[]): any[] => {
       return items.map((f: any) => {
@@ -122,25 +125,36 @@ export const createProjectSlice: StateCreator<AppState, [], [], ProjectSlice> = 
       });
     };
 
-    let furniture = data.furniture || [];
+    let furniture = projectData.furniture || [];
     if (currentVersion < 2) {
       furniture = migrateFurniture(furniture);
     }
 
     // Ensure all attachments have default curtain colors if missing
-    const wallAttachments = (data.wallAttachments || []).map((a: any) => ({
+    const wallAttachments = (projectData.wallAttachments || []).map((a: any) => ({
       ...a,
       thinCurtainColor: a.thinCurtainColor || '#ffffff',
       thickCurtainColor: a.thickCurtainColor || '#f1f5f9'
     }));
 
     set({
-      ...data,
-      projectId: null, // Reset projectId when loading from a local file
+      projectName: projectData.projectName || 'Loaded Project',
+      pixelsPerCm: projectData.pixelsPerCm || projectData.pixelsPrCm || 20, // Support typo from potentially old versions
+      rooms: projectData.rooms || [],
       furniture,
+      dimensions: projectData.dimensions || [],
       wallAttachments,
+      wallThickness: projectData.wallThickness || 20,
+      wallHeight: projectData.wallHeight || 250,
+      backgroundImage: projectData.backgroundImage || null,
+      backgroundVisible: projectData.backgroundVisible ?? true,
+      backgroundPosition: projectData.backgroundPosition || { x: 0, y: 0 },
+      backgroundScale: projectData.backgroundScale ?? 1,
+      backgroundRotation: projectData.backgroundRotation ?? 0,
+      backgroundOpacity: projectData.backgroundOpacity ?? 0.5,
+      projectId: null,
       version: 2,
-      history: [], // Clear history on load
+      history: [],
       selectedId: null,
       selectedRoomId: null,
       selectedDimensionId: null,
@@ -163,6 +177,7 @@ export const createProjectSlice: StateCreator<AppState, [], [], ProjectSlice> = 
       wallThickness: state.wallThickness,
       wallHeight: state.wallHeight,
       backgroundImage: state.backgroundImage,
+      backgroundVisible: state.backgroundVisible,
       backgroundPosition: state.backgroundPosition,
       backgroundScale: state.backgroundScale,
       backgroundRotation: state.backgroundRotation,
@@ -170,6 +185,14 @@ export const createProjectSlice: StateCreator<AppState, [], [], ProjectSlice> = 
     };
 
     const jsonString = JSON.stringify(projectData);
+    
+    // Check if data is too large for Firestore (1MB limit)
+    // 1MB = 1,048,576 bytes. We'll use 1,000,000 as a safe limit.
+    if (currentUser && jsonString.length > 1000000) {
+      console.warn('Project data is too large for the cloud (limit 1MB). The blueprint image might be too big.');
+      // We still try to save, but let's see if we can strip the image as a fallback or just let it fail.
+      // For now, let it fail so the user sees the error in console, but in a real app we'd upload to storage.
+    }
 
     // If user is logged in, save to Firestore
     if (currentUser) {

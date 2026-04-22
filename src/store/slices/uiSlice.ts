@@ -145,7 +145,11 @@ export const createUISlice: StateCreator<AppState, [], [], UISlice> = (set, get)
 
   ensureVisible: (bounds, width, height) => {
     const { scale, position } = get();
-    const padding = 60; // Extra padding to account for UI elements
+    // Sidebar on the right occupies space. On large screens it's relative, 
+    // but on smaller it might be absolute or the layout might not have updated yet.
+    // We add a significant right padding to account for the property editor.
+    const padding = 60; 
+    const rightPadding = width > 1024 ? 60 : 400; // Account for right sidebar if it's likely absolute/overlapping
     
     // Convert world bounds to screen bounds
     const screenMinX = bounds.minX * scale + position.x;
@@ -156,18 +160,26 @@ export const createUISlice: StateCreator<AppState, [], [], UISlice> = (set, get)
     let dx = 0;
     let dy = 0;
 
-    // Check right edge
-    if (screenMaxX > width - padding) {
-      dx = (width - padding) - screenMaxX;
+    // Check right edge (property sidebar side)
+    const effectiveWidth = width - rightPadding;
+    if (screenMaxX > effectiveWidth) {
+      dx = effectiveWidth - screenMaxX;
     }
-    // Check left edge (lower priority than right edge if both don't fit, but right is what user complained about)
+    
+    // Check left edge
     if (screenMinX < padding) {
-      dx = padding - screenMinX;
+      // Don't shift left if it would push off the right side
+      const tentativeDx = padding - screenMinX;
+      if (screenMaxX + tentativeDx <= effectiveWidth) {
+        dx = tentativeDx;
+      }
     }
+    
     // Check bottom edge
     if (screenMaxY > height - padding) {
       dy = (height - padding) - screenMaxY;
     }
+    
     // Check top edge
     if (screenMinY < padding) {
       dy = padding - screenMinY;

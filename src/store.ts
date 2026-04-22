@@ -32,6 +32,7 @@ export const useStore = create<AppState>()(
         wallThickness: state.wallThickness,
         wallHeight: state.wallHeight,
         backgroundImage: state.backgroundImage,
+        backgroundVisible: state.backgroundVisible,
         backgroundPosition: state.backgroundPosition,
         backgroundScale: state.backgroundScale,
         backgroundRotation: state.backgroundRotation,
