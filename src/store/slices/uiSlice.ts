@@ -84,8 +84,31 @@ export const createUISlice: StateCreator<AppState, [], [], UISlice> = (set, get)
 
   setScale: (scale) => set({ scale }),
   setPosition: (position) => set({ position }),
-  setMode: (mode) => set({ mode, roomPoints: [], measurePoints: [], dimensionInput: '' }),
-  setActiveLayer: (activeLayer) => set({ activeLayer }),
+  setMode: (mode) => set({ 
+    mode, 
+    roomPoints: [], 
+    measurePoints: [], 
+    dimensionInput: '',
+    selectedId: null,
+    selectedIds: [],
+    selectedRoomId: null,
+    selectedWallIndex: null,
+    selectedAttachmentId: null,
+    selectedDimensionId: null
+  }),
+  setActiveLayer: (activeLayer) => set({ 
+    activeLayer,
+    mode: 'select',
+    selectedId: null,
+    selectedIds: [],
+    selectedRoomId: null,
+    selectedWallIndex: null,
+    selectedAttachmentId: null,
+    selectedDimensionId: null,
+    roomPoints: [],
+    measurePoints: [],
+    dimensionInput: ''
+  }),
   setOrthoMode: (orthoMode) => set({ orthoMode }),
   setSnapToGrid: (snapToGrid) => set({ snapToGrid }),
   setSnapToObjects: (snapToObjects) => set({ snapToObjects }),

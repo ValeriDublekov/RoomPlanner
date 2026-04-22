@@ -4,12 +4,12 @@ This document tracks known logical complexities, suboptimal implementations, and
 
 ## 1. Component Bloat
 
-### `CanvasStage.tsx` (~400+ lines)
-- **Status**: Critical
-- **Issue**: Handles high-level Konva Layer definitions AND complex context menu hit-detection logic.
-- **Refactoring Strategy**: 
-    - Extract Context Menu hit-detection into a separate hook or utility.
-    - Split Konva layers into dedicated components (e.g., `SceneBackground.tsx`, `ArchitecturalLayer.tsx`, `AnnotationOverlay.tsx`).
+### `CanvasStage.tsx` (~60 lines)
+- **Status**: Resolved
+- **Issue**: Handled high-level Konva Layer definitions AND complex context menu hit-detection logic.
+- **Outcome**: 
+    - Extracted Context Menu hit-detection into `useStageContextMenu.ts`.
+    - Split Konva layers into dedicated components in `src/components/Canvas/Layers/` (`BackgroundLayer.tsx`, `ArchitecturalLayer.tsx`, `AnnotationOverlay.tsx`, `InteractionLayer.tsx`).
 
 ### `RoomItem.tsx` and `RoomEditor.tsx`
 - **Status**: Medium

@@ -1,47 +1,12 @@
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import { X, BookOpen } from 'lucide-react';
+import manualContent from '../../USER_GUIDE.md?raw';
 
 interface UserManualModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
-
-const manualContent = `
-# RoomPlanner User Guide
-
-Welcome to RoomPlanner! This guide will help you understand the workflow and features of the application.
-
-## Workflow
-
-### 1. Blueprint Layer (Optional)
-*   **Upload Image**: Start by uploading a floor plan image (JPG/PNG).
-*   **Calibrate**: Use the Calibrate tool (C) to set the scale. Click two points on the image and enter the real-world distance between them.
-*   **Adjust**: Use the opacity and visibility toggles to help you trace over the blueprint.
-
-### 2. Room Layer
-*   **Draw Room**: Use the Draw Room tool (R) to trace the walls. 
-*   **Snap to Image**: Enable this to automatically snap points to detected lines in your blueprint.
-*   **Wall Thickness**: Adjust the thickness of the walls in the settings panel.
-*   **Add Doors & Windows**: Click on a wall to place a door or window. You can flip their orientation or mirror them in the properties editor.
-
-### 3. Furniture Layer
-*   **Add Box**: Quickly add a rectangular object (B).
-*   **Draw Object**: Create custom shapes (F) for specific furniture.
-*   **Move & Rotate**: Drag objects to move them. Use the transformer handles to resize or rotate.
-*   **Wall Distances**: While moving furniture, the app shows real-time distances to the nearest walls.
-
-### 4. Annotation Layer
-*   **Measure**: Use the Measure tool (M) for quick distance checks.
-*   **Dimension**: Add permanent dimension lines (D) to your plan.
-
-## Tips & Shortcuts
-*   **Undo**: Ctrl+Z or use the Undo button.
-*   **Snap to Grid**: Toggle (S) to align points to a 10cm grid.
-*   **Ortho Mode**: Toggle (O) or hold Ctrl to draw perfectly horizontal or vertical lines.
-*   **Reset View**: Click the Reset icon in the header to return to 100% zoom and center the view.
-*   **Save/Load**: Save your project as a JSON file to continue later.
-`;
 
 export const UserManualModal: React.FC<UserManualModalProps> = ({ isOpen, onClose }) => {
   if (!isOpen) return null;

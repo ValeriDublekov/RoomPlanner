@@ -14,23 +14,36 @@ Welcome to RoomPlanner! This guide will help you understand the workflow and fea
     *   **Precise Input**: While drawing, you can type a number (e.g., `300`) and press **Enter** to create a segment of exactly that length (in cm) in the direction of your mouse.
     *   **Close Room**: Click the starting point or double-click to finish the room.
 *   **Individual Wall Selection**: In **Select** mode, you can click directly on a wall segment to highlight it.
-*   **Wall Coloring**: Use the sidebar to set a **Default Wall Color** for the entire room, or select a specific wall to give it a unique color (accent wall).
+*   **Room Properties**: When a room is selected, you can adjust:
+    *   **Wall Dimensions**: Change the global **Thickness** and **Height (3D)** of all walls in the project.
+    *   **Colors & Textures**: Set the floor texture and default wall color.
+    *   **Accent Walls**: Select a specific wall to override its color independently.
 *   **Area Calculation**: Once a room is closed, its area in square meters (m²) is automatically calculated and displayed in the center. This label is hidden when the room is selected to avoid visual clutter.
 *   **Add Door/Window**: Select the tool and click on any wall to place an attachment.
     *   **Flip/Mirror**: Select a door or window to see flip controls in the sidebar. You can change the hinge side or the opening direction (In/Out).
+    *   **Curtains**: Windows support adding **Curtains** (Thin or Thick) with custom colors to enhance the 3D aesthetic.
     *   **Move**: Drag doors and windows along the wall. Distances to nearest perpendicular walls will be shown.
 
 ### 3. Furniture Layer
 *   **Catalog**: Use the Catalog to add standard furniture items.
 *   **CAD Symbols**: Many items feature detailed CAD symbols (like pillows on beds) that scale automatically to your chosen dimensions.
-*   **3D Height**: Every furniture item has a **Height (3D)** property in the sidebar. Set this to define how tall the object appears in the 3D preview (e.g., 50cm for a bed, 220cm for a wardrobe).
-*   **Elevation**: Use the **Elevation** property to define the height from the floor. This is useful for wall-mounted TVs, shelves, or placing objects on top of others. In 2D, items with higher elevation are rendered on top of lower items.
-*   **Manipulate**: Select an object to move, rotate, or resize it using the handles.
-    *   **Ortho Snapping**: If Ortho Mode is active, rotation will snap to 90-degree increments.
+*   **3D Height**: Every furniture item has a **Height (3D)** property in the sidebar. Set this to define how tall the object appears in the 3D preview.
+*   **Elevation**: Use the **Elevation** property to define the height from the floor. This is useful for wall-mounted TVs, shelves, or placing objects on top of others.
+*   **Manipulate**: Moving and rotating is constrained by **Snap to Grid** or **Snap to Objects**.
 *   **Measure (M)**: Use this tool to see the temporary distance between two points.
 *   **Dimension (D)**: Create permanent dimension labels that stay on your plan.
 
-### 4. View & Navigation
+### 4. 3D Preview Mode
+*   **Dollhouse View**: Experience your project in a full interactive 3D reconstruction. 
+*   **Navigation**:
+    *   **Rotate**: Left Click + Drag.
+    *   **Pan**: Right Click + Drag.
+    *   **Zoom**: Scroll wheel.
+*   **Sectional Walls**: To ensure visibility inside rooms, walls are automatically cut at a standard height (usually 210cm) unless viewed from specific low angles.
+*   **Materials & Lighting**: Wall colors and floor textures (wood, tile, carpet) applied in 2D are rendered with realistic shaders in 3D.
+*   **Real-time Sync**: Any changes made in the 2D editor (moving furniture, changing colors) are reflected instantly in the 3D view.
+
+### 5. View & Navigation
 *   **Editor Modes**: Use the horizontal switcher in the sub-header to toggle between **Blueprint**, **Room**, and **Furniture** editors.
 *   **3D Preview**: Access the 3D mode via the button in the **Editor Mode** switcher.
 *   **Viewport Tools**:

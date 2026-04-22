@@ -159,24 +159,6 @@ export const SubHeader: React.FC = () => {
             )}
           </div>
         </div>
-
-        {activeLayer === 'room' && (
-          <div className="flex items-center gap-4 pl-6 border-l border-slate-200">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Wall Thickness</span>
-            <div className="flex items-center gap-4 group">
-              <input
-                type="range"
-                min="5"
-                max="50"
-                step="1"
-                value={wallThickness}
-                onChange={(e) => setWallThickness(parseInt(e.target.value))}
-                className="w-28 h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-indigo-600 border border-slate-200"
-              />
-              <span className="text-[10px] font-mono font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100 min-w-[40px] text-center">{wallThickness}cm</span>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

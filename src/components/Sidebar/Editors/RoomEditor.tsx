@@ -1,8 +1,9 @@
 import React from 'react';
-import { X } from 'lucide-react';
+import { X, Ruler } from 'lucide-react';
 import { RoomObject } from '../../../types';
 import { FLOOR_TEXTURES } from '../../../constants';
 import { cn } from '../../../lib/utils';
+import { useStore } from '../../../store';
 
 interface RoomEditorProps {
   selectedRoom: RoomObject;
@@ -17,10 +18,56 @@ export const RoomEditor: React.FC<RoomEditorProps> = ({
   updateRoom,
   deleteRoom,
 }) => {
+  const wallThickness = useStore(state => state.wallThickness);
+  const setWallThickness = useStore(state => state.setWallThickness);
+  const wallHeight = useStore(state => state.wallHeight);
+  const setWallHeight = useStore(state => state.setWallHeight);
+
   return (
     <>
       <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">Room Properties</div>
       
+      <div className="space-y-4 p-3 bg-slate-50/50 rounded-xl border border-slate-100">
+        <label className="flex items-center gap-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+          <Ruler size={12} className="text-slate-400" />
+          Global Wall Dimensions
+        </label>
+        
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Thickness</span>
+              <span className="text-[10px] font-mono font-bold text-indigo-600">{wallThickness}cm</span>
+            </div>
+            <input
+              type="range"
+              min="5"
+              max="50"
+              step="1"
+              value={wallThickness}
+              onChange={(e) => setWallThickness(parseInt(e.target.value))}
+              className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Height (3D)</span>
+              <span className="text-[10px] font-mono font-bold text-indigo-600">{wallHeight}cm</span>
+            </div>
+            <input
+              type="range"
+              min="100"
+              max="400"
+              step="5"
+              value={wallHeight}
+              onChange={(e) => setWallHeight(parseInt(e.target.value))}
+              className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+            />
+          </div>
+        </div>
+      </div>
+
       <div className="space-y-1.5">
         <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Floor Texture</label>
         <div className="grid grid-cols-2 gap-2">
