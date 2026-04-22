@@ -11,6 +11,8 @@ export const SubHeader: React.FC = () => {
     setOrthoMode,
     snapToGrid,
     setSnapToGrid,
+    snapToObjects,
+    setSnapToObjects,
     snapToImage,
     setSnapToImage,
     wallThickness,
@@ -59,7 +61,10 @@ export const SubHeader: React.FC = () => {
           </div>
           
           <div className="flex items-center gap-4">
-            <label className="flex items-center gap-2 cursor-pointer group">
+            <label 
+              className="flex items-center gap-2 cursor-pointer group"
+              title="Ortho mode restricts drawing and moving to 90-degree angles. Useful for straight walls and precise alignment."
+            >
               <input
                 type="checkbox"
                 checked={orthoMode}
@@ -69,17 +74,38 @@ export const SubHeader: React.FC = () => {
               <span className="text-[10px] font-bold text-slate-600 uppercase tracking-wider group-hover:text-slate-900">Ortho (H)</span>
             </label>
 
-            <label className="flex items-center gap-2 cursor-pointer group">
-              <input
-                type="checkbox"
-                checked={snapToGrid}
-                onChange={(e) => setSnapToGrid(e.target.checked)}
-                className="w-3.5 h-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-              />
-              <span className="text-[10px] font-bold text-slate-600 uppercase tracking-wider group-hover:text-slate-900">Snap Grid (S)</span>
-            </label>
+            {activeLayer === 'furniture' ? (
+              <label 
+                className="flex items-center gap-2 cursor-pointer group"
+                title="Snap furniture to walls and other objects for perfect alignment."
+              >
+                <input
+                  type="checkbox"
+                  checked={snapToObjects}
+                  onChange={(e) => setSnapToObjects(e.target.checked)}
+                  className="w-3.5 h-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                />
+                <span className="text-[10px] font-bold text-slate-600 uppercase tracking-wider group-hover:text-slate-900">Snap Object (S)</span>
+              </label>
+            ) : (
+              <label 
+                className="flex items-center gap-2 cursor-pointer group"
+                title="Snap to the background grid for modular planning."
+              >
+                <input
+                  type="checkbox"
+                  checked={snapToGrid}
+                  onChange={(e) => setSnapToGrid(e.target.checked)}
+                  className="w-3.5 h-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                />
+                <span className="text-[10px] font-bold text-slate-600 uppercase tracking-wider group-hover:text-slate-900">Snap Grid (S)</span>
+              </label>
+            )}
 
-            <label className="flex items-center gap-2 cursor-pointer group">
+            <label 
+              className="flex items-center gap-2 cursor-pointer group"
+              title="Automatically show dimensions for room walls and furniture distances."
+            >
               <input
                 type="checkbox"
                 checked={showAutoDimensions}
@@ -90,7 +116,10 @@ export const SubHeader: React.FC = () => {
             </label>
 
             {activeLayer === 'room' && (
-              <label className="flex items-center gap-2 cursor-pointer group">
+              <label 
+                className="flex items-center gap-2 cursor-pointer group"
+                title="Snap to the lines detected in the background blueprint image."
+              >
                 <input
                   type="checkbox"
                   checked={snapToImage}

@@ -26,7 +26,10 @@ export const useKeyboardShortcuts = (
     setOrthoMode,
     snapToGrid,
     setSnapToGrid,
-    moveView
+    snapToObjects,
+    setSnapToObjects,
+    moveView,
+    activeLayer
   } = useStore();
 
   useEffect(() => {
@@ -119,7 +122,13 @@ export const useKeyboardShortcuts = (
             setSelectedDimensionId(null);
             break;
           case 'h': setOrthoMode(!orthoMode); break;
-          case 's': setSnapToGrid(!snapToGrid); break;
+          case 's': 
+            if (activeLayer === 'furniture') {
+              setSnapToObjects(!snapToObjects);
+            } else {
+              setSnapToGrid(!snapToGrid);
+            }
+            break;
         }
       }
 
@@ -165,5 +174,5 @@ export const useKeyboardShortcuts = (
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [mode, roomPoints, dimensionInput, selectedId, selectedRoomId, orthoMode, snapToGrid, setIsCtrlPressed, handleDimensionSubmit, setDimensionInput, setSelectedId, setSelectedRoomId, setMode, setOrthoMode, setSnapToGrid, moveView, deleteRoom, selectedDimensionId, deleteDimension, undo]);
+  }, [mode, roomPoints, dimensionInput, selectedId, selectedRoomId, orthoMode, snapToGrid, snapToObjects, activeLayer, setIsCtrlPressed, handleDimensionSubmit, setDimensionInput, setSelectedId, setSelectedRoomId, setMode, setOrthoMode, setSnapToGrid, setSnapToObjects, moveView, deleteRoom, selectedDimensionId, deleteDimension, undo]);
 };

@@ -9,6 +9,7 @@ export interface UISlice {
   activeLayer: LayerType;
   orthoMode: boolean;
   snapToGrid: boolean;
+  snapToObjects: boolean;
   snapToImage: boolean;
   gridVisible: boolean;
   showAutoDimensions: boolean;
@@ -33,6 +34,7 @@ export interface UISlice {
   setActiveLayer: (layer: LayerType) => void;
   setOrthoMode: (enabled: boolean) => void;
   setSnapToGrid: (enabled: boolean) => void;
+  setSnapToObjects: (enabled: boolean) => void;
   setSnapToImage: (enabled: boolean) => void;
   setGridVisible: (visible: boolean) => void;
   setShowAutoDimensions: (visible: boolean) => void;
@@ -54,8 +56,9 @@ export const createUISlice: StateCreator<AppState, [], [], UISlice> = (set, get)
   position: { x: 0, y: 0 },
   mode: 'select',
   activeLayer: 'furniture',
-  orthoMode: false,
+  orthoMode: true,
   snapToGrid: true,
+  snapToObjects: true,
   snapToImage: true,
   gridVisible: true,
   showAutoDimensions: false,
@@ -80,6 +83,7 @@ export const createUISlice: StateCreator<AppState, [], [], UISlice> = (set, get)
   setActiveLayer: (activeLayer) => set({ activeLayer }),
   setOrthoMode: (orthoMode) => set({ orthoMode }),
   setSnapToGrid: (snapToGrid) => set({ snapToGrid }),
+  setSnapToObjects: (snapToObjects) => set({ snapToObjects }),
   setSnapToImage: (snapToImage) => set({ snapToImage }),
   setGridVisible: (gridVisible) => set({ gridVisible }),
   setShowAutoDimensions: (showAutoDimensions) => set({ showAutoDimensions }),

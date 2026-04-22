@@ -9,7 +9,8 @@ import {
   rotatePoint,
   checkPolygonsIntersect, 
   checkCirclePolygonIntersect,
-  isPointInPolygon
+  isPointInPolygon,
+  getSnappedFurniturePosition
 } from '../lib/geometry';
 
 export const useFurnitureInteraction = (
@@ -24,8 +25,6 @@ export const useFurnitureInteraction = (
   const [isColliding, setIsColliding] = useState(false);
 
   const handleDragMove = (e: Konva.KonvaEventObject<DragEvent>) => {
-    if (!rooms.length) return;
-
     const node = e.target;
     const x = node.x();
     const y = node.y();
@@ -33,90 +32,30 @@ export const useFurnitureInteraction = (
     const h = shape.height;
     const rotation = node.rotation();
     const snapThreshold = 15 / scale;
+    const { snapToObjects, isAltPressed } = useStore.getState();
     
-    let currentX = x;
-    let currentY = y;
-    let snappedWallIds = new Set<string>();
-
-    for (let pass = 0; pass < 2; pass++) {
-      let bestSnap = null;
-      let minSnapDist = Infinity;
-      let pointsToSnap: Vector2d[] = [];
-      
-      if (shape.type === 'group' && shape.children) {
-        shape.children.forEach(child => {
-          const cw = child.width;
-          const ch = child.height;
-          // child.x/y are relative to group top-left (0,0)
-          // Group center is at (w/2, h/2)
-          const cx = child.x - w / 2;
-          const cy = child.y - h / 2;
-          const midpoints = [
-            { x: cx + cw / 2, y: cy },
-            { x: cx + cw / 2, y: cy + ch },
-            { x: cx, y: cy + ch / 2 },
-            { x: cx + cw, y: cy + ch / 2 },
-          ];
-          midpoints.forEach(p => {
-            pointsToSnap.push(rotatePoint(p, { x: 0, y: 0 }, rotation));
-          });
-        });
-        const groupMidpoints = [
-          { x: 0, y: -h / 2 },
-          { x: 0, y: h / 2 },
-          { x: -w / 2, y: 0 },
-          { x: w / 2, y: 0 },
-        ];
-        groupMidpoints.forEach(p => {
-          pointsToSnap.push(rotatePoint(p, { x: 0, y: 0 }, rotation));
-        });
-      } else {
-        pointsToSnap = [
-          rotatePoint({ x: 0, y: -h / 2 }, { x: 0, y: 0 }, rotation),
-          rotatePoint({ x: 0, y: h / 2 }, { x: 0, y: 0 }, rotation),
-          rotatePoint({ x: -w / 2, y: 0 }, { x: 0, y: 0 }, rotation),
-          rotatePoint({ x: w / 2, y: 0 }, { x: 0, y: 0 }, rotation),
-        ];
-      }
-
-      const worldPoints = pointsToSnap.map(p => ({ x: p.x + currentX, y: p.y + currentY }));
-
-      for (const side of worldPoints) {
-        for (const room of rooms) {
-          const isInside = isPointInPolygon(side, room.points);
-          if (!isInside) continue;
-
-          for (let i = 0; i < room.points.length; i++) {
-            const wallId = `${room.id}-${i}`;
-            if (snappedWallIds.has(wallId)) continue;
-
-            const p1 = room.points[i];
-            const p2 = room.points[(i + 1) % room.points.length];
-            const result = getDistanceToSegment(side, p1, p2);
-            
-            if (typeof result === 'object') {
-              const distToFace = result.distance;
-              if (distToFace < snapThreshold && distToFace < minSnapDist) {
-                minSnapDist = distToFace;
-                bestSnap = {
-                  offsetX: result.point.x - side.x,
-                  offsetY: result.point.y - side.y,
-                  wallId
-                };
-              }
-            }
-          }
-        }
-      }
-
-      if (bestSnap && !useStore.getState().isAltPressed) {
-        currentX += bestSnap.offsetX;
-        currentY += bestSnap.offsetY;
-        snappedWallIds.add(bestSnap.wallId);
-      } else {
-        break;
-      }
+    if (!snapToObjects || isAltPressed) {
+      node.x(x);
+      node.y(y);
+      setDragDistances([]);
+      setIsColliding(false);
+      return;
     }
+
+    // Use unified snapping logic
+    const snappedPos = getSnappedFurniturePosition(
+      { x, y },
+      w,
+      h,
+      rotation,
+      rooms,
+      allFurniture,
+      snapThreshold,
+      shape.id
+    );
+
+    const currentX = snappedPos.x;
+    const currentY = snappedPos.y;
 
     node.x(currentX);
     node.y(currentY);
@@ -139,6 +78,23 @@ export const useFurnitureInteraction = (
           const p1 = room.points[i];
           const p2 = room.points[(i + 1) % room.points.length];
           const result = getDistanceToSegment(side, p1, p2);
+          if (typeof result === 'object') {
+            const distToFace = result.distance;
+            if (distToFace < minFaceDist) {
+              minFaceDist = distToFace;
+              nearestPointOnFace = result.point;
+            }
+          }
+        }
+      });
+
+      allFurniture.forEach(other => {
+        if (other.id === shape.id) return;
+        const otherVertices = getFurnitureVertices(other);
+        for (let i = 0; i < otherVertices.length; i++) {
+          const v1 = otherVertices[i];
+          const v2 = otherVertices[(i + 1) % otherVertices.length];
+          const result = getDistanceToSegment(side, v1, v2);
           if (typeof result === 'object') {
             const distToFace = result.distance;
             if (distToFace < minFaceDist) {

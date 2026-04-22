@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { useStore } from '../store';
-import { getSnappedPosition, getOrthoPoint } from '../lib/geometry';
+import { getSnappedPosition, getOrthoPoint, getSnappedFurniturePosition } from '../lib/geometry';
 
 export const useMouseSnapping = (mousePos: { x: number, y: number }, isCtrlPressed: boolean, isAltPressed: boolean) => {
     const {
@@ -10,6 +10,7 @@ export const useMouseSnapping = (mousePos: { x: number, y: number }, isCtrlPress
     rooms,
     furniture,
     snapToGrid,
+    snapToObjects,
     snapToImage,
     edgeMap,
     backgroundPosition,
@@ -18,7 +19,8 @@ export const useMouseSnapping = (mousePos: { x: number, y: number }, isCtrlPress
     orthoMode,
     roomPoints,
     measurePoints,
-    pixelsPerCm
+    pixelsPerCm,
+    pendingFurniture
   } = useStore();
 
   const getSnappedMousePos = useCallback((forceIgnoreGrid = false) => {
@@ -26,17 +28,35 @@ export const useMouseSnapping = (mousePos: { x: number, y: number }, isCtrlPress
 
     if (isAltPressed) return pos;
 
-    // 1. Vector/Image Snapping
+    // 1. Vector/Image/Box Snapping
     const snapThreshold = 10 / scale;
     const shouldSnapToImage = snapToImage && activeLayer === 'room';
-    const snapped = getSnappedPosition(
-      pos, 
-      rooms, 
-      furniture, 
-      snapThreshold, 
-      shouldSnapToImage ? edgeMap : null,
-      { x: backgroundPosition.x, y: backgroundPosition.y, scale: backgroundScale, rotation: backgroundRotation }
-    );
+    
+    let snapped = { ...pos };
+    if (snapToObjects) {
+      if (mode === 'place-furniture' && pendingFurniture) {
+        // Advanced box-to-box/box-to-wall snapping for placement
+        snapped = getSnappedFurniturePosition(
+          pos,
+          pendingFurniture.width,
+          pendingFurniture.height,
+          pendingFurniture.rotation,
+          rooms,
+          furniture,
+          15 / scale // Slightly higher threshold for box snapping
+        );
+      } else {
+        // Standard point/edge snapping for cursor
+        snapped = getSnappedPosition(
+          pos, 
+          rooms, 
+          furniture, 
+          snapThreshold, 
+          shouldSnapToImage ? edgeMap : null,
+          { x: backgroundPosition.x, y: backgroundPosition.y, scale: backgroundScale, rotation: backgroundRotation }
+        );
+      }
+    }
     
     let hasSnappedToVector = false;
     if (snapped.x !== pos.x || snapped.y !== pos.y) {
@@ -79,7 +99,7 @@ export const useMouseSnapping = (mousePos: { x: number, y: number }, isCtrlPress
     }
 
     return pos;
-  }, [mousePos, isCtrlPressed, orthoMode, snapToGrid, mode, roomPoints, measurePoints, rooms, furniture, scale, pixelsPerCm, snapToImage, edgeMap, backgroundPosition, backgroundScale, backgroundRotation]);
+  }, [mousePos, isCtrlPressed, orthoMode, snapToGrid, snapToObjects, mode, roomPoints, measurePoints, rooms, furniture, pendingFurniture, scale, pixelsPerCm, snapToImage, edgeMap, backgroundPosition, backgroundScale, backgroundRotation]);
 
   return { getSnappedMousePos };
 };

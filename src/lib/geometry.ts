@@ -140,19 +140,27 @@ export const getSnappedPosition = (
     }
   }
 
-  // Check furniture corners
+  // Check furniture corners and edges
   for (const f of furniture) {
-    const corners = [
-      { x: f.x, y: f.y },
-      { x: f.x + f.width, y: f.y },
-      { x: f.x, y: f.y + f.height },
-      { x: f.x + f.width, y: f.y + f.height },
-    ];
-    for (const p of corners) {
-      const d = getDistance(pos, p);
+    const vertices = getFurnitureVertices(f as any); // cast for safety if needed, or update signature
+    
+    // Check corners
+    for (const v of vertices) {
+      const d = getDistance(pos, v);
       if (d < minDist) {
         minDist = d;
-        nearest = { ...p };
+        nearest = { ...v };
+      }
+    }
+
+    // Check furniture edges
+    for (let i = 0; i < vertices.length; i++) {
+      const v1 = vertices[i];
+      const v2 = vertices[(i + 1) % vertices.length];
+      const result = getDistanceToSegment(pos, v1, v2);
+      if (result.distance < minDist) {
+        minDist = result.distance;
+        nearest = result.point;
       }
     }
   }
@@ -388,6 +396,103 @@ export const isPointInPolygon = (point: Vector2d, poly: Vector2d[]): boolean => 
 /**
  * Checks if two circles intersect.
  */
+/**
+ * Snaps a furniture-like rectangle (center-based) to walls and other furniture.
+ */
+export const getSnappedFurniturePosition = (
+  centerPos: Vector2d,
+  width: number,
+  height: number,
+  rotation: number,
+  rooms: { id: string, points: Vector2d[] }[],
+  furniture: { id: string, x: number; y: number; width: number; height: number; rotation: number }[],
+  threshold: number,
+  ignoredId?: string
+): Vector2d => {
+  let currentPos = { ...centerPos };
+  let snappedTargetIds = new Set<string>();
+
+  // Two passes for better corner snapping
+  for (let pass = 0; pass < 2; pass++) {
+    let bestSnap = null;
+    let minSnapDist = Infinity;
+    
+    // Middle points of each side for snapping
+    const sides = [
+      rotatePoint({ x: 0, y: -height / 2 }, { x: 0, y: 0 }, rotation),
+      rotatePoint({ x: 0, y: height / 2 }, { x: 0, y: 0 }, rotation),
+      rotatePoint({ x: -width / 2, y: 0 }, { x: 0, y: 0 }, rotation),
+      rotatePoint({ x: width / 2, y: 0 }, { x: 0, y: 0 }, rotation),
+    ];
+
+    const worldSides = sides.map(s => ({ x: s.x + currentPos.x, y: s.y + currentPos.y }));
+
+    for (const side of worldSides) {
+      // 1. Snap to Walls
+      for (const room of rooms) {
+        // Optimization: check if side is roughly near room
+        if (!isPointInPolygon(side, room.points)) {
+          // If outside, maybe we are snapping to external face? 
+          // For now, only snap if near a wall from inside as most furniture is inside.
+          // But actually, snapping should work regardless if minDist is small.
+        }
+
+        for (let i = 0; i < room.points.length; i++) {
+          const wallId = `wall-${room.id}-${i}`;
+          if (snappedTargetIds.has(wallId)) continue;
+
+          const p1 = room.points[i];
+          const p2 = room.points[(i + 1) % room.points.length];
+          const result = getDistanceToSegment(side, p1, p2);
+          
+          if (result.distance < threshold && result.distance < minSnapDist) {
+            minSnapDist = result.distance;
+            bestSnap = {
+              offsetX: result.point.x - side.x,
+              offsetY: result.point.y - side.y,
+              targetId: wallId
+            };
+          }
+        }
+      }
+
+      // 2. Snap to Other Furniture
+      for (const other of furniture) {
+        if (other.id === ignoredId) continue;
+        
+        const targetId = `furniture-${other.id}`;
+        if (snappedTargetIds.has(targetId)) continue;
+
+        const otherVertices = getFurnitureVertices(other);
+        for (let i = 0; i < otherVertices.length; i++) {
+          const v1 = otherVertices[i];
+          const v2 = otherVertices[(i + 1) % otherVertices.length];
+          const result = getDistanceToSegment(side, v1, v2);
+          
+          if (result.distance < threshold && result.distance < minSnapDist) {
+            minSnapDist = result.distance;
+            bestSnap = {
+              offsetX: result.point.x - side.x,
+              offsetY: result.point.y - side.y,
+              targetId: targetId
+            };
+          }
+        }
+      }
+    }
+
+    if (bestSnap) {
+      currentPos.x += bestSnap.offsetX;
+      currentPos.y += bestSnap.offsetY;
+      snappedTargetIds.add(bestSnap.targetId);
+    } else {
+      break;
+    }
+  }
+
+  return currentPos;
+};
+
 export const checkCirclesIntersect = (c1: Vector2d, r1: number, c2: Vector2d, r2: number): boolean => {
   return getDistance(c1, c2) <= (r1 + r2);
 };
