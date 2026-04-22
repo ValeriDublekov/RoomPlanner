@@ -30,7 +30,8 @@ export const CanvasHeader: React.FC<CanvasHeaderProps> = ({ onExport, onPrint, g
     setShow3d,
     setPixelsPerCm,
     currentUser,
-    isSaving
+    isSaving,
+    activeLayer
   } = useStore();
 
   const [showNewConfirm, setShowNewConfirm] = React.useState(false);
@@ -117,47 +118,49 @@ export const CanvasHeader: React.FC<CanvasHeaderProps> = ({ onExport, onPrint, g
 
   return (
     <header className="bg-white border-b border-slate-200 flex flex-col lg:flex-row items-center justify-between px-4 z-20 shadow-sm py-2 gap-3 w-full">
-      <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3 md:gap-6 w-full lg:w-auto">
+      <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 md:gap-6 w-full lg:w-auto">
         {/* Project Name & App Icon */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 pr-2 border-r border-slate-100 hidden sm:flex">
           <div className="w-8 h-8 bg-indigo-600 rounded-lg flex shrink-0 items-center justify-center text-white shadow-sm">
             <Layout size={18} />
           </div>
-          <div className="flex flex-col">
+          <div className="flex flex-col min-w-0">
             <div className="flex items-center gap-2">
               <input
                 type="text"
                 value={projectName}
                 onChange={(e) => setProjectName(e.target.value)}
                 placeholder="Project Name"
-                className="text-sm font-bold text-slate-700 bg-transparent border-none p-0 focus:ring-0 outline-none w-28 sm:w-32 md:w-48 placeholder:text-slate-300"
-                title={cloudName ? `Filename: ${cloudName}` : 'Scale project'}
+                className="text-sm font-bold text-slate-700 bg-transparent border-none p-0 focus:ring-0 outline-none w-24 sm:w-28 md:w-40 placeholder:text-slate-300"
+                title={cloudName ? `Filename: ${cloudName}` : 'Project name'}
               />
               {cloudName && (
-                <div className="hidden sm:flex items-center gap-1.5 px-2 py-0.5 bg-indigo-50 rounded-full border border-indigo-100 text-[9px] text-indigo-500 font-bold tracking-wider">
-                  <Cloud size={10} className="text-indigo-400" />
-                  <span className="truncate max-w-[80px] md:max-w-[120px]">{cloudName}</span>
+                <div className="flex items-center gap-1 px-1.5 py-0.5 bg-indigo-50/50 rounded-md border border-indigo-100/50 text-[8px] text-indigo-400 font-bold tracking-wider">
+                  <Cloud size={9} />
+                  <span className="truncate max-w-[60px] md:max-w-[100px]">{cloudName}</span>
                 </div>
               )}
             </div>
           </div>
         </div>
 
-        <div className="hidden md:block h-8 w-px bg-slate-100" />
-
-        {/* Essential Tools */}
-        <div className="flex items-center gap-1">
+        {/* History Group */}
+        <div className="flex items-center bg-slate-50/50 p-0.5 rounded-lg border border-slate-100">
           <button
             onClick={undo}
             disabled={history.length === 0}
-            className="p-1.5 md:p-2 text-slate-500 hover:bg-slate-50 rounded-lg transition-colors disabled:opacity-30 flex-shrink-0"
+            className="p-1.5 md:p-2 text-slate-500 hover:bg-white hover:text-indigo-600 rounded-md transition-all disabled:opacity-20 flex-shrink-0 shadow-none hover:shadow-sm"
             title={`Undo (${history.length})`}
           >
             <Undo2 size={18} />
           </button>
+        </div>
+
+        {/* Navigation Group */}
+        <div className="flex items-center bg-slate-50/50 p-0.5 rounded-lg border border-slate-100">
           <button
             onClick={resetView}
-            className="p-1.5 md:p-2 text-slate-500 hover:bg-slate-50 rounded-lg transition-colors flex-shrink-0"
+            className="p-1.5 md:p-2 text-slate-500 hover:bg-white hover:text-indigo-600 rounded-md transition-all flex-shrink-0 shadow-none hover:shadow-sm"
             title="Center View (0,0)"
           >
             <RotateCcw size={18} />
@@ -169,52 +172,49 @@ export const CanvasHeader: React.FC<CanvasHeaderProps> = ({ onExport, onPrint, g
                 fitToScreen(canvas.clientWidth, canvas.clientHeight);
               }
             }}
-            className="p-1.5 md:p-2 text-slate-500 hover:bg-slate-50 rounded-lg transition-colors flex-shrink-0"
+            className="p-1.5 md:p-2 text-slate-500 hover:bg-white hover:text-indigo-600 rounded-md transition-all flex-shrink-0 shadow-none hover:shadow-sm border-l border-slate-100"
             title="Fit to Screen"
           >
             <Maximize size={18} />
           </button>
+        </div>
+
+        {/* View Options Group */}
+        <div className="flex items-center bg-slate-50/50 p-0.5 rounded-lg border border-slate-100">
           <button
             onClick={() => setGridVisible(!gridVisible)}
-            className={`p-1.5 md:p-2 rounded-lg transition-colors flex-shrink-0 ${gridVisible ? 'text-indigo-600 bg-indigo-50' : 'text-slate-500 hover:bg-slate-50'}`}
+            className={`p-1.5 md:p-2 rounded-md transition-all flex-shrink-0 ${gridVisible ? 'text-indigo-600 bg-white shadow-sm' : 'text-slate-500 hover:bg-white hover:text-indigo-600'}`}
             title="Toggle Grid"
           >
             <Grid size={18} />
           </button>
           <button
             onClick={() => setShowManual(true)}
-            className="hidden sm:block p-1.5 md:p-2 text-slate-500 hover:bg-slate-50 rounded-lg transition-colors flex-shrink-0"
+            className="hidden sm:block p-1.5 md:p-2 text-slate-500 hover:bg-white hover:text-indigo-600 rounded-md transition-all flex-shrink-0 border-l border-slate-100"
             title="User Manual"
           >
             <BookOpen size={18} />
           </button>
-          <button
-            onClick={() => setShow3d(true)}
-            className="flex items-center gap-1.5 md:gap-2 px-2 py-1.5 md:px-3 md:py-1.2 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-lg transition-colors font-bold text-[10px] uppercase tracking-wider flex-shrink-0 shadow-sm"
-            title="3D Preview"
-          >
-            <Box size={16} />
-            <span className="hidden sm:inline">3D View</span>
-          </button>
         </div>
-
-        <div className="hidden lg:block h-8 w-px bg-slate-100" />
 
         {/* Scale */}
-        <div className="flex items-center gap-2 px-2 py-1 md:px-3 md:py-1 bg-slate-50 rounded-lg border border-slate-100 flex-shrink-0">
-          <span className="hidden sm:inline text-[9px] font-bold text-slate-400 uppercase tracking-widest">Scale</span>
-          <div className="flex items-center gap-1">
-            <input
-              type="number"
-              value={pixelsPerCm.toFixed(2)}
-              onChange={(e) => setPixelsPerCm(parseFloat(e.target.value) || 1)}
-              className="w-10 md:w-12 text-[10px] font-mono font-bold text-indigo-600 bg-transparent border-none p-0 focus:ring-0 outline-none"
-              step="0.1"
-            />
-            <span className="text-[9px] font-mono font-bold text-indigo-400">px/cm</span>
+        {(activeLayer === 'room' || activeLayer === 'blueprint') && (
+          <div className="hidden sm:flex items-center gap-2 px-2 py-1 md:px-3 md:py-1 bg-slate-50 rounded-lg border border-slate-100 flex-shrink-0 animate-in fade-in slide-in-from-left-2 duration-300">
+            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Scale</span>
+            <div className="flex items-center gap-1">
+              <input
+                type="number"
+                value={pixelsPerCm.toFixed(2)}
+                onChange={(e) => setPixelsPerCm(parseFloat(e.target.value) || 1)}
+                className="w-10 md:w-12 text-[10px] font-mono font-bold text-indigo-600 bg-transparent border-none p-0 focus:ring-0 outline-none"
+                step="0.1"
+              />
+              <span className="text-[9px] font-mono font-bold text-indigo-400">px/cm</span>
+            </div>
           </div>
-        </div>
+        )}
       </div>
+
 
       <div className="flex items-center justify-center lg:justify-end gap-2 md:gap-3 w-full lg:w-auto">
         <UserManualModal isOpen={showManual} onClose={() => setShowManual(false)} />

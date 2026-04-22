@@ -23,119 +23,147 @@ export const SubHeader: React.FC = () => {
   } = useStore();
 
   return (
-    <div className="min-h-[3rem] py-1 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between px-4 md:px-6 z-10 gap-y-2">
-      <div className="flex flex-wrap items-center gap-4">
-        <div className="flex items-center gap-2 mr-1">
-          <Layers size={14} className="text-slate-400" />
-          <span className="hidden sm:inline text-[10px] font-bold text-slate-400 uppercase tracking-widest">Layers</span>
-        </div>
-        <div className="flex flex-wrap bg-slate-200/50 p-1 rounded-xl gap-1">
-          {(['blueprint', 'room', 'furniture'] as const).map((layer) => (
+    <div className="min-h-[3.5rem] py-2 bg-white border-b border-slate-200 flex flex-wrap items-center justify-between px-4 md:px-6 z-10 gap-y-2">
+      <div className="flex flex-wrap items-center gap-6">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Layers size={14} className="text-slate-400" />
+            <span className="hidden sm:inline text-[10px] font-bold text-slate-400 uppercase tracking-widest">Editor Mode</span>
+          </div>
+          <div className="flex bg-slate-50/50 p-1 rounded-xl border border-slate-100 gap-1.5 min-w-[280px]">
+            {(['blueprint', 'room', 'furniture'] as const).map((layer) => (
+              <button
+                key={layer}
+                onClick={() => setActiveLayer(layer)}
+                className={cn(
+                  "flex-1 px-4 py-2 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all",
+                  activeLayer === layer
+                    ? "bg-white text-indigo-600 shadow-sm border border-slate-100"
+                    : "text-slate-500 hover:text-slate-700 hover:bg-white/50"
+                )}
+              >
+                {layer}
+              </button>
+            ))}
+            <div className="w-px bg-slate-200/50 my-1 mx-0.5" />
             <button
-              key={layer}
-              onClick={() => setActiveLayer(layer)}
-              className={cn(
-                "px-4 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all",
-                activeLayer === layer
-                  ? "bg-white text-indigo-600 shadow-sm"
-                  : "text-slate-500 hover:text-slate-700"
-              )}
+              onClick={() => setShow3d(true)}
+              className="px-4 py-2 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all text-slate-500 hover:text-slate-700 hover:bg-white/50"
             >
-              {layer}
+              3D View
             </button>
-          ))}
-          <button
-            onClick={() => setShow3d(true)}
-            className="px-4 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all text-slate-500 hover:text-slate-700 hover:bg-white/50"
-          >
-            3D View
-          </button>
+          </div>
         </div>
       </div>
 
-      <div className="flex items-center gap-6">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
+      <div className="flex items-center gap-8">
+        <div className="flex items-center gap-6 h-8">
+          <div className="flex items-center gap-2 pr-4 border-r border-slate-100">
             <Settings2 size={14} className="text-slate-400" />
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Settings</span>
           </div>
           
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-5">
             <label 
-              className="flex items-center gap-2 cursor-pointer group"
+              className="flex items-center gap-2.5 cursor-pointer group"
               title="Ortho mode restricts drawing and moving to 90-degree angles. Useful for straight walls and precise alignment."
             >
-              <input
-                type="checkbox"
-                checked={orthoMode}
-                onChange={(e) => setOrthoMode(e.target.checked)}
-                className="w-3.5 h-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-              />
-              <span className="text-[10px] font-bold text-slate-600 uppercase tracking-wider group-hover:text-slate-900">Ortho (H)</span>
+              <div className="relative flex items-center justify-center">
+                <input
+                  type="checkbox"
+                  checked={orthoMode}
+                  onChange={(e) => setOrthoMode(e.target.checked)}
+                  className="peer appearance-none w-4 h-4 rounded border border-slate-300 checked:bg-indigo-600 checked:border-indigo-600 focus:ring-0 focus:ring-offset-0 transition-all cursor-pointer"
+                />
+                <div className="absolute opacity-0 peer-checked:opacity-100 text-white pointer-events-none">
+                  <svg className="w-2.5 h-2.5 fill-current" viewBox="0 0 20 20"><path d="M0 11l2-2 5 5L18 3l2 2L7 18z"/></svg>
+                </div>
+              </div>
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider group-hover:text-indigo-600 transition-colors">Ortho (H)</span>
             </label>
 
             {activeLayer === 'furniture' ? (
               <label 
-                className="flex items-center gap-2 cursor-pointer group"
+                className="flex items-center gap-2.5 cursor-pointer group"
                 title="Snap furniture to walls and other objects for perfect alignment."
               >
-                <input
-                  type="checkbox"
-                  checked={snapToObjects}
-                  onChange={(e) => setSnapToObjects(e.target.checked)}
-                  className="w-3.5 h-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-                />
-                <span className="text-[10px] font-bold text-slate-600 uppercase tracking-wider group-hover:text-slate-900">Snap Object (S)</span>
+                <div className="relative flex items-center justify-center">
+                  <input
+                    type="checkbox"
+                    checked={snapToObjects}
+                    onChange={(e) => setSnapToObjects(e.target.checked)}
+                    className="peer appearance-none w-4 h-4 rounded border border-slate-300 checked:bg-indigo-600 checked:border-indigo-600 focus:ring-0 focus:ring-offset-0 transition-all cursor-pointer"
+                  />
+                  <div className="absolute opacity-0 peer-checked:opacity-100 text-white pointer-events-none">
+                    <svg className="w-2.5 h-2.5 fill-current" viewBox="0 0 20 20"><path d="M0 11l2-2 5 5L18 3l2 2L7 18z"/></svg>
+                  </div>
+                </div>
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider group-hover:text-indigo-600 transition-colors">Snap Object (S)</span>
               </label>
             ) : (
               <label 
-                className="flex items-center gap-2 cursor-pointer group"
+                className="flex items-center gap-2.5 cursor-pointer group"
                 title="Snap to the background grid for modular planning."
               >
-                <input
-                  type="checkbox"
-                  checked={snapToGrid}
-                  onChange={(e) => setSnapToGrid(e.target.checked)}
-                  className="w-3.5 h-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-                />
-                <span className="text-[10px] font-bold text-slate-600 uppercase tracking-wider group-hover:text-slate-900">Snap Grid (S)</span>
+                <div className="relative flex items-center justify-center">
+                  <input
+                    type="checkbox"
+                    checked={snapToGrid}
+                    onChange={(e) => setSnapToGrid(e.target.checked)}
+                    className="peer appearance-none w-4 h-4 rounded border border-slate-300 checked:bg-indigo-600 checked:border-indigo-600 focus:ring-0 focus:ring-offset-0 transition-all cursor-pointer"
+                  />
+                  <div className="absolute opacity-0 peer-checked:opacity-100 text-white pointer-events-none">
+                    <svg className="w-2.5 h-2.5 fill-current" viewBox="0 0 20 20"><path d="M0 11l2-2 5 5L18 3l2 2L7 18z"/></svg>
+                  </div>
+                </div>
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider group-hover:text-indigo-600 transition-colors">Snap Grid (S)</span>
               </label>
             )}
 
             <label 
-              className="flex items-center gap-2 cursor-pointer group"
+              className="flex items-center gap-2.5 cursor-pointer group"
               title="Automatically show dimensions for room walls and furniture distances."
             >
-              <input
-                type="checkbox"
-                checked={showAutoDimensions}
-                onChange={(e) => setShowAutoDimensions(e.target.checked)}
-                className="w-3.5 h-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-              />
-              <span className="text-[10px] font-bold text-slate-600 uppercase tracking-wider group-hover:text-slate-900">Auto Dim</span>
+              <div className="relative flex items-center justify-center">
+                <input
+                  type="checkbox"
+                  checked={showAutoDimensions}
+                  onChange={(e) => setShowAutoDimensions(e.target.checked)}
+                  className="peer appearance-none w-4 h-4 rounded border border-slate-300 checked:bg-indigo-600 checked:border-indigo-600 focus:ring-0 focus:ring-offset-0 transition-all cursor-pointer"
+                />
+                <div className="absolute opacity-0 peer-checked:opacity-100 text-white pointer-events-none">
+                  <svg className="w-2.5 h-2.5 fill-current" viewBox="0 0 20 20"><path d="M0 11l2-2 5 5L18 3l2 2L7 18z"/></svg>
+                </div>
+              </div>
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider group-hover:text-indigo-600 transition-colors">Auto Dim</span>
             </label>
 
             {activeLayer === 'room' && (
               <label 
-                className="flex items-center gap-2 cursor-pointer group"
+                className="flex items-center gap-2.5 cursor-pointer group"
                 title="Snap to the lines detected in the background blueprint image."
               >
-                <input
-                  type="checkbox"
-                  checked={snapToImage}
-                  onChange={(e) => setSnapToImage(e.target.checked)}
-                  className="w-3.5 h-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-                />
-                <span className="text-[10px] font-bold text-slate-600 uppercase tracking-wider group-hover:text-slate-900">Snap Image</span>
+                <div className="relative flex items-center justify-center">
+                  <input
+                    type="checkbox"
+                    checked={snapToImage}
+                    onChange={(e) => setSnapToImage(e.target.checked)}
+                    className="peer appearance-none w-4 h-4 rounded border border-slate-300 checked:bg-indigo-600 checked:border-indigo-600 focus:ring-0 focus:ring-offset-0 transition-all cursor-pointer"
+                  />
+                  <div className="absolute opacity-0 peer-checked:opacity-100 text-white pointer-events-none">
+                    <svg className="w-2.5 h-2.5 fill-current" viewBox="0 0 20 20"><path d="M0 11l2-2 5 5L18 3l2 2L7 18z"/></svg>
+                  </div>
+                </div>
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider group-hover:text-indigo-600 transition-colors">Snap Image</span>
               </label>
             )}
           </div>
         </div>
 
         {activeLayer === 'room' && (
-          <div className="flex items-center gap-3 pl-6 border-l border-slate-200">
+          <div className="flex items-center gap-4 pl-6 border-l border-slate-200">
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Wall Thickness</span>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-4 group">
               <input
                 type="range"
                 min="5"
@@ -143,9 +171,9 @@ export const SubHeader: React.FC = () => {
                 step="1"
                 value={wallThickness}
                 onChange={(e) => setWallThickness(parseInt(e.target.value))}
-                className="w-24 h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                className="w-28 h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-indigo-600 border border-slate-200"
               />
-              <span className="text-[10px] font-mono font-bold text-indigo-600 w-8">{wallThickness}cm</span>
+              <span className="text-[10px] font-mono font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100 min-w-[40px] text-center">{wallThickness}cm</span>
             </div>
           </div>
         )}
