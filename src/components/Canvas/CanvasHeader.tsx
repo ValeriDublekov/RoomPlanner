@@ -4,6 +4,7 @@ import { useStore } from '../../store';
 import { UserManualModal } from '../UserManualModal';
 import { CloudLoadModal } from '../Sidebar/CloudLoadModal';
 import { SaveModal } from '../Sidebar/SaveModal';
+import { ConfirmModal } from '../Dialogs/ConfirmModal';
 
 interface CanvasHeaderProps {
   onExport: () => void;
@@ -38,14 +39,19 @@ export const CanvasHeader: React.FC<CanvasHeaderProps> = ({ onExport, onPrint, g
   const [isSaveModalOpen, setIsSaveModalOpen] = React.useState(false);
   const [isFileMenuOpen, setIsFileMenuOpen] = React.useState(false);
   const [pendingThumbnail, setPendingThumbnail] = React.useState<string | null>(null);
+  const menuRef = React.useRef<HTMLDivElement>(null);
 
   // Close menu when clicking outside
   React.useEffect(() => {
-    const handleClickOutside = () => setIsFileMenuOpen(false);
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setIsFileMenuOpen(false);
+      }
+    };
     if (isFileMenuOpen) {
-      window.addEventListener('click', handleClickOutside);
+      document.addEventListener('mousedown', handleClickOutside);
     }
-    return () => window.removeEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isFileMenuOpen]);
 
   const handleLoad = () => {
@@ -221,6 +227,20 @@ export const CanvasHeader: React.FC<CanvasHeaderProps> = ({ onExport, onPrint, g
           }} 
           thumbnail={pendingThumbnail}
         />
+        <ConfirmModal
+          isOpen={showNewConfirm}
+          title="New Project"
+          message="This will clear your current plan and start fresh. Any unsaved changes will be lost. Are you sure?"
+          confirmLabel="Reset Everything"
+          cancelLabel="Cancel"
+          onConfirm={() => {
+            newProject();
+            setShowNewConfirm(false);
+            setIsFileMenuOpen(false);
+          }}
+          onCancel={() => setShowNewConfirm(false)}
+          variant="danger"
+        />
 
         {/* Quick Actions */}
         <div className="flex items-center gap-1 bg-slate-50/50 p-1 rounded-xl border border-slate-100">
@@ -250,7 +270,7 @@ export const CanvasHeader: React.FC<CanvasHeaderProps> = ({ onExport, onPrint, g
         <div className="h-6 w-px bg-slate-200 hidden lg:block" />
         
         {/* Main Menu */}
-        <div className="relative">
+        <div className="relative" ref={menuRef}>
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -278,29 +298,6 @@ export const CanvasHeader: React.FC<CanvasHeaderProps> = ({ onExport, onPrint, g
                   <FilePlus size={16} className="text-slate-400 group-hover:text-indigo-500" />
                   New Project
                 </button>
-                {showNewConfirm && (
-                  <div className="mt-2 p-2 bg-red-50 rounded-lg border border-red-100 italic">
-                    <p className="text-[10px] font-bold text-red-600 uppercase tracking-wider mb-2 text-center">Reset everything?</p>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => {
-                          newProject();
-                          setShowNewConfirm(false);
-                          setIsFileMenuOpen(false);
-                        }}
-                        className="flex-1 px-2 py-1 bg-red-500 text-white rounded text-[10px] font-bold"
-                      >
-                        YES
-                      </button>
-                      <button
-                        onClick={() => setShowNewConfirm(false)}
-                        className="flex-1 px-2 py-1 bg-slate-200 text-slate-600 rounded text-[10px] font-bold"
-                      >
-                        NO
-                      </button>
-                    </div>
-                  </div>
-                )}
               </div>
 
               {/* Load/Save Group */}

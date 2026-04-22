@@ -46,9 +46,11 @@ export const FurnitureRenderer: React.FC<FurnitureRendererProps> = ({
         <Rect
           width={shape.width}
           height={shape.height}
+          fill="rgba(0,0,0,0)"
           stroke={isSelected ? "#4f46e5" : "transparent"}
           strokeWidth={1 / scale}
           dash={[5 / scale, 5 / scale]}
+          listening={true}
         />
       </Group>
     );
@@ -60,7 +62,7 @@ export const FurnitureRenderer: React.FC<FurnitureRendererProps> = ({
         width={shape.width}
         height={shape.height}
         fill={isColliding ? "rgba(239, 68, 68, 0.1)" : (
-          shape.svgPath ? "transparent" : (
+          shape.svgPath ? "rgba(0,0,0,0.001)" : (
             (shape.furnitureType === 'bed' || shape.furnitureType === 'wardrobe' || shape.furnitureType === 'dresser') 
               ? (shape.secondaryColor || "#f8fafc") 
               : (shape.color || "#f8fafc")
@@ -77,6 +79,7 @@ export const FurnitureRenderer: React.FC<FurnitureRendererProps> = ({
         shadowColor={isColliding ? "#ef4444" : "#4f46e5"}
         shadowOpacity={0.2}
         opacity={shape.svgPath ? 0.2 : 1}
+        listening={true}
       />
 
       {shape.svgPath && (() => {
