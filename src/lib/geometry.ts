@@ -112,7 +112,8 @@ export const getSnappedPosition = (
   furniture: { x: number; y: number; width: number; height: number }[],
   threshold: number,
   edgeMap: EdgeMap | null = null,
-  bgTransform: { x: number, y: number, scale: number, rotation: number } | null = null
+  bgTransform: { x: number, y: number, scale: number, rotation: number } | null = null,
+  lastPoint: Vector2d | null = null
 ): Vector2d => {
   let nearest = { ...pos };
   let minDist = threshold;
@@ -142,7 +143,7 @@ export const getSnappedPosition = (
 
   // Check furniture corners and edges
   for (const f of furniture) {
-    const vertices = getFurnitureVertices(f as any); // cast for safety if needed, or update signature
+    const vertices = getFurnitureVertices(f as any); 
     
     // Check corners
     for (const v of vertices) {
@@ -168,7 +169,7 @@ export const getSnappedPosition = (
   // 2. If no vector vertex found within threshold, check Edge Map (Image Snapping)
   if (minDist === threshold && edgeMap && bgTransform) {
     // Search radius in image pixels, derived from the world-space threshold
-    const radius = Math.max(5, threshold / bgTransform.scale);
+    const radius = Math.max(8, threshold / bgTransform.scale);
     
     // Inverse transform: world -> image space
     const rad = (bgTransform.rotation * Math.PI) / 180;
@@ -181,6 +182,15 @@ export const getSnappedPosition = (
     const imgX = (dx * cos - dy * sin) / bgTransform.scale;
     const imgY = (dx * sin + dy * cos) / bgTransform.scale;
     
+    let lastImgX = -1;
+    let lastImgY = -1;
+    if (lastPoint) {
+      const ldx = lastPoint.x - bgTransform.x;
+      const ldy = lastPoint.y - bgTransform.y;
+      lastImgX = (ldx * cos - ldy * sin) / bgTransform.scale;
+      lastImgY = (ldx * sin + ldy * cos) / bgTransform.scale;
+    }
+
     const startX = Math.floor(imgX - radius);
     const endX = Math.ceil(imgX + radius);
     const startY = Math.floor(imgY - radius);
@@ -209,11 +219,27 @@ export const getSnappedPosition = (
 
             const d = Math.sqrt(Math.pow(x - imgX, 2) + Math.pow(y - imgY, 2));
             
-            // Core Logic Fix: Prioritize distance primarily.
-            // Give a small "gravitational bonus" to intersections (neighbors > 2).
-            // This prevents jumping to distant corners while staying close to the cursor.
-            const gravityBonus = neighbors > 2 ? 2.0 : 0.0;
-            const score = d - gravityBonus;
+            // Prioritize distance primarily.
+            // Give extra "gravitational bonus" to intersections/junctions (neighbors > 2)
+            // or endpoints (neighbors == 1)
+            let junctionBonus = (neighbors > 2 || neighbors === 1) ? 3.0 : 0.0;
+            
+            // If we have a last point, give bonus if this pixel is roughly in the direction of drawing
+            let directionBonus = 0;
+            if (lastImgX !== -1) {
+              const dx1 = x - lastImgX;
+              const dy1 = y - lastImgY;
+              const dx2 = imgX - lastImgX;
+              const dy2 = imgY - lastImgY;
+              const mag1 = Math.sqrt(dx1 * dx1 + dy1 * dy1);
+              const mag2 = Math.sqrt(dx2 * dx2 + dy2 * dy2);
+              if (mag1 > 0 && mag2 > 0) {
+                const dot = (dx1 * dx2 + dy1 * dy2) / (mag1 * mag2);
+                if (dot > 0.98) directionBonus = 2.0; // High alignment bonus
+              }
+            }
+
+            const score = d - junctionBonus - directionBonus;
 
             if (score < minScore) {
               minScore = score;

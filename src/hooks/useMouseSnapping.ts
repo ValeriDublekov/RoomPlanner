@@ -47,13 +47,20 @@ export const useMouseSnapping = (mousePos: { x: number, y: number }, isCtrlPress
         );
       } else {
         // Standard point/edge snapping for cursor
+        const lastPoint = (mode === 'draw-room' || mode === 'draw-furniture') && roomPoints.length > 0
+          ? roomPoints[roomPoints.length - 1]
+          : (mode === 'measure' || mode === 'dimension') && measurePoints.length > 0
+            ? measurePoints[measurePoints.length - 1]
+            : null;
+
         snapped = getSnappedPosition(
           pos, 
           rooms, 
           furniture, 
           snapThreshold, 
           shouldSnapToImage ? edgeMap : null,
-          { x: backgroundPosition.x, y: backgroundPosition.y, scale: backgroundScale, rotation: backgroundRotation }
+          { x: backgroundPosition.x, y: backgroundPosition.y, scale: backgroundScale, rotation: backgroundRotation },
+          lastPoint
         );
       }
     }
