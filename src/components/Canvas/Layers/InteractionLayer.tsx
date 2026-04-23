@@ -25,8 +25,14 @@ export const InteractionLayer: React.FC<InteractionLayerProps> = ({
     pendingFurniture
   } = useStore();
 
+  const isDrawing = (mode === 'draw-room' || mode === 'draw-furniture') && roomPoints.length > 0;
+  const isDragDrawing = (mode === 'add-box' || mode === 'draw-circle') && roomPoints.length === 1;
+  const isCalibrating = mode === 'calibrate' && calibrationPoints && calibrationPoints.length === 1;
+  const isPlacingFurniture = mode === 'place-furniture' && pendingFurniture !== null;
+  const isActive = isDrawing || isDragDrawing || isCalibrating || isPlacingFurniture;
+
   return (
-    <Layer id="interaction-layer">
+    <Layer id="interaction-layer" listening={isActive}>
       <DrawingLayer
         mode={mode}
         roomPoints={roomPoints}
@@ -36,18 +42,18 @@ export const InteractionLayer: React.FC<InteractionLayerProps> = ({
         scale={scale}
         pixelsPerCm={pixelsPerCmVal}
       />
-      {mode === 'place-furniture' && pendingFurniture && (
+      {isPlacingFurniture && (
         <Group
           x={snappedMouse.x}
           y={snappedMouse.y}
-          rotation={pendingFurniture.rotation}
-          offsetX={pendingFurniture.width / 2}
-          offsetY={pendingFurniture.height / 2}
+          rotation={pendingFurniture!.rotation}
+          offsetX={pendingFurniture!.width / 2}
+          offsetY={pendingFurniture!.height / 2}
           opacity={0.6}
           listening={false}
         >
           <FurnitureRenderer
-            shape={{ ...pendingFurniture, id: 'preview' } as any}
+            shape={{ ...pendingFurniture!, id: 'preview' } as any}
             isSelected={false}
             isColliding={false}
             scale={scale}

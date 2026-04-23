@@ -264,21 +264,23 @@ export const WallAttachmentItem: React.FC<WallAttachmentItemProps> = ({
 
       <Group
         ref={groupRef}
+        name="wall-attachment"
         x={x}
         y={y}
         rotation={angle}
         onClick={(e) => {
-          if (e.evt.button !== 0) return;
+          if (e.evt.button !== 0 || activeLayer !== 'room') return;
           e.cancelBubble = true;
           onSelect();
         }}
         onTap={(e) => {
+          if (activeLayer !== 'room') return;
           e.cancelBubble = true;
           onSelect();
         }}
         draggable={true}
         onDragStart={(e) => {
-          if (e.evt.button !== 0) return;
+          if (e.evt.button !== 0 || activeLayer !== 'room') return;
           onSelect();
           saveHistory();
           setIsInteracting(true);
@@ -316,7 +318,7 @@ export const WallAttachmentItem: React.FC<WallAttachmentItemProps> = ({
         height={thicknessPx}
         offsetX={widthPx / 2}
         offsetY={finalOffsetY}
-        listening={activeLayer === 'room'}
+        listening={activeLayer === 'room' || true}
       >
         {/* 
           The "Cutter" Rectangle 
@@ -328,6 +330,7 @@ export const WallAttachmentItem: React.FC<WallAttachmentItemProps> = ({
           fill="white"
           stroke={isSelected ? "#4f46e5" : "#334155"}
           strokeWidth={1 / scale}
+          hitStrokeWidth={20 / scale}
         />
 
         {attachment.type === 'window' ? (

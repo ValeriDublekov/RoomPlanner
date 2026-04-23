@@ -37,7 +37,7 @@ export const ArchitecturalLayer: React.FC<ArchitecturalLayerProps> = ({ scale })
       isSelected={selectedRoomId === room.id}
       onSelect={() => setSelectedRoomId(room.id)}
       scale={scale}
-      isLocked={activeLayer !== 'room'}
+      isLocked={false} 
     />
   )), [rooms, selectedRoomId, scale, activeLayer, setSelectedRoomId]);
 

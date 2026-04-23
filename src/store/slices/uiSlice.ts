@@ -93,7 +93,6 @@ export const createUISlice: StateCreator<AppState, [], [], UISlice> = (set, get)
     selectedIds: [],
     selectedRoomId: null,
     selectedWallIndex: null,
-    selectedAttachmentId: null,
     selectedDimensionId: null
   }),
   setActiveLayer: (activeLayer) => set({ 

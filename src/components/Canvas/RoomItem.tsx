@@ -44,6 +44,8 @@ export const RoomItem: React.FC<RoomItemProps> = ({
   const showAutoDimensions = useStore((state) => state.showAutoDimensions);
   const setSelectedRoomId = useStore((state) => state.setSelectedRoomId);
   const setSelectedWallIndex = useStore((state) => state.setSelectedWallIndex);
+  const setSelectedId = useStore((state) => state.setSelectedId);
+  const setSelectedIds = useStore((state) => state.setSelectedIds);
   const selectedWallIndex = useStore((state) => state.selectedWallIndex);
   
   const wallOpacity = activeLayer === 'room' ? 0.4 : (isDragging ? 0.2 : (isSelected ? 1 : 0.8));
@@ -152,31 +154,36 @@ export const RoomItem: React.FC<RoomItemProps> = ({
     <Group 
       id={room.id}
       onClick={(e) => {
-        if (e.evt.button !== 0 || mode !== 'select') return;
+        if (e.evt.button !== 0 || mode !== 'select' || activeLayer !== 'room') return;
         e.cancelBubble = true;
         
         // Check if we clicked on a wall specifically
-        const stage = e.target.getStage();
-        const pointer = stage?.getPointerPosition();
-        if (pointer) {
-          const worldPos = {
-            x: (pointer.x - stage!.x()) / stage!.scaleX(),
-            y: (pointer.y - stage!.y()) / stage!.scaleY()
-          };
-          
-          let clickedWallIndex = -1;
-          for (const seg of wallSegments) {
-            const dist = getDistanceToSegment(worldPos, seg.p1, seg.p2).distance;
-            if (dist < wallThicknessCm) {
-              clickedWallIndex = seg.index;
-              break;
+        console.log('RoomItem Clicked, target name:', e.target.name(), 'activeLayer:', activeLayer);
+        if (e.target.name() !== 'wall-attachment') {
+          const stage = e.target.getStage();
+          const pointer = stage?.getPointerPosition();
+          if (pointer) {
+            const worldPos = {
+              x: (pointer.x - stage!.x()) / stage!.scaleX(),
+              y: (pointer.y - stage!.y()) / stage!.scaleY()
+            };
+            
+            let clickedWallIndex = -1;
+            for (const seg of wallSegments) {
+              const dist = getDistanceToSegment(worldPos, seg.p1, seg.p2).distance;
+              if (dist < wallThicknessCm) {
+                clickedWallIndex = seg.index;
+                break;
+              }
             }
-          }
-          
-          if (clickedWallIndex !== -1) {
-            onSelect();
-            setSelectedWallIndex(clickedWallIndex);
-            return;
+            
+            if (clickedWallIndex !== -1) {
+              setSelectedWallIndex(clickedWallIndex);
+              setSelectedRoomId(null);
+              setSelectedId(null);
+              setSelectedIds([]);
+              return;
+            }
           }
         }
         
