@@ -21,6 +21,16 @@ export const useStore = create<AppState>()(
     }),
     {
       name: 'floor-plan-storage',
+      version: 1,
+      migrate: (persistedState: any, version: number) => {
+        if (version === 0 && persistedState && persistedState.rooms) {
+          persistedState.rooms = persistedState.rooms.map((room: any) => ({
+            ...room,
+            points: Array.isArray(room.points) ? room.points : []
+          }));
+        }
+        return persistedState;
+      },
       partialize: (state) => ({
         projectId: state.projectId,
         projectName: state.projectName,
