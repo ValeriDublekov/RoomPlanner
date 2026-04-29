@@ -24,30 +24,6 @@ export const WallAttachmentItem: React.FC<WallAttachmentItemProps> = ({
   const [isInteracting, setIsInteracting] = useState(false);
   const [distances, setDistances] = useState<{ left: number | null, right: number | null }>({ left: null, right: null });
 
-  const room = rooms.find(r => r.id === attachment.roomId);
-  if (!room) return null;
-
-  const p1 = room.points[attachment.wallSegmentIndex];
-  const p2 = room.points[(attachment.wallSegmentIndex + 1) % room.points.length];
-  
-  const dx = p2.x - p1.x;
-  const dy = p2.y - p1.y;
-  const length = Math.sqrt(dx * dx + dy * dy);
-  const angle = Math.atan2(dy, dx) * (180 / Math.PI);
-
-  // Exact projection point on the wall line
-  const x = p1.x + dx * attachment.positionAlongWall;
-  const y = p1.y + dy * attachment.positionAlongWall;
-
-  const widthPx = attachment.width * pixelsPerCm;
-  const thicknessPx = wallThickness * pixelsPerCm;
-
-  const normal = getOutwardNormal(room.points, attachment.wallSegmentIndex);
-  const localY = { x: -dy / length, y: dx / length };
-  const dot = localY.x * normal.x + localY.y * normal.y;
-  const isLocalYOutside = dot > 0;
-  const finalOffsetY = isLocalYOutside ? 0 : thicknessPx;
-
   useEffect(() => {
     if (isSelected && trRef.current && groupRef.current) {
       trRef.current.nodes([groupRef.current]);
@@ -79,6 +55,30 @@ export const WallAttachmentItem: React.FC<WallAttachmentItemProps> = ({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isSelected, attachment.id, attachment.type, attachment.flipX, attachment.flipY, updateWallAttachment]);
+
+  const room = rooms.find(r => r.id === attachment.roomId);
+  if (!room) return null;
+
+  const p1 = room.points[attachment.wallSegmentIndex];
+  const p2 = room.points[(attachment.wallSegmentIndex + 1) % room.points.length];
+  
+  const dx = p2.x - p1.x;
+  const dy = p2.y - p1.y;
+  const length = Math.sqrt(dx * dx + dy * dy);
+  const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+
+  // Exact projection point on the wall line
+  const x = p1.x + dx * attachment.positionAlongWall;
+  const y = p1.y + dy * attachment.positionAlongWall;
+
+  const widthPx = attachment.width * pixelsPerCm;
+  const thicknessPx = wallThickness * pixelsPerCm;
+
+  const normal = getOutwardNormal(room.points, attachment.wallSegmentIndex);
+  const localY = { x: -dy / length, y: dx / length };
+  const dot = localY.x * normal.x + localY.y * normal.y;
+  const isLocalYOutside = dot > 0;
+  const finalOffsetY = isLocalYOutside ? 0 : thicknessPx;
 
   const handleTransform = (e: Konva.KonvaEventObject<Event>) => {
     const node = groupRef.current;

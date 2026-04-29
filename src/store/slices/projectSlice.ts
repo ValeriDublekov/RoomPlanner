@@ -293,7 +293,7 @@ export const createProjectSlice: StateCreator<AppState, [], [], ProjectSlice> = 
       calibrationPoints: null,
       tempCalibrationDist: null,
       pixelsPerCm: 1,
-      mode: 'room',
+      mode: 'draw-room',
       activeLayer: 'room',
       show3d: false,
       selectedWallIndex: null,

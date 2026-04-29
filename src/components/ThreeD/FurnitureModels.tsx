@@ -403,8 +403,8 @@ export const Picture3D: React.FC<ModelProps> = ({ width, depth, height, color, i
           color={color} 
           roughness={0.5} 
           polygonOffset 
-          polygonOffsetFactor={1} 
-          polygonOffsetUnits={1}
+          polygonOffsetFactor={-1} 
+          polygonOffsetUnits={-1}
         />
       </mesh>
       
@@ -416,16 +416,16 @@ export const Picture3D: React.FC<ModelProps> = ({ width, depth, height, color, i
             map={texture} 
             roughness={0.3} 
             polygonOffset 
-            polygonOffsetFactor={-1} 
-            polygonOffsetUnits={-1}
+            polygonOffsetFactor={-2} 
+            polygonOffsetUnits={-2}
           />
         ) : (
           <meshStandardMaterial 
             color="#ffffff" 
             roughness={1} 
             polygonOffset 
-            polygonOffsetFactor={-1} 
-            polygonOffsetUnits={-1}
+            polygonOffsetFactor={-2} 
+            polygonOffsetUnits={-2}
           />
         )}
       </mesh>
@@ -440,7 +440,7 @@ export const Electronics3D: React.FC<ModelProps & { hideStand?: boolean }> = ({ 
       {/* Screen */}
       <mesh position={[width / 2, (height - standHeight) / 2 + standHeight, depth / 2]} castShadow receiveShadow>
         <boxGeometry args={[width, height - standHeight, 2]} />
-        <SmartMaterial color="#0f172a" roughness={0.1} metalness={0.8} />
+        <SmartMaterial color="#0f172a" roughness={0.1} metalness={0.8} polygonOffset polygonOffsetFactor={-1} polygonOffsetUnits={-1} />
       </mesh>
       {/* Stand */}
       {!hideStand && (
