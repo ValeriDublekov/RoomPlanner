@@ -71,7 +71,7 @@ export const Ceiling: React.FC<{ room: RoomObject, pixelsPerCm: number, height: 
   }, [room.points, pixelsPerCm]);
 
   return (
-    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, height, 0]}>
+    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, height + 0.1, 0]}>
       <shapeGeometry args={[ceilingShape]} />
       <SmartMaterial 
         color="#f8fafc" 
@@ -79,6 +79,9 @@ export const Ceiling: React.FC<{ room: RoomObject, pixelsPerCm: number, height: 
         side={THREE.DoubleSide}
         emissive="#ffffff"
         emissiveIntensity={0.1}
+        polygonOffset
+        polygonOffsetFactor={1}
+        polygonOffsetUnits={1}
       />
     </mesh>
   );

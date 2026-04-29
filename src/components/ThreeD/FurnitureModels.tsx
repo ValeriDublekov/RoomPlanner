@@ -123,9 +123,9 @@ export const Nightstand3D: React.FC<ModelProps> = ({ width, depth, height, color
       <boxGeometry args={[width, height, depth]} />
       <WoodMaterial color={color} />
     </mesh>
-    <mesh position={[width / 2, height * 0.7, depth + 0.5]} castShadow receiveShadow>
+    <mesh position={[width / 2, height * 0.7, depth + 0.6]} castShadow receiveShadow>
       <boxGeometry args={[width - 4, 2, 1]} />
-      <SmartMaterial color="#94a3b8" />
+      <SmartMaterial color="#94a3b8" polygonOffset polygonOffsetFactor={-1} polygonOffsetUnits={-1} />
     </mesh>
   </group>
 );
@@ -203,16 +203,16 @@ export const Wardrobe3D: React.FC<ModelProps> = ({ width, depth, height, color, 
       
       {/* Doors */}
       {Array.from({ length: numDoors }).map((_, i) => (
-        <group key={i} position={[i * doorWidth + doorWidth / 2 + 1, height / 2, depth + 0.5]}>
+        <group key={i} position={[i * doorWidth + doorWidth / 2 + 1, height / 2, depth + 0.6]}>
           <mesh castShadow receiveShadow>
             <boxGeometry args={[doorWidth - 0.5, height - 2, 1]} />
             <WoodMaterial color={doorColor} />
           </mesh>
           
           {/* Handle */}
-          <mesh position={[i % 2 === 0 ? doorWidth / 3 : -doorWidth / 3, 0, 1]} castShadow receiveShadow>
+          <mesh position={[i % 2 === 0 ? doorWidth / 3 : -doorWidth / 3, 0, 1.1]} castShadow receiveShadow>
             <cylinderGeometry args={[handleRadius, handleRadius, handleHeight, 8]} />
-            <SmartMaterial color="#94a3b8" metalness={0.8} roughness={0.2} />
+            <SmartMaterial color="#94a3b8" metalness={0.8} roughness={0.2} polygonOffset polygonOffsetFactor={-2} polygonOffsetUnits={-2} />
           </mesh>
         </group>
       ))}
@@ -235,15 +235,15 @@ export const Dresser3D: React.FC<ModelProps> = ({ width, depth, height, color, s
       
       {/* Drawers */}
       {Array.from({ length: numDrawers }).map((_, i) => (
-        <group key={i} position={[width / 2, i * drawerHeight + drawerHeight / 2 + 2, depth + 0.5]}>
+        <group key={i} position={[width / 2, i * drawerHeight + drawerHeight / 2 + 2, depth + 0.6]}>
           <mesh castShadow receiveShadow>
             <boxGeometry args={[width - 2, drawerHeight - 2, 1]} />
             <WoodMaterial color={drawerColor} />
           </mesh>
           {/* Handle */}
-          <mesh position={[0, 0, 1]} castShadow receiveShadow>
+          <mesh position={[0, 0, 1.1]} castShadow receiveShadow>
             <boxGeometry args={[10, 1, 1]} />
-            <SmartMaterial color="#94a3b8" metalness={0.8} roughness={0.2} />
+            <SmartMaterial color="#94a3b8" metalness={0.8} roughness={0.2} polygonOffset polygonOffsetFactor={-2} polygonOffsetUnits={-2} />
           </mesh>
         </group>
       ))}
@@ -371,14 +371,14 @@ export const Shelf3D: React.FC<ModelProps> = ({ width, depth, height, color, sec
             
             return (
               <group key={i} position={[xPos, 0, 0]}>
-                <mesh position={[0, 0, 0.5]} castShadow receiveShadow>
+                <mesh position={[0, 0, 0.6]} castShadow receiveShadow>
                   <boxGeometry args={[sectionWidth - 0.5, height - 1, 1]} />
                   <WoodMaterial color={doorColor} />
                 </mesh>
                 {/* Handle */}
-                <mesh position={[handleX, 0, 1.1]} castShadow receiveShadow>
+                <mesh position={[handleX, 0, 1.2]} castShadow receiveShadow>
                   <boxGeometry args={[1, 12, 1]} />
-                  <SmartMaterial color="#94a3b8" metalness={1} roughness={0.1} />
+                  <SmartMaterial color="#94a3b8" metalness={1} roughness={0.1} polygonOffset polygonOffsetFactor={-2} polygonOffsetUnits={-2} />
                 </mesh>
               </group>
             );
@@ -392,22 +392,41 @@ export const Shelf3D: React.FC<ModelProps> = ({ width, depth, height, color, sec
 export const Picture3D: React.FC<ModelProps> = ({ width, depth, height, color, imageUrl }) => {
   const texture = imageUrl ? useTexture(imageUrl) : null;
   const frameThickness = 2; // 2cm frame
+  const wallOffset = 0.1; // 1mm offset from wall to prevent z-fighting
   
   return (
     <group>
       {/* Frame */}
-      <mesh position={[width / 2, height / 2, depth / 2]} castShadow receiveShadow>
+      <mesh position={[width / 2, height / 2, depth / 2 + wallOffset]} castShadow receiveShadow>
         <boxGeometry args={[width, height, depth]} />
-        <meshStandardMaterial color={color} roughness={0.5} />
+        <meshStandardMaterial 
+          color={color} 
+          roughness={0.5} 
+          polygonOffset 
+          polygonOffsetFactor={1} 
+          polygonOffsetUnits={1}
+        />
       </mesh>
       
       {/* Canvas/Image */}
-      <mesh position={[width / 2, height / 2, depth - 0.1]} castShadow receiveShadow>
-        <boxGeometry args={[width - frameThickness * 2, height - frameThickness * 2, 0.2]} />
+      <mesh position={[width / 2, height / 2, depth + wallOffset + 0.05]} castShadow receiveShadow>
+        <boxGeometry args={[width - frameThickness * 2, height - frameThickness * 2, 0.1]} />
         {texture ? (
-          <meshStandardMaterial map={texture} roughness={0.3} />
+          <meshStandardMaterial 
+            map={texture} 
+            roughness={0.3} 
+            polygonOffset 
+            polygonOffsetFactor={-1} 
+            polygonOffsetUnits={-1}
+          />
         ) : (
-          <meshStandardMaterial color="#ffffff" roughness={1} />
+          <meshStandardMaterial 
+            color="#ffffff" 
+            roughness={1} 
+            polygonOffset 
+            polygonOffsetFactor={-1} 
+            polygonOffsetUnits={-1}
+          />
         )}
       </mesh>
     </group>
