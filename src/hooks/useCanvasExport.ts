@@ -2,6 +2,9 @@ import Konva from 'konva';
 import { useStore } from '../store';
 import { getFurnitureVertices } from '../lib/geometry';
 import { exportToDXF } from '../lib/dxfExport';
+import { exportToOBJ } from '../lib/objExport';
+import { exportToGLB } from '../lib/glbExport';
+import { generateProjectScene } from '../lib/threeSceneGenerator';
 
 export const useCanvasExport = (stageRef: React.RefObject<Konva.Stage>) => {
   const handleExport = async () => {
@@ -306,5 +309,31 @@ export const useCanvasExport = (stageRef: React.RefObject<Konva.Stage>) => {
     });
   };
 
-  return { handleExport, handlePrint, getStageThumbnail, handleExportDXF };
+  const handleExportOBJ = () => {
+    const { rooms, furniture, wallAttachments, pixelsPerCm, wallThickness, wallHeight } = useStore.getState();
+    const scene = generateProjectScene({
+      rooms,
+      furniture,
+      wallAttachments,
+      pixelsPerCm,
+      wallThickness,
+      wallHeight
+    });
+    exportToOBJ(scene);
+  };
+
+  const handleExportGLB = () => {
+    const { rooms, furniture, wallAttachments, pixelsPerCm, wallThickness, wallHeight } = useStore.getState();
+    const scene = generateProjectScene({
+      rooms,
+      furniture,
+      wallAttachments,
+      pixelsPerCm,
+      wallThickness,
+      wallHeight
+    });
+    exportToGLB(scene);
+  };
+
+  return { handleExport, handlePrint, getStageThumbnail, handleExportDXF, handleExportOBJ, handleExportGLB };
 };
