@@ -71,15 +71,14 @@ describe('Export Utilities', () => {
         { x: 100, y: 100 },
         { x: 0, y: 100 }
       ],
-      isClosed: true,
-      name: 'Test Room'
+      isClosed: true
     }
   ];
 
   const mockFurniture: FurnitureObject[] = [
     {
       id: 'f1',
-      type: 'rectangle',
+      type: 'box',
       name: 'Test Furniture',
       x: 10,
       y: 10,

@@ -27,7 +27,6 @@ describe('AppState Store', () => {
       rooms: [],
       furniture: [],
       dimensions: [],
-      wallAttachments: [],
       history: [],
       roomPoints: [],
       measurePoints: [],
@@ -104,7 +103,7 @@ describe('AppState Store', () => {
   describe('furnitureSlice', () => {
     it('adds furniture', () => {
       const newItem = {
-        type: 'rectangle' as const,
+        type: 'box' as const,
         name: 'Bed',
         x: 50,
         y: 50,
@@ -122,7 +121,7 @@ describe('AppState Store', () => {
 
     it('updates furniture', () => {
       useStore.setState({
-        furniture: [{ id: 'f1', name: 'Old Name', x: 0, y: 0, width: 10, height: 10, rotation: 0, type: 'rectangle' }]
+        furniture: [{ id: 'f1', name: 'Old Name', x: 0, y: 0, width: 10, height: 10, rotation: 0, type: 'box' }]
       });
       
       useStore.getState().updateFurniture('f1', { name: 'New Name' });
@@ -136,7 +135,7 @@ describe('AppState Store', () => {
       const initialRooms = [{ id: 'r1', points: [], isClosed: true }];
       useStore.setState({
         rooms: [{ id: 'r2', points: [], isClosed: true }],
-        history: [{ rooms: initialRooms, furniture: [], dimensions: [], wallAttachments: [] }]
+        history: [{ rooms: initialRooms, furniture: [], dimensions: [] }]
       });
       
       useStore.getState().undo();
