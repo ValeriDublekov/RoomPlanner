@@ -17,6 +17,7 @@ export interface RoomSlice {
   setWallThickness: (thickness: number) => void;
   setWallHeight: (height: number) => void;
   addRoomPoint: (point: Vector2d) => void;
+  clearRoomPoints: () => void;
   closeRoom: () => void;
   finishRoom: () => void;
   setDimensionInput: (input: string) => void;
@@ -51,6 +52,8 @@ export const createRoomSlice: StateCreator<AppState, [], [], RoomSlice> = (set, 
   setWallHeight: (wallHeight) => set({ wallHeight }),
   
   addRoomPoint: (point) => set((state) => ({ roomPoints: [...state.roomPoints, point] })),
+  
+  clearRoomPoints: () => set({ roomPoints: [] }),
   
   closeRoom: () => set((state) => {
     if (state.roomPoints.length < 3) return { roomPoints: [], dimensionInput: '' };

@@ -15,4 +15,5 @@ export interface ToolHandler {
   onMouseUp?: (e: Konva.KonvaEventObject<MouseEvent>, context: ToolContext) => void;
   onClick?: (e: Konva.KonvaEventObject<MouseEvent>, context: ToolContext) => void;
   onDblClick?: (e: Konva.KonvaEventObject<MouseEvent>, context: ToolContext) => void;
+  onSubmitDimension?: (context: ToolContext) => void;
 }

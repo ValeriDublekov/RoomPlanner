@@ -83,6 +83,7 @@ export const Canvas: React.FC = () => {
     handleMouseMove,
     handleMouseUp,
     handleClick,
+    handleDblClick,
     handleDimensionSubmit
   } = useCanvasLogic(stageRef, dimensions, isCtrlPressed, isAltPressed);
 
@@ -170,7 +171,7 @@ export const Canvas: React.FC = () => {
             onDragMove={handleDragMove}
             onDragEnd={handleDragEnd}
             onClick={handleClick}
-            onDblClick={(e) => {}}
+            onDblClick={handleDblClick}
             onMouseMove={handleMouseMove}
             bgImage={bgImage}
             bgRef={bgRef}

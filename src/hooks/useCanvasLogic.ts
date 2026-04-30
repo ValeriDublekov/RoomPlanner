@@ -19,9 +19,6 @@ export const useCanvasLogic = (
     scale, setScale,
     setPosition,
     mode, 
-    setDimensionInput,
-    addRoomPoint,
-    dimensionInput,
     setContextMenu
   } = state;
 
@@ -103,25 +100,17 @@ export const useCanvasLogic = (
     }
   };
 
+  const handleDblClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
+    if (currentTool.onDblClick && toolContext) {
+      currentTool.onDblClick(e, toolContext);
+    }
+  };
+
   const handleDimensionSubmit = useCallback(() => {
-    const cm = parseFloat(dimensionInput);
-    const pixelsPerCm = useStore.getState().pixelsPerCm;
-    if (isNaN(cm) || cm <= 0 || state.roomPoints.length === 0) return;
-    
-    const lastPoint = state.roomPoints[state.roomPoints.length - 1];
-    const currentMouse = getSnappedMousePos(true);
-    const dx = currentMouse.x - lastPoint.x;
-    const dy = currentMouse.y - lastPoint.y;
-    const dist = Math.sqrt(dx * dx + dy * dy);
-    
-    if (dist === 0) return;
-    const targetPx = cm * pixelsPerCm;
-    addRoomPoint({
-      x: lastPoint.x + (dx / dist) * targetPx,
-      y: lastPoint.y + (dy / dist) * targetPx,
-    });
-    setDimensionInput('');
-  }, [dimensionInput, state.roomPoints, getSnappedMousePos, addRoomPoint, setDimensionInput]);
+    if (currentTool.onSubmitDimension && toolContext) {
+      currentTool.onSubmitDimension(toolContext);
+    }
+  }, [currentTool, toolContext]);
 
   return {
     mousePos,
@@ -132,6 +121,7 @@ export const useCanvasLogic = (
     handleMouseMove,
     handleMouseUp,
     handleClick,
+    handleDblClick,
     handleDimensionSubmit
   };
 };

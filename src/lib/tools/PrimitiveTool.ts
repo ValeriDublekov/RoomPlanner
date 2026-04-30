@@ -24,8 +24,7 @@ export const PrimitiveTool: ToolHandler = {
         });
         setMode('select');
       }
-      // @ts-ignore - reaching into store to clear temp drawing points
-      state.set({ roomPoints: [] });
+      state.clearRoomPoints();
     }
   },
   onClick: (e, { state, getSnappedMousePos }) => {
