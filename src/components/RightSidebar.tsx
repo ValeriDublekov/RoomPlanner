@@ -1,6 +1,6 @@
 import React from 'react';
-import { useStore } from '../store';
-import { PropertyEditor } from './Sidebar/PropertyEditor';
+import { useStore } from '@/src/store';
+import { PropertyEditor } from '@/src/components/Sidebar';
 
 export const RightSidebar: React.FC = () => {
   const sidebarRef = React.useRef<HTMLDivElement>(null);

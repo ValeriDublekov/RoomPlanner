@@ -1,9 +1,6 @@
 import React from 'react';
-import { FurnitureObject, RoomObject, DimensionObject, WallAttachment } from '../../types';
-import { FurnitureEditor } from './Editors/FurnitureEditor';
-import { RoomEditor } from './Editors/RoomEditor';
-import { AttachmentEditor } from './Editors/AttachmentEditor';
-import { DimensionEditor } from './Editors/DimensionEditor';
+import { FurnitureObject, RoomObject, DimensionObject, WallAttachment } from '@/src/types';
+import { FurnitureEditor, RoomEditor, AttachmentEditor, DimensionEditor } from './Editors';
 
 interface PropertyEditorProps {
   selectedFurniture?: FurnitureObject;

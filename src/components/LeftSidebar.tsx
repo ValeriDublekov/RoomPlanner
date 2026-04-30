@@ -1,10 +1,8 @@
 import React, { useState } from 'react';
 import { MousePointer2, Pencil, Square, Ruler, DoorOpen, Layout, Circle, BookPlus, LogIn, LogOut, User as UserIcon, Cloud, Download, Upload } from 'lucide-react';
-import { useStore } from '../store';
-import { ToolButton } from './Sidebar/ToolButton';
-import { FileActions } from './Sidebar/FileActions';
-import { CatalogModal } from './Sidebar/CatalogModal';
-import { loginWithGoogle, logout } from '../firebase';
+import { useStore } from '@/src/store';
+import { ToolButton, FileActions, CatalogModal } from './Sidebar';
+import { loginWithGoogle, logout } from '@/src/firebase';
 
 const tools = [
   { id: 'select', icon: MousePointer2, label: 'Select (V)' },

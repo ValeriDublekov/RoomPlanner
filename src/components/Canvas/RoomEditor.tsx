@@ -1,8 +1,8 @@
 import React, { useRef, useMemo, useState } from 'react';
 import { Line, Group, Circle, Text, Rect } from 'react-konva';
-import { RoomObject, Vector2d } from '../../types';
-import { useStore } from '../../store';
-import { getOutwardNormal, getWallSegments } from '../../lib/geometry';
+import { RoomObject, Vector2d } from '@/src/types';
+import { useStore } from '@/src/store';
+import { getOutwardNormal, getWallSegments } from '@/src/lib/geometry';
 import { DimensionLabel } from './DimensionLabel';
 
 interface RoomEditorProps {

@@ -1,10 +1,10 @@
 import React, { useMemo } from 'react';
 import { Line, Group, Text, Rect } from 'react-konva';
 import useImage from 'use-image';
-import { RoomObject } from '../../types';
-import { useStore } from '../../store';
-import { FLOOR_TEXTURES } from '../../constants';
-import { getSignedArea, getDistance, getOutwardNormal, getDistanceToSegment, getWallSegments } from '../../lib/geometry';
+import { RoomObject } from '@/src/types';
+import { useStore } from '@/src/store';
+import { FLOOR_TEXTURES } from '@/src/constants';
+import { getSignedArea, getDistance, getOutwardNormal, getDistanceToSegment, getWallSegments } from '@/src/lib/geometry';
 import { DimensionLabel } from './DimensionLabel';
 
 interface RoomItemProps {

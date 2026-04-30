@@ -1,10 +1,9 @@
 import React from 'react';
 import { Undo2, Download, Upload, Layout, FilePlus, RotateCcw, Grid, BookOpen, Box, Maximize, Cloud, Save, Menu, ChevronDown, Printer, FileCode } from 'lucide-react';
-import { useStore } from '../../store';
-import { UserManualModal } from '../UserManualModal';
-import { CloudLoadModal } from '../Sidebar/CloudLoadModal';
-import { SaveModal } from '../Sidebar/SaveModal';
-import { ConfirmModal } from '../Dialogs/ConfirmModal';
+import { useStore } from '@/src/store';
+import { UserManualModal } from '@/src/components/UserManualModal';
+import { CloudLoadModal, SaveModal } from '@/src/components/Sidebar';
+import { ConfirmModal } from '@/src/components/Dialogs';
 
 interface CanvasHeaderProps {
   onExport: () => void;

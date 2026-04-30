@@ -26,6 +26,10 @@
 11. Prompt 11: Audit markdown documentation
 12. Prompt 12: Execute markdown cleanup
 13. Prompt 13: Add tooling consistency
+14. Prompt 14: Extract settings panel from SubHeader
+15. Prompt 15: Centralize keyboard shortcut handling
+16. Prompt 16: Split CanvasHeader responsibilities
+17. Prompt 17: Separate export generation from browser download
 
 ---
 
@@ -456,4 +460,137 @@ Done criteria:
 
 Verification:
 - Пусни новия check или актуализирания npm script.
+```
+
+---
+
+## Additional Prompts Found After Applying 1 To 8
+
+Тези prompt-и са добавени след повторен преглед на проекта. Те не се припокриват с Prompt 9 до Prompt 13 и могат да се изпълнят независимо от тях. Добър practically-safe ред за тях е: 14, 15, 16, 17.
+
+## Prompt 14: Extract Settings Panel From SubHeader
+
+```text
+Цел:
+Извади настройките от SubHeader в по-ясен и по-малък компонент, така че SubHeader да остане layout/orchestration слой, а не да държи цялата settings UI логика.
+
+Read first:
+- src/components/SubHeader.tsx
+- src/store.ts
+- src/store/slices/uiSlice.ts
+- TECHNICAL_DEBTS.md
+
+Constraints:
+- Не променяй умишлено UX поведението или наличните shortcuts.
+- Не мести business logic в нови несвързани файлове.
+- Дръж промяната малка и лесна за review.
+
+Tasks:
+- Извади settings controls като отделен компонент, например SettingsPanel или близка структура според текущата организация.
+- Намали JSX и условната логика в SubHeader.tsx.
+- Запази същите store actions и текущо поведение за ortho, snap и auto-dimension настройките.
+
+Done criteria:
+- SubHeader.tsx е видимо по-малък и по-фокусиран.
+- Settings UI е изнесена в компонент с ясна отговорност.
+- Няма поведенческа регресия.
+
+Verification:
+- Пусни typecheck.
+```
+
+## Prompt 15: Centralize Keyboard Shortcut Handling
+
+```text
+Цел:
+Консолидирай keyboard shortcut логиката, така че глобалните команди да не са разделени между App.tsx и useKeyboardShortcuts.ts.
+
+Read first:
+- src/App.tsx
+- src/hooks/useKeyboardShortcuts.ts
+- src/hooks/useCanvasLogic.ts
+- src/store.ts
+
+Constraints:
+- Не променяй shortcut mapping-а умишлено.
+- Не въвеждай голяма command framework абстракция.
+- Пази поведението при input/textarea focus.
+
+Tasks:
+- Намери дублиращите или конкуриращи се keyboard handlers, особено около Undo и глобалните команди.
+- Централизирай обработката в един ясен entry point или hook.
+- Ако е нужно, извади малък helper за checks като "typing guard" или command matching.
+
+Done criteria:
+- Няма разделена shortcut логика между няколко несъгласувани места.
+- Undo и другите глобални shortcuts имат едно ясно място за поддръжка.
+- Поведението остава същото.
+
+Verification:
+- Пусни typecheck.
+- Ако има лесен таргетиран test за shortcut hook-а, пусни и него.
+```
+
+## Prompt 16: Split CanvasHeader Responsibilities
+
+```text
+Цел:
+Намали отговорностите на CanvasHeader, като изнесеш file/menu/modal orchestration логиката в по-малки локални части или hooks.
+
+Read first:
+- src/components/Canvas/CanvasHeader.tsx
+- src/components/Dialogs/ConfirmModal.tsx
+- src/components/Sidebar/CloudLoadModal.tsx
+- src/components/Sidebar/SaveModal.tsx
+- src/store.ts
+
+Constraints:
+- Не променяй видимото поведение на header-а.
+- Не прави голяма визуална реорганизация.
+- Пази refactor-а локален около CanvasHeader и директните му зависимости.
+
+Tasks:
+- Намери отделимите отговорности: file menu state, cloud/local save flow, local JSON load flow, modal state orchestration.
+- Изнеси поне една или две от тях в по-малки локални компоненти или hooks.
+- Намали директното ползване на DOM APIs вътре в основния header компонент, ако може без голяма промяна.
+
+Done criteria:
+- CanvasHeader.tsx е по-кратък и с по-ясна структура.
+- File/menu/modal flow е по-лесен за следване и поддръжка.
+- Няма поведенческа промяна.
+
+Verification:
+- Пусни typecheck.
+```
+
+## Prompt 17: Separate Export Generation From Browser Download
+
+```text
+Цел:
+Раздели export generation логиката от browser download side effects, за да стане кодът по-тестируем и по-лесен за поддръжка.
+
+Read first:
+- src/lib/glbExport.ts
+- src/lib/objExport.ts
+- src/lib/dxfExport.ts
+- src/lib/threeSceneGenerator.ts
+
+Constraints:
+- Не променяй крайния потребителски export flow умишлено.
+- Не променяй file formats или filenames без добра причина.
+- Дръж refactor-а фокусиран върху separation of concerns.
+
+Tasks:
+- Намери местата, където generation, filtering и download trigger логиката са смесени.
+- Извади чиста функция или helper слой за генериране на export payload.
+- Остави browser-specific download стъпката като тънка обвивка върху generated result.
+
+Done criteria:
+- Export кодът е по-лесен за тестване без DOM side effects.
+- Generation и download логиката са отделени по ясен начин.
+- Няма промяна в user-visible export flow.
+
+Verification:
+- Пусни typecheck.
+- Ако има export tests, пусни таргетираните tests.
 ```

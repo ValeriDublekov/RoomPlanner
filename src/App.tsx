@@ -6,13 +6,12 @@
 import { useEffect } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from './firebase';
-import { Sidebar } from './components/Sidebar';
+import { Sidebar, ThreeDPreview } from './components';
 import { RightSidebar } from './components/RightSidebar';
 import { Canvas } from './components/Canvas';
 import { CalibrationModal } from './components/CalibrationModal';
-import { ThreeDPreview } from './components/ThreeD/ThreeDPreview';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import { useStore } from './store';
+import { useStore } from '@/src/store';
 
 export default function App() {
   const show3d = useStore(state => state.show3d);

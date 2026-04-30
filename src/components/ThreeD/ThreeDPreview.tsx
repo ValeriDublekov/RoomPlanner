@@ -2,17 +2,13 @@ import React, { useMemo, Suspense, useState, useEffect } from 'react';
 import { Canvas, useThree, useFrame } from '@react-three/fiber';
 import { OrbitControls, Environment, ContactShadows } from '@react-three/drei';
 import * as THREE from 'three';
-import { useStore } from '../../store';
-import { FurnitureObject } from '../../types';
-import { FPVControls } from './FPVControls';
+import { useStore } from '@/src/store';
+import { FurnitureObject } from '@/src/types';
 import { Camera, MousePointer2, Box } from 'lucide-react';
-import { WallSegments, Ceiling } from './RoomElements';
-import { 
-  Bed3D, Desk3D, Wardrobe3D, Dresser3D, Chair3D, 
+import { FPVControls, WallSegments, Ceiling, Bed3D, Desk3D, Wardrobe3D, Dresser3D, Chair3D, 
   Shelf3D, Electronics3D, Table3D, GenericFurniture3D,
   Sofa3D, Nightstand3D, Toilet3D, Bathtub3D, Light3D,
-  Picture3D
-} from './FurnitureModels';
+  Picture3D } from './';
 
 const SceneBackground = ({ isExporting }: { isExporting: boolean }) => {
   const { gl } = useThree();

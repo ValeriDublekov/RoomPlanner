@@ -1,9 +1,9 @@
 import React, { useEffect, useRef } from 'react';
 import { Group, Transformer, Line as KonvaLine, Text, Ellipse } from 'react-konva';
 import Konva from 'konva';
-import { FurnitureObject, RoomObject } from '../../types';
-import { useStore } from '../../store';
-import { useFurnitureInteraction } from '../../hooks/useFurnitureInteraction';
+import { FurnitureObject, RoomObject } from '@/src/types';
+import { useStore } from '@/src/store';
+import { useFurnitureInteraction } from '@/src/hooks';
 import { FurnitureRenderer } from './FurnitureRenderer';
 
 interface FurnitureItemProps {
