@@ -20,30 +20,23 @@ const tools = [
 ] as const;
 
 export const Sidebar: React.FC = () => {
-  const { 
-    mode, 
-    setMode, 
-    activeLayer,
-    setBackgroundImage, 
-    pixelsPerCm,
-    loadState,
-    saveProject,
-    backgroundImage,
-    backgroundVisible,
-    setBackgroundVisible,
-    backgroundOpacity,
-    setBackgroundOpacity,
-    setSelectedId,
-    setSelectedIds,
-    setSelectedRoomId,
-    setSelectedDimensionId,
-    setSelectedAttachmentId,
-    currentUser,
-    isAuthLoading,
-    rooms,
-    furniture,
-    wallAttachments,
-  } = useStore();
+  const mode = useStore(state => state.mode);
+  const setMode = useStore(state => state.setMode);
+  const activeLayer = useStore(state => state.activeLayer);
+  const setBackgroundImage = useStore(state => state.setBackgroundImage);
+  const loadState = useStore(state => state.loadState);
+  const backgroundImage = useStore(state => state.backgroundImage);
+  const backgroundVisible = useStore(state => state.backgroundVisible);
+  const setBackgroundVisible = useStore(state => state.setBackgroundVisible);
+  const backgroundOpacity = useStore(state => state.backgroundOpacity);
+  const setBackgroundOpacity = useStore(state => state.setBackgroundOpacity);
+  const setSelectedId = useStore(state => state.setSelectedId);
+  const setSelectedIds = useStore(state => state.setSelectedIds);
+  const setSelectedRoomId = useStore(state => state.setSelectedRoomId);
+  const setSelectedDimensionId = useStore(state => state.setSelectedDimensionId);
+  const setSelectedAttachmentId = useStore(state => state.setSelectedAttachmentId);
+  const currentUser = useStore(state => state.currentUser);
+  const isAuthLoading = useStore(state => state.isAuthLoading);
 
   const [isCatalogOpen, setIsCatalogOpen] = useState(false);
 

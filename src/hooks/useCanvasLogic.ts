@@ -14,13 +14,11 @@ export const useCanvasLogic = (
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const { getSnappedMousePos } = useMouseSnapping(mousePos, isCtrlPressed, isAltPressed);
   
-  const state = useStore();
-  const {
-    scale, setScale,
-    setPosition,
-    mode, 
-    setContextMenu
-  } = state;
+  const scale = useStore(state => state.scale);
+  const setScale = useStore(state => state.setScale);
+  const setPosition = useStore(state => state.setPosition);
+  const mode = useStore(state => state.mode);
+  const setContextMenu = useStore(state => state.setContextMenu);
 
   const currentTool = useMemo(() => getToolHandler(mode), [mode]);
 
@@ -28,13 +26,13 @@ export const useCanvasLogic = (
     const stage = stageRef.current;
     if (!stage) return null;
     return {
-      state,
+      state: useStore.getState(),
       getSnappedMousePos,
       mousePos,
       stage,
       scale
     };
-  }, [state, getSnappedMousePos, mousePos, stageRef.current, scale]);
+  }, [getSnappedMousePos, mousePos, stageRef.current, scale]);
 
   const handleWheel = (e: Konva.KonvaEventObject<WheelEvent>) => {
     e.evt.preventDefault();

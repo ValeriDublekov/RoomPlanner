@@ -48,7 +48,7 @@ export const CanvasStage: React.FC<CanvasStageProps> = ({
   snappedMouse,
   mousePos
 }) => {
-  const { mode } = useStore();
+  const mode = useStore(state => state.mode);
   const { handleContextMenu } = useStageContextMenu(stageRef);
 
   return (

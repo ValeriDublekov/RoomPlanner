@@ -2,18 +2,16 @@ import Konva from 'konva';
 import { useStore } from '../store';
 
 export const useStageContextMenu = (stageRef: React.RefObject<Konva.Stage>) => {
-  const {
-    rooms,
-    furniture,
-    dimensions: savedDimensions,
-    selectedIds,
-    selectedRoomId,
-    selectedDimensionId,
-    setSelectedId,
-    setSelectedRoomId,
-    setSelectedDimensionId,
-    setContextMenu
-  } = useStore();
+  const rooms = useStore(state => state.rooms);
+  const furniture = useStore(state => state.furniture);
+  const savedDimensions = useStore(state => state.dimensions);
+  const selectedIds = useStore(state => state.selectedIds);
+  const selectedRoomId = useStore(state => state.selectedRoomId);
+  const selectedDimensionId = useStore(state => state.selectedDimensionId);
+  const setSelectedId = useStore(state => state.setSelectedId);
+  const setSelectedRoomId = useStore(state => state.setSelectedRoomId);
+  const setSelectedDimensionId = useStore(state => state.setSelectedDimensionId);
+  const setContextMenu = useStore(state => state.setContextMenu);
 
   const handleContextMenu = (e: Konva.KonvaEventObject<PointerEvent>) => {
     e.evt.preventDefault();

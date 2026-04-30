@@ -3,30 +3,28 @@ import { useStore } from '../store';
 import { PropertyEditor } from './Sidebar/PropertyEditor';
 
 export const RightSidebar: React.FC = () => {
-  const { 
-    selectedId,
-    furniture,
-    updateFurniture,
-    rooms,
-    dimensions,
-    selectedDimensionId,
-    deleteDimension,
-    selectedRoomId,
-    selectedWallIndex,
-    deleteRoom,
-    updateRoom,
-    wallAttachments,
-    selectedAttachmentId,
-    updateWallAttachment,
-    deleteWallAttachment,
-    saveHistory,
-    bringToFront,
-    sendToBack,
-    bringForward,
-    sendBackward,
-    pixelsPerCm,
-    deleteSelected
-  } = useStore();
+  const selectedId = useStore(state => state.selectedId);
+  const furniture = useStore(state => state.furniture);
+  const updateFurniture = useStore(state => state.updateFurniture);
+  const rooms = useStore(state => state.rooms);
+  const dimensions = useStore(state => state.dimensions);
+  const selectedDimensionId = useStore(state => state.selectedDimensionId);
+  const deleteDimension = useStore(state => state.deleteDimension);
+  const selectedRoomId = useStore(state => state.selectedRoomId);
+  const selectedWallIndex = useStore(state => state.selectedWallIndex);
+  const deleteRoom = useStore(state => state.deleteRoom);
+  const updateRoom = useStore(state => state.updateRoom);
+  const wallAttachments = useStore(state => state.wallAttachments);
+  const selectedAttachmentId = useStore(state => state.selectedAttachmentId);
+  const updateWallAttachment = useStore(state => state.updateWallAttachment);
+  const deleteWallAttachment = useStore(state => state.deleteWallAttachment);
+  const saveHistory = useStore(state => state.saveHistory);
+  const bringToFront = useStore(state => state.bringToFront);
+  const sendToBack = useStore(state => state.sendToBack);
+  const bringForward = useStore(state => state.bringForward);
+  const sendBackward = useStore(state => state.sendBackward);
+  const pixelsPerCm = useStore(state => state.pixelsPerCm);
+  const deleteSelected = useStore(state => state.deleteSelected);
 
   const selectedFurniture = furniture.find(f => f.id === selectedId);
   const selectedRoom = rooms.find(r => r.id === selectedRoomId);
