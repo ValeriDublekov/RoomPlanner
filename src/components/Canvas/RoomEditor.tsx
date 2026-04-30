@@ -2,7 +2,8 @@ import React, { useRef, useMemo, useState } from 'react';
 import { Line, Group, Circle, Text, Rect } from 'react-konva';
 import { RoomObject, Vector2d } from '../../types';
 import { useStore } from '../../store';
-import { getOutwardNormal } from '../../lib/geometry';
+import { getOutwardNormal, getWallSegments } from '../../lib/geometry';
+import { DimensionLabel } from './DimensionLabel';
 
 interface RoomEditorProps {
   room: RoomObject;
@@ -27,16 +28,7 @@ export const RoomEditor: React.FC<RoomEditorProps> = ({
   const wallThicknessPx = wallThicknessCm * pixelsPerCm;
   const dragStartMouseRef = useRef<Vector2d | null>(null);
 
-  const wallSegments = useMemo(() => {
-    const segments = [];
-    const count = room.isClosed ? room.points.length : room.points.length - 1;
-    for (let i = 0; i < count; i++) {
-      const p1 = room.points[i];
-      const p2 = room.points[(i + 1) % room.points.length];
-      segments.push({ p1, p2, index: i });
-    }
-    return segments;
-  }, [room.points, room.isClosed]);
+  const wallSegments = useMemo(() => getWallSegments(room), [room]);
 
   if (activeLayer !== 'room' && activeLayer !== 'furniture') return null;
 
@@ -243,34 +235,15 @@ export const RoomEditor: React.FC<RoomEditorProps> = ({
               strokeWidth={2 / scale}
               dash={[4 / scale, 4 / scale]}
             />
-            <Group 
-              x={labelX} 
+            <DimensionLabel
+              x={labelX}
               y={labelY}
+              text={`${(d.dist / pixelsPerCm).toFixed(1)} cm`}
               rotation={labelAngle}
-            >
-              <Rect
-                x={-25 / scale}
-                y={-10 / scale}
-                width={50 / scale}
-                height={20 / scale}
-                fill="white"
-                stroke="#4f46e5"
-                strokeWidth={1 / scale}
-                cornerRadius={4 / scale}
-              />
-              <Text
-                text={`${(d.dist / pixelsPerCm).toFixed(1)} cm`}
-                fontSize={12 / scale}
-                fill="#4f46e5"
-                fontStyle="bold"
-                align="center"
-                verticalAlign="middle"
-                width={50 / scale}
-                height={20 / scale}
-                x={-25 / scale}
-                y={-10 / scale}
-              />
-            </Group>
+              scale={scale}
+              color="#4f46e5"
+              stroke="#4f46e5"
+            />
           </Group>
         );
       })}

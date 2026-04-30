@@ -4,7 +4,8 @@ import useImage from 'use-image';
 import { RoomObject } from '../../types';
 import { useStore } from '../../store';
 import { FLOOR_TEXTURES } from '../../constants';
-import { getSignedArea, getDistance, getOutwardNormal, getDistanceToSegment } from '../../lib/geometry';
+import { getSignedArea, getDistance, getOutwardNormal, getDistanceToSegment, getWallSegments } from '../../lib/geometry';
+import { DimensionLabel } from './DimensionLabel';
 
 interface RoomItemProps {
   room: RoomObject;
@@ -51,45 +52,25 @@ export const RoomItem: React.FC<RoomItemProps> = ({
   const wallOpacity = activeLayer === 'room' ? 0.4 : (isDragging ? 0.2 : (isSelected ? 1 : 0.8));
   const floorOpacity = activeLayer === 'room' ? 0 : (isDragging ? 0.1 : 1);
 
-  const wallSegments = useMemo(() => {
-    const segments = [];
-    const count = room.isClosed ? room.points.length : room.points.length - 1;
-    for (let i = 0; i < count; i++) {
-      const p1 = room.points[i];
-      const p2 = room.points[(i + 1) % room.points.length];
-      const color = room.wallColors?.[i] || room.defaultWallColor || "#1e293b";
-      segments.push({ p1, p2, index: i, color });
-    }
-    return segments;
-  }, [room.points, room.isClosed, room.wallColors, room.defaultWallColor]);
+  const wallSegments = useMemo(() => getWallSegments(room), [room]);
 
   const autoDimensions = useMemo(() => {
     if ((!showAutoDimensions && !isSelected) || room.points.length < 2) return null;
     
     const dimensions: React.ReactNode[] = [];
     const numPoints = room.points.length;
-    const limit = room.isClosed ? numPoints : numPoints - 1;
 
-    for (let i = 0; i < limit; i++) {
-      const p1 = room.points[i];
-      const p2 = room.points[(i + 1) % numPoints];
-      const dist = getDistance(p1, p2);
+    for (const seg of wallSegments) {
+      const dist = getDistance(seg.p1, seg.p2);
       
       if (dist < 10) continue; // Don't show for very small segments
 
-      const midX = (p1.x + p2.x) / 2;
-      const midY = (p1.y + p2.y) / 2;
+      const midX = (seg.p1.x + seg.p2.x) / 2;
+      const midY = (seg.p1.y + seg.p2.y) / 2;
       
-      const normal = getOutwardNormal(room.points, i);
-      
-      // Calculate corner angles to adjust offset and avoid overlaps
-      const prevIdx = (i - 1 + numPoints) % numPoints;
-      const nextIdx = (i + 1) % numPoints;
-      const pPrev = room.points[prevIdx];
-      const pNext = room.points[(i + 2) % numPoints];
+      const normal = getOutwardNormal(room.points, seg.index);
       
       // Basic overlap avoidance: if segment is short, increase offset significantly
-      // or if it's near a sharp corner
       let dynamicOffset = (wallThicknessPx + 24 / scale);
       if (dist < 120) {
         dynamicOffset += 14 / scale;
@@ -101,54 +82,25 @@ export const RoomItem: React.FC<RoomItemProps> = ({
       const textX = midX + normal.x * dynamicOffset;
       const textY = midY + normal.y * dynamicOffset;
 
-      const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x) * (180 / Math.PI);
+      const angle = Math.atan2(seg.p2.y - seg.p1.y, seg.p2.x - seg.p1.x) * (180 / Math.PI);
       // Keep text upright
       const normalizedAngle = (angle > 90 || angle < -90) ? angle + 180 : angle;
 
       const labelText = `${(dist / pixelsPerCm).toFixed(1)} cm`;
-      const fontSize = 11 / scale;
-      const padding = 5 / scale;
-      
-      // Approximate text width
-      const approxWidth = (labelText.length * 7.5 + padding * 2) / scale;
-      const approxHeight = (fontSize + padding * 2);
 
       dimensions.push(
-        <Group key={`dim-group-${room.id}-${i}`} x={textX} y={textY} rotation={normalizedAngle}>
-          <Rect
-            x={-approxWidth / 2}
-            y={-approxHeight / 2}
-            width={approxWidth}
-            height={approxHeight}
-            fill="white"
-            opacity={0.9}
-            cornerRadius={4 / scale}
-            stroke="#94a3b8"
-            strokeWidth={1 / scale}
-            listening={false}
-            shadowBlur={4 / scale}
-            shadowColor="black"
-            shadowOpacity={0.1}
-            shadowOffset={{ x: 1 / scale, y: 1 / scale }}
-          />
-          <Text
-            text={labelText}
-            x={-approxWidth / 2}
-            y={-approxHeight / 2}
-            width={approxWidth}
-            height={approxHeight}
-            fontSize={fontSize}
-            fill="#334155"
-            fontStyle="bold"
-            align="center"
-            verticalAlign="middle"
-            listening={false}
-          />
-        </Group>
+        <DimensionLabel
+          key={`dim-label-${room.id}-${seg.index}`}
+          x={textX}
+          y={textY}
+          text={labelText}
+          rotation={normalizedAngle}
+          scale={scale}
+        />
       );
     }
     return dimensions;
-  }, [room, showAutoDimensions, pixelsPerCm, scale, wallThicknessPx]);
+  }, [room, showAutoDimensions, pixelsPerCm, scale, wallThicknessPx, isSelected, wallSegments]);
 
   return (
     <Group 

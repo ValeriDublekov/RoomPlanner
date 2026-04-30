@@ -34,3 +34,18 @@ export const getFurnitureVertices = (f: { x: number; y: number; width: number; h
     rotatePoint({ x: f.x, y: f.y + f.height }, center, f.rotation)
   ];
 };
+
+/**
+ * Gets the wall segments of a room.
+ */
+export const getWallSegments = (room: { points: Vector2d[]; isClosed: boolean; wallColors?: string[]; defaultWallColor?: string }) => {
+  const segments = [];
+  const count = room.isClosed ? room.points.length : room.points.length - 1;
+  for (let i = 0; i < count; i++) {
+    const p1 = room.points[i];
+    const p2 = room.points[(i + 1) % room.points.length];
+    const color = room.wallColors?.[i] || room.defaultWallColor || "#1e293b";
+    segments.push({ p1, p2, index: i, color });
+  }
+  return segments;
+};
