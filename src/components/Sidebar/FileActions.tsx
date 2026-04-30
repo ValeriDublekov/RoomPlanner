@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { Download, Upload, Image as ImageIcon, Eye, EyeOff } from 'lucide-react';
+import { Download, Upload, Image as ImageIcon, Eye, EyeOff, FileCode } from 'lucide-react';
 
 interface FileActionsProps {
   onImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -10,6 +10,8 @@ interface FileActionsProps {
   setBackgroundOpacity: (opacity: number) => void;
   removeBackgroundImage: () => void;
   hideImageActions?: boolean;
+  onExportDXF?: () => void;
+  canExportDXF?: boolean;
 }
 
 export const FileActions: React.FC<FileActionsProps> = ({
@@ -21,11 +23,23 @@ export const FileActions: React.FC<FileActionsProps> = ({
   setBackgroundOpacity,
   removeBackgroundImage,
   hideImageActions,
+  onExportDXF,
+  canExportDXF,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-4">
+      {canExportDXF && onExportDXF && (
+        <button
+          onClick={onExportDXF}
+          className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-emerald-50 text-emerald-700 rounded-2xl border border-emerald-100 hover:bg-emerald-100 transition-all shadow-sm"
+        >
+          <FileCode size={18} />
+          <span className="text-sm font-bold">Export DXF (2D)</span>
+        </button>
+      )}
+
       {!hideImageActions && (
         <div className="relative">
           <input

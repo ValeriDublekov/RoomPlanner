@@ -86,7 +86,7 @@ export const Canvas: React.FC = () => {
     handleDimensionSubmit
   } = useCanvasLogic(stageRef, dimensions, isCtrlPressed, isAltPressed);
 
-  const { handleExport, handlePrint, getStageThumbnail } = useCanvasExport(stageRef);
+  const { handleExport, handlePrint, getStageThumbnail, handleExportDXF } = useCanvasExport(stageRef);
 
   useClipboardPaste();
   useKeyboardShortcuts(setIsCtrlPressed, handleDimensionSubmit);
@@ -146,7 +146,7 @@ export const Canvas: React.FC = () => {
 
   return (
     <div className="flex-1 bg-slate-50 relative overflow-hidden flex flex-col">
-      <CanvasHeader onExport={handleExport} onPrint={handlePrint} getThumbnail={getStageThumbnail} />
+      <CanvasHeader onExport={handleExport} onExportDXF={handleExportDXF} onPrint={handlePrint} getThumbnail={getStageThumbnail} />
       <SubHeader />
 
       <div ref={containerRef} className="flex-1 relative">

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Undo2, Download, Upload, Layout, FilePlus, RotateCcw, Grid, BookOpen, Box, Maximize, Cloud, Save, Menu, ChevronDown, Printer } from 'lucide-react';
+import { Undo2, Download, Upload, Layout, FilePlus, RotateCcw, Grid, BookOpen, Box, Maximize, Cloud, Save, Menu, ChevronDown, Printer, FileCode } from 'lucide-react';
 import { useStore } from '../../store';
 import { UserManualModal } from '../UserManualModal';
 import { CloudLoadModal } from '../Sidebar/CloudLoadModal';
@@ -8,11 +8,12 @@ import { ConfirmModal } from '../Dialogs/ConfirmModal';
 
 interface CanvasHeaderProps {
   onExport: () => void;
+  onExportDXF: () => void;
   onPrint: () => void;
   getThumbnail?: () => Promise<string | null>;
 }
 
-export const CanvasHeader: React.FC<CanvasHeaderProps> = ({ onExport, onPrint, getThumbnail }) => {
+export const CanvasHeader: React.FC<CanvasHeaderProps> = ({ onExport, onExportDXF, onPrint, getThumbnail }) => {
   const { 
     undo, 
     history, 
@@ -333,6 +334,13 @@ export const CanvasHeader: React.FC<CanvasHeaderProps> = ({ onExport, onPrint, g
                 >
                   <Download size={16} className="text-slate-400 group-hover:text-indigo-500" />
                   Export PNG
+                </button>
+                <button
+                  onClick={onExportDXF}
+                  className="w-full flex items-center gap-3 px-3 py-2 text-slate-600 hover:bg-slate-50 rounded-lg text-xs font-bold transition-colors uppercase tracking-wider group"
+                >
+                  <FileCode size={16} className="text-slate-400 group-hover:text-indigo-500" />
+                  Export DXF (2D)
                 </button>
                 <button
                   onClick={onPrint}

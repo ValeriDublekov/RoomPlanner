@@ -4,7 +4,6 @@ import { useStore } from '../store';
 import { ToolButton } from './Sidebar/ToolButton';
 import { FileActions } from './Sidebar/FileActions';
 import { CatalogModal } from './Sidebar/CatalogModal';
-import { AlertModal } from './Dialogs/AlertModal';
 import { loginWithGoogle, logout } from '../firebase';
 
 const tools = [
@@ -41,10 +40,12 @@ export const Sidebar: React.FC = () => {
     setSelectedAttachmentId,
     currentUser,
     isAuthLoading,
+    rooms,
+    furniture,
+    wallAttachments,
   } = useStore();
 
   const [isCatalogOpen, setIsCatalogOpen] = useState(false);
-  const [alertInfo, setAlertInfo] = useState<{ isOpen: boolean; title: string; message: string }>({ isOpen: false, title: '', message: '' });
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -60,12 +61,6 @@ export const Sidebar: React.FC = () => {
   return (
     <aside className="w-64 bg-white border-r border-slate-200 flex flex-col h-full shadow-sm z-10">
       <CatalogModal isOpen={isCatalogOpen} onClose={() => setIsCatalogOpen(false)} />
-      <AlertModal
-        isOpen={alertInfo.isOpen}
-        title={alertInfo.title}
-        message={alertInfo.message}
-        onClose={() => setAlertInfo({ ...alertInfo, isOpen: false })}
-      />
       
       <nav className="flex-1 overflow-y-auto px-4 py-6 space-y-8">
         <div>

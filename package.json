@@ -20,6 +20,7 @@
     "@vitejs/plugin-react": "^5.0.4",
     "clsx": "^2.1.1",
     "dotenv": "^17.2.3",
+    "dxf-writer": "^1.18.4",
     "express": "^4.21.2",
     "firebase": "^12.12.0",
     "konva": "^10.2.3",

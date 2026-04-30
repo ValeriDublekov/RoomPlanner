@@ -1,6 +1,7 @@
 import Konva from 'konva';
 import { useStore } from '../store';
 import { getFurnitureVertices } from '../lib/geometry';
+import { exportToDXF } from '../lib/dxfExport';
 
 export const useCanvasExport = (stageRef: React.RefObject<Konva.Stage>) => {
   const handleExport = async () => {
@@ -294,5 +295,16 @@ export const useCanvasExport = (stageRef: React.RefObject<Konva.Stage>) => {
     return dataURL;
   };
 
-  return { handleExport, handlePrint, getStageThumbnail };
+  const handleExportDXF = () => {
+    const { rooms, furniture, wallAttachments, dimensions, pixelsPerCm } = useStore.getState();
+    exportToDXF({
+      rooms,
+      furniture,
+      attachments: wallAttachments,
+      dimensions,
+      pixelsPerCm
+    });
+  };
+
+  return { handleExport, handlePrint, getStageThumbnail, handleExportDXF };
 };
