@@ -140,7 +140,7 @@ export const useKeyboardShortcuts = (
         }
       }
 
-      if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) {
         e.preventDefault();
         undo();
       }

@@ -1,5 +1,6 @@
 import { StateCreator } from 'zustand';
 import { AppState } from '../../store';
+import { PERSISTED_KEYS, PersistedState } from '../constants';
 import { HistoryEntry, Vector2d } from '../../types';
 import { rotatePoint } from '../../lib/geometry';
 import { doc, setDoc, addDoc, collection, serverTimestamp, query, where, getDocs } from 'firebase/firestore';
@@ -100,7 +101,7 @@ export const createProjectSlice: StateCreator<AppState, [], [], ProjectSlice> = 
     if (!data) return;
     
     // Support both direct data and wrapped data
-    const projectData = typeof data === 'string' ? JSON.parse(data) : data;
+    const projectData = (typeof data === 'string' ? JSON.parse(data) : data) as PersistedState;
     
     // Migration for center-based rotation (Version 2)
     const currentVersion = projectData.version || 1;
@@ -139,7 +140,7 @@ export const createProjectSlice: StateCreator<AppState, [], [], ProjectSlice> = 
 
     set({
       projectName: projectData.projectName || 'Loaded Project',
-      pixelsPerCm: projectData.pixelsPerCm || projectData.pixelsPrCm || 20, // Support typo from potentially old versions
+      pixelsPerCm: projectData.pixelsPerCm || (projectData as any).pixelsPrCm || 20, // Support typo from potentially old versions
       rooms: projectData.rooms || [],
       furniture,
       dimensions: projectData.dimensions || [],
@@ -166,23 +167,11 @@ export const createProjectSlice: StateCreator<AppState, [], [], ProjectSlice> = 
     const state = get();
     const { currentUser } = state;
 
-    const projectData = {
-      version: 2,
-      projectName: state.projectName,
-      pixelsPerCm: state.pixelsPerCm,
-      rooms: state.rooms,
-      furniture: state.furniture,
-      dimensions: state.dimensions,
-      wallAttachments: state.wallAttachments,
-      wallThickness: state.wallThickness,
-      wallHeight: state.wallHeight,
-      backgroundImage: state.backgroundImage,
-      backgroundVisible: state.backgroundVisible,
-      backgroundPosition: state.backgroundPosition,
-      backgroundScale: state.backgroundScale,
-      backgroundRotation: state.backgroundRotation,
-      backgroundOpacity: state.backgroundOpacity,
-    };
+    const projectData = PERSISTED_KEYS.reduce((acc, key) => {
+      // @ts-ignore
+      acc[key] = (state as any)[key];
+      return acc;
+    }, { version: 2 } as PersistedState);
 
     const jsonString = JSON.stringify(projectData);
     
