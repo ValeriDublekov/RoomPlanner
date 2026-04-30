@@ -1,6 +1,5 @@
 import React, { useRef, useEffect } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
-import { PointerLockControls } from '@react-three/drei';
 import * as THREE from 'three';
 import { useStore } from '../../store';
 
@@ -23,16 +22,8 @@ export const FPVControls: React.FC<FPVControlsProps> = ({ initialPosition }) => 
   useEffect(() => {
     camera.position.set(initialPosition.x, 160, initialPosition.z);
     camera.lookAt(initialPosition.x + 100, 160, initialPosition.z);
+    camera.rotation.order = 'YXZ';
   }, [camera, initialPosition]);
-
-  useEffect(() => {
-    return () => {
-      // Exit pointer lock on unmount to prevent errors or unexpected behavior
-      if (document.pointerLockElement === gl.domElement) {
-        document.exitPointerLock();
-      }
-    };
-  }, [gl.domElement]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -70,15 +61,65 @@ export const FPVControls: React.FC<FPVControlsProps> = ({ initialPosition }) => 
       }
     };
 
+    const requestLock = async () => {
+      if (!gl.domElement || !gl.domElement.isConnected) return;
+      
+      try {
+        const result = gl.domElement.requestPointerLock();
+        // Handle browsers where it returns a promise
+        if (result instanceof Promise) {
+          await result;
+        }
+      } catch (err) {
+        console.warn('Pointer lock request failed:', err);
+      }
+    };
+
+    const handleCanvasClick = (e: MouseEvent) => {
+      if (document.pointerLockElement !== gl.domElement) {
+        requestLock();
+      }
+    };
+
+    const handlePointerLockChange = () => {
+      // Logic if needed when lock state changes
+    };
+
+    const handleMouseMove = (event: MouseEvent) => {
+      if (document.pointerLockElement !== gl.domElement) return;
+
+      const movementX = event.movementX || 0;
+      const movementY = event.movementY || 0;
+
+      camera.rotation.y -= movementX * 0.002;
+      camera.rotation.x -= movementY * 0.002;
+      camera.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, camera.rotation.x));
+    };
+
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
     window.addEventListener('wheel', handleWheel, { passive: false });
+    gl.domElement.addEventListener('click', handleCanvasClick);
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('pointerlockchange', handlePointerLockChange);
+
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
       window.removeEventListener('wheel', handleWheel);
+      gl.domElement.removeEventListener('click', handleCanvasClick);
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('pointerlockchange', handlePointerLockChange);
+      
+      if (document.pointerLockElement === gl.domElement) {
+        try {
+          document.exitPointerLock();
+        } catch (e) {
+          // Ignore exit errors
+        }
+      }
     };
-  }, [camera]);
+  }, [camera, gl.domElement]);
 
   const checkCollision = (targetPos: THREE.Vector3): boolean => {
     const collisionRadius = 25; // cm (player width)
@@ -170,5 +211,5 @@ export const FPVControls: React.FC<FPVControlsProps> = ({ initialPosition }) => 
     camera.position.y = 160;
   });
 
-  return <PointerLockControls domElement={gl.domElement} />;
+  return null;
 };
