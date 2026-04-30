@@ -38,6 +38,11 @@ export interface FurnitureObject {
   showLabel?: boolean; // Explicitly show name label
   drawerRows?: number;
   drawerCols?: number;
+  hasHeadboard?: boolean;
+  headboardHeight?: number;
+  headboardTilt?: number;
+  mattressWidth?: number;
+  mattressDepth?: number;
   children?: FurnitureObject[]; // For groups
 }
 

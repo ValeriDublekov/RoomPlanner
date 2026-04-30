@@ -106,6 +106,77 @@ export const FurnitureRenderer: React.FC<FurnitureRendererProps> = ({
         );
       })()}
 
+      {/* Bed Detail */}
+      {!shape.svgPath && shape.furnitureType === 'bed' && (() => {
+        const tiltDeg = shape.headboardTilt || 15;
+        const hbH = shape.headboardHeight || 60;
+        const tiltRad = (tiltDeg * Math.PI) / 180;
+        const hbThickness = 8;
+        const hbProjection = shape.hasHeadboard ? Math.sin(tiltRad) * hbH : 0;
+        const hbTotalDepthCm = shape.hasHeadboard ? (hbThickness + hbProjection) : 0;
+        const hbTotalDepth = hbTotalDepthCm * pixelsPerCm;
+        const frameThickness = 3 * pixelsPerCm;
+        const mattressInset = 2 * pixelsPerCm;
+
+        return (
+          <Group>
+            {/* Headboard Area (at the top) */}
+            {shape.hasHeadboard && (
+              <>
+                {/* Slanted part projection */}
+                <Rect
+                  width={shape.width}
+                  height={hbProjection * pixelsPerCm}
+                  fill={shape.color || "#cbd5e1"}
+                  opacity={0.3}
+                />
+                {/* Main thick part */}
+                <Rect
+                  y={hbProjection * pixelsPerCm}
+                  width={shape.width}
+                  height={hbThickness * pixelsPerCm}
+                  fill={shape.color || "#cbd5e1"}
+                />
+              </>
+            )}
+            
+            {/* Mattress Area */}
+            <Rect
+              x={mattressInset}
+              y={hbTotalDepth + mattressInset}
+              width={shape.width - mattressInset * 2}
+              height={shape.height - hbTotalDepth - mattressInset * 2 - (3 * pixelsPerCm)} // minus footboard
+              fill={shape.secondaryColor || "#f8fafc"}
+              stroke="#cbd5e1"
+              strokeWidth={1 / scale}
+              cornerRadius={2 / scale}
+            />
+
+            {/* Pillows */}
+            <Group y={hbTotalDepth + 5 * pixelsPerCm}>
+              <Rect
+                x={shape.width * 0.15}
+                width={shape.width * 0.3}
+                height={shape.height * 0.1}
+                fill="white"
+                stroke="#e2e8f0"
+                strokeWidth={1 / scale}
+                cornerRadius={2 / scale}
+              />
+              <Rect
+                x={shape.width * 0.55}
+                width={shape.width * 0.3}
+                height={shape.height * 0.1}
+                fill="white"
+                stroke="#e2e8f0"
+                strokeWidth={1 / scale}
+                cornerRadius={2 / scale}
+              />
+            </Group>
+          </Group>
+        );
+      })()}
+
       {!shape.svgPath && shape.type === 'circle' && (
         <Ellipse
           x={shape.width / 2}

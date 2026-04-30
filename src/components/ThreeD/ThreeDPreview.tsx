@@ -80,7 +80,7 @@ const Furniture = ({ item, pixelsPerCm, isChild = false, parentWidth = 0, parent
     };
     
     switch (item.furnitureType) {
-      case 'bed': return <Bed3D {...props} />;
+      case 'bed': return <Bed3D {...props} hasHeadboard={item.hasHeadboard} headboardHeight={item.headboardHeight} headboardTilt={item.headboardTilt} mattressWidth={item.mattressWidth} mattressDepth={item.mattressDepth} />;
       case 'desk': return <Desk3D {...props} />;
       case 'wardrobe': return <Wardrobe3D {...props} />;
       case 'dresser': return <Dresser3D {...props} drawerRows={item.drawerRows} drawerCols={item.drawerCols} />;

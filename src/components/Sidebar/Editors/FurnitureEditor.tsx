@@ -98,9 +98,14 @@ export const FurnitureEditor: React.FC<FurnitureEditorProps> = ({
           <input
             type="number"
             value={Math.round((selectedFurniture.height3d || 0) / pixelsPerCm)}
+            readOnly={selectedFurniture.furnitureType === 'bed'}
+            title={selectedFurniture.furnitureType === 'bed' ? "Calculated from frame and headboard" : ""}
             onFocus={saveHistory}
             onChange={(e) => updateFurniture(selectedFurniture.id, { height3d: parseFloat(e.target.value) * pixelsPerCm })}
-            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-mono focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+            className={cn(
+              "w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-mono outline-none transition-all",
+              selectedFurniture.furnitureType === 'bed' ? "bg-slate-100 text-slate-400 cursor-not-allowed" : "bg-slate-50 focus:ring-2 focus:ring-indigo-500"
+            )}
           />
         </div>
         <div className="space-y-1.5">
@@ -261,6 +266,124 @@ export const FurnitureEditor: React.FC<FurnitureEditorProps> = ({
                 </div>
               </div>
               <p className="text-[8px] text-slate-400 mt-1 italic ml-1">Leave empty for automatic layout</p>
+            </div>
+          )}
+
+          {selectedFurniture.furnitureType === 'bed' && (
+            <div className="space-y-3 p-3 bg-indigo-50/50 rounded-xl border border-indigo-100 mb-2">
+              <div className="flex items-center justify-between">
+                <label className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest ml-1">Mattress Size</label>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-[9px] font-bold text-slate-400 uppercase tracking-tight ml-1">Width (cm)</label>
+                  <input
+                    type="number"
+                    value={selectedFurniture.mattressWidth || Math.round((selectedFurniture.width / pixelsPerCm) - 6)}
+                    onChange={(e) => {
+                      const mWidth = parseInt(e.target.value) || 0;
+                      const newWidth = (mWidth + 6) * pixelsPerCm;
+                      updateFurniture(selectedFurniture.id, { 
+                        mattressWidth: mWidth,
+                        width: newWidth,
+                        height3d: (30 + 20 + (selectedFurniture.hasHeadboard ? (selectedFurniture.headboardHeight || 60) : 0)) * pixelsPerCm
+                      });
+                    }}
+                    className="w-full bg-white border border-indigo-200 rounded-lg px-3 py-1.5 text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-sm"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[9px] font-bold text-slate-400 uppercase tracking-tight ml-1">Depth (cm)</label>
+                  <input
+                    type="number"
+                    value={selectedFurniture.mattressDepth || Math.round((selectedFurniture.height / pixelsPerCm) - 15)}
+                    onChange={(e) => {
+                      const mDepth = parseInt(e.target.value) || 0;
+                      const tiltRad = ((selectedFurniture.headboardTilt || 15) * Math.PI) / 180;
+                      const hbProj = selectedFurniture.hasHeadboard ? (Math.sin(tiltRad) * (selectedFurniture.headboardHeight || 60) + 8) : 3;
+                      const newDepth = (mDepth + hbProj + 3) * pixelsPerCm;
+                      updateFurniture(selectedFurniture.id, { 
+                        mattressDepth: mDepth,
+                        height: newDepth,
+                        height3d: (30 + 20 + (selectedFurniture.hasHeadboard ? (selectedFurniture.headboardHeight || 60) : 0)) * pixelsPerCm
+                      });
+                    }}
+                    className="w-full bg-white border border-indigo-200 rounded-lg px-3 py-1.5 text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-sm"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 pt-1 border-t border-indigo-100/50 mt-1">
+                <input
+                  type="checkbox"
+                  id="hasHeadboard"
+                  checked={selectedFurniture.hasHeadboard || false}
+                  onChange={(e) => {
+                    const hasHb = e.target.checked;
+                    const mDepth = selectedFurniture.mattressDepth || Math.round((selectedFurniture.height / pixelsPerCm) - 15);
+                    const tiltRad = ((selectedFurniture.headboardTilt || 15) * Math.PI) / 180;
+                    const hbProj = hasHb ? (Math.sin(tiltRad) * (selectedFurniture.headboardHeight || 60) + 8) : 3;
+                    const newDepth = (mDepth + hbProj + 3) * pixelsPerCm;
+                    const hbH = selectedFurniture.headboardHeight || 60;
+                    
+                    updateFurniture(selectedFurniture.id, { 
+                      hasHeadboard: hasHb,
+                      height: newDepth,
+                      headboardHeight: hbH,
+                      headboardTilt: selectedFurniture.headboardTilt || 15,
+                      height3d: (30 + 20 + (hasHb ? hbH : 0)) * pixelsPerCm
+                    });
+                  }}
+                  className="w-3.5 h-3.5 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500"
+                />
+                <label htmlFor="hasHeadboard" className="text-[10px] font-bold text-slate-600 uppercase tracking-wide">Include Headboard</label>
+              </div>
+
+              {selectedFurniture.hasHeadboard && (
+                <div className="grid grid-cols-2 gap-3 pt-1">
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-bold text-slate-400 uppercase tracking-tight ml-1">HB Height (cm)</label>
+                    <input
+                      type="number"
+                      value={selectedFurniture.headboardHeight || 60}
+                      onChange={(e) => {
+                        const h = parseInt(e.target.value) || 0;
+                        const mDepth = selectedFurniture.mattressDepth || Math.round((selectedFurniture.height / pixelsPerCm) - 15);
+                        const tiltRad = ((selectedFurniture.headboardTilt || 15) * Math.PI) / 180;
+                        const hbProj = Math.sin(tiltRad) * h + 8;
+                        const newDepth = (mDepth + hbProj + 3) * pixelsPerCm;
+                        
+                        updateFurniture(selectedFurniture.id, { 
+                          headboardHeight: h,
+                          height: newDepth,
+                          height3d: (30 + 20 + h) * pixelsPerCm
+                        });
+                      }}
+                      className="w-full bg-white border border-indigo-200 rounded-lg px-3 py-1.5 text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-sm"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-bold text-slate-400 uppercase tracking-tight ml-1">Tilt Ang. (°)</label>
+                    <input
+                      type="number"
+                      value={selectedFurniture.headboardTilt || 15}
+                      onChange={(e) => {
+                        const t = parseInt(e.target.value) || 0;
+                        const mDepth = selectedFurniture.mattressDepth || Math.round((selectedFurniture.height / pixelsPerCm) - 15);
+                        const tiltRad = (t * Math.PI) / 180;
+                        const hbProj = Math.sin(tiltRad) * (selectedFurniture.headboardHeight || 60) + 8;
+                        const newDepth = (mDepth + hbProj + 3) * pixelsPerCm;
+                        
+                        updateFurniture(selectedFurniture.id, { 
+                          headboardTilt: t,
+                          height: newDepth
+                        });
+                      }}
+                      className="w-full bg-white border border-indigo-200 rounded-lg px-3 py-1.5 text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-sm"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

@@ -9,6 +9,11 @@ interface FurnitureParams {
   hasDoors?: boolean;
   drawerRows?: number;
   drawerCols?: number;
+  hasHeadboard?: boolean;
+  headboardHeight?: number;
+  headboardTilt?: number;
+  mattressWidth?: number;
+  mattressDepth?: number;
 }
 
 export const createFurnitureModel = (type: string, params: FurnitureParams): THREE.Group => {
@@ -67,13 +72,42 @@ export const createFurnitureModel = (type: string, params: FurnitureParams): THR
     }
 
     case 'bed': {
-      const frameH = height * 0.3;
-      const mattressH = height * 0.6;
-      group.add(createBox(width, frameH, depth, color, [0, frameH / 2, 0], 'Frame'));
-      group.add(createBox(width - 5, mattressH, depth - 5, doorColor, [0, frameH + mattressH / 2, 0], 'Mattress'));
+      const frameH = Math.min(height * 0.4, 30);
+      const mattressT = 20;
+      const frameThickness = 3;
+      
+      const mWidth = params.mattressWidth || (width - frameThickness * 2);
+      const mDepth = params.mattressDepth || (depth - frameThickness - 5);
+      
+      const hbH = params.headboardHeight || 60;
+      const tiltDeg = params.headboardTilt || 15;
+      const tiltRad = (tiltDeg * Math.PI) / 180;
+      const hbThickness = 8;
+      const hbProjection = params.hasHeadboard ? Math.sin(tiltRad) * hbH : 0;
+      const hbDepth = params.hasHeadboard ? (hbThickness + hbProjection) : 0;
+      
+      const zOffset = hbDepth;
+
+      // Base Frame
+      group.add(createBox(mWidth + frameThickness * 2, frameH, mDepth + frameThickness, color, [0, frameH / 2, -depth/2 + zOffset + mDepth/2 + frameThickness/2], 'Frame'));
+      
+      // Mattress
+      group.add(createBox(mWidth - 2, mattressT, mDepth - 2, doorColor, [0, frameH + mattressT / 2, -depth/2 + zOffset + mDepth/2], 'Mattress'));
+      
+      // Headboard
+      if (params.hasHeadboard) {
+        const hbGroup = new THREE.Group();
+        hbGroup.position.set(0, frameH, -depth/2 + hbDepth);
+        
+        const headboard = createBox(mWidth + frameThickness * 2, hbH, hbThickness, color, [0, hbH / 2, -hbThickness / 2], 'Headboard');
+        headboard.rotation.x = -tiltRad;
+        hbGroup.add(headboard);
+        group.add(hbGroup);
+      }
+
       // Pillows
-      group.add(createBox(width * 0.3, 5, depth * 0.2, doorColor, [-width * 0.25, frameH + mattressH + 2.5, -depth * 0.35], 'Pillow_L'));
-      group.add(createBox(width * 0.3, 5, depth * 0.2, doorColor, [width * 0.25, frameH + mattressH + 2.5, -depth * 0.35], 'Pillow_R'));
+      group.add(createBox(mWidth * 0.35, 6, 25, doorColor, [-mWidth * 0.25, frameH + mattressT + 3, -depth / 2 + zOffset + 20], 'Pillow_L'));
+      group.add(createBox(mWidth * 0.35, 6, 25, doorColor, [mWidth * 0.25, frameH + mattressT + 3, -depth / 2 + zOffset + 20], 'Pillow_R'));
       break;
     }
 

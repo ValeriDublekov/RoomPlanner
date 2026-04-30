@@ -54,35 +54,73 @@ const SmartMaterial = (props: any) => {
   return <meshStandardMaterial {...props} />;
 };
 
-export const Bed3D: React.FC<ModelProps> = ({ width, depth, height, color, secondaryColor }) => {
-  const frameHeight = height * 0.3;
-  const mattressHeight = height * 0.5;
-  const mattressInset = 5; // 5cm inset
+export const Bed3D: React.FC<ModelProps & { 
+  hasHeadboard?: boolean, 
+  headboardHeight?: number, 
+  headboardTilt?: number,
+  mattressWidth?: number,
+  mattressDepth?: number
+}> = ({ width, depth, height, color, secondaryColor, hasHeadboard, headboardHeight = 60, headboardTilt = 15, mattressWidth, mattressDepth }) => {
+  const frameHeight = Math.min(height * 0.4, 30);
+  const mattressThickness = 20;
+  const mattressInset = 2; 
   const mattressColor = secondaryColor || "#ffffff";
+  const frameThickness = 3;
+  
+  // Use mattress size if provided, otherwise derive from width/depth
+  const mWidth = mattressWidth || (width - frameThickness * 2);
+  const mDepth = mattressDepth || (depth - frameThickness - 5);
+  
+  // Headboard settings
+  const hbThickness = 8;
+  const hbHeight = headboardHeight || 60; // Height above mattress
+  const tiltRad = ((headboardTilt || 15) * Math.PI) / 180;
+  
+  // Calculate headboard projection (how much it slants back)
+  const hbProjection = hasHeadboard ? Math.sin(tiltRad) * hbHeight : 0;
+  const hbDepth = hasHeadboard ? (hbThickness + hbProjection) : 0;
+  
+  // Offset everything forward by hbDepth so nothing goes behind z=0
+  const zOffset = hbDepth;
   
   return (
     <group>
-      {/* Base Frame */}
-      <mesh position={[width / 2, frameHeight / 2, depth / 2]} castShadow receiveShadow>
-        <boxGeometry args={[width, frameHeight, depth]} />
+      {/* Base Frame - sized to fit mattress plus frame thickness */}
+      <mesh position={[width / 2, frameHeight / 2, zOffset + mDepth / 2 + frameThickness / 2]} castShadow receiveShadow>
+        <boxGeometry args={[mWidth + frameThickness * 2, frameHeight, mDepth + frameThickness]} />
         <WoodMaterial color={color} />
       </mesh>
       
       {/* Mattress */}
-      <mesh position={[width / 2, frameHeight + mattressHeight / 2, depth / 2]} castShadow receiveShadow>
-        <boxGeometry args={[width - mattressInset, mattressHeight, depth - mattressInset]} />
+      <mesh position={[width / 2, frameHeight + mattressThickness / 2, zOffset + mDepth / 2]} castShadow receiveShadow>
+        <boxGeometry args={[mWidth - mattressInset, mattressThickness, mDepth - mattressInset]} />
         <SmartMaterial color={mattressColor} roughness={0.9} />
       </mesh>
       
-      {/* Pillows */}
-      <mesh position={[width * 0.25, frameHeight + mattressHeight + 2, depth * 0.15]} castShadow receiveShadow>
-        <boxGeometry args={[width * 0.3, 5, depth * 0.2]} />
-        <SmartMaterial color={mattressColor} roughness={1} />
-      </mesh>
-      <mesh position={[width * 0.75, frameHeight + mattressHeight + 2, depth * 0.15]} castShadow receiveShadow>
-        <boxGeometry args={[width * 0.3, 5, depth * 0.2]} />
-        <SmartMaterial color={mattressColor} roughness={1} />
-      </mesh>
+      {/* Headboard */}
+      {hasHeadboard && (
+        <group position={[width / 2, frameHeight, hbDepth]}>
+          <group rotation={[-tiltRad, 0, 0]}>
+            <mesh position={[0, hbHeight / 2, -hbThickness / 2]} castShadow receiveShadow>
+              <boxGeometry args={[mWidth + frameThickness * 2, hbHeight, hbThickness]} />
+              <WoodMaterial color={color} />
+              <Edges color="white" threshold={20} />
+            </mesh>
+          </group>
+        </group>
+      )}
+
+      {/* Pillows - placed near headboard */}
+      <group position={[width / 2, frameHeight + mattressThickness, zOffset + 20]}>
+        <mesh position={[-mWidth * 0.25, 3, 0]} castShadow receiveShadow>
+          <boxGeometry args={[mWidth * 0.35, 6, 25]} />
+          <SmartMaterial color={mattressColor} roughness={1} />
+        </mesh>
+        <mesh position={[mWidth * 0.25, 3, 0]} castShadow receiveShadow>
+          <boxGeometry args={[mWidth * 0.35, 6, 25]} />
+          <SmartMaterial color={mattressColor} roughness={1} />
+        </mesh>
+      </group>
     </group>
   );
 };
