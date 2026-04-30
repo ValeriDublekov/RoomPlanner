@@ -224,24 +224,41 @@ export const Dresser3D: React.FC<ModelProps> = ({ width, depth, height, color, s
   const numDrawers = height < 90 ? 3 : 4;
   const drawerHeight = (height - 4) / numDrawers;
   const drawerColor = secondaryColor || color;
+  const thickness = 2;
   
   return (
     <group>
-      {/* Main Body */}
-      <mesh position={[width / 2, height / 2, depth / 2]} castShadow receiveShadow>
-        <boxGeometry args={[width, height, depth]} />
+      {/* Carcass Panels */}
+      <mesh position={[width / 2, thickness / 2, depth / 2]} castShadow receiveShadow>
+        <boxGeometry args={[width, thickness, depth]} />
+        <WoodMaterial color={color} />
+      </mesh>
+      <mesh position={[width / 2, height - thickness / 2, depth / 2]} castShadow receiveShadow>
+        <boxGeometry args={[width, thickness, depth]} />
+        <WoodMaterial color={color} />
+      </mesh>
+      <mesh position={[thickness / 2, height / 2, depth / 2]} castShadow receiveShadow>
+        <boxGeometry args={[thickness, height, depth]} />
+        <WoodMaterial color={color} />
+      </mesh>
+      <mesh position={[width - thickness / 2, height / 2, depth / 2]} castShadow receiveShadow>
+        <boxGeometry args={[thickness, height, depth]} />
+        <WoodMaterial color={color} />
+      </mesh>
+      <mesh position={[width / 2, height / 2, 0.5]} castShadow receiveShadow>
+        <boxGeometry args={[width - thickness * 2, height - thickness * 2, 1]} />
         <WoodMaterial color={color} />
       </mesh>
       
       {/* Drawers */}
       {Array.from({ length: numDrawers }).map((_, i) => (
-        <group key={i} position={[width / 2, i * drawerHeight + drawerHeight / 2 + 2, depth + 0.6]}>
+        <group key={i} position={[width / 2, i * drawerHeight + drawerHeight / 2 + 2, depth + 0.3]}>
           <mesh castShadow receiveShadow>
-            <boxGeometry args={[width - 2, drawerHeight - 2, 1]} />
+            <boxGeometry args={[width - thickness * 2 - 1, drawerHeight - 2, 0.8]} />
             <WoodMaterial color={drawerColor} />
           </mesh>
           {/* Handle */}
-          <mesh position={[0, 0, 1.1]} castShadow receiveShadow>
+          <mesh position={[0, 0, 0.8]} castShadow receiveShadow>
             <boxGeometry args={[10, 1, 1]} />
             <SmartMaterial color="#94a3b8" metalness={0.8} roughness={0.2} polygonOffset polygonOffsetFactor={-2} polygonOffsetUnits={-2} />
           </mesh>
@@ -296,67 +313,41 @@ export const Shelf3D: React.FC<ModelProps> = ({ width, depth, height, color, sec
   const numSections = numVerticalDividers + 1;
   const sectionWidth = width / numSections;
   const doorColor = secondaryColor || color;
+  const thickness = 2;
 
   return (
     <group>
-      {/* Top and Bottom Panels for Wall Shelf, or Side Panels for Tall Shelf */}
-      {isWallShelf ? (
-        <>
-          <mesh position={[width / 2, 1, depth / 2]} castShadow receiveShadow>
-            <boxGeometry args={[width, 2, depth]} />
-            <WoodMaterial color={color} />
-          </mesh>
-          <mesh position={[width / 2, height - 1, depth / 2]} castShadow receiveShadow>
-            <boxGeometry args={[width, 2, depth]} />
-            <WoodMaterial color={color} />
-          </mesh>
-        </>
-      ) : (
-        <>
-          <mesh position={[1, height / 2, depth / 2]} castShadow receiveShadow>
-            <boxGeometry args={[2, height, depth]} />
-            <WoodMaterial color={color} />
-          </mesh>
-          <mesh position={[width - 1, height / 2, depth / 2]} castShadow receiveShadow>
-            <boxGeometry args={[2, height, depth]} />
-            <WoodMaterial color={color} />
-          </mesh>
-        </>
-      )}
+      {/* Sides */}
+      <mesh position={[thickness / 2, height / 2, depth / 2]} castShadow receiveShadow>
+        <boxGeometry args={[thickness, height, depth]} />
+        <WoodMaterial color={color} />
+      </mesh>
+      <mesh position={[width - thickness / 2, height / 2, depth / 2]} castShadow receiveShadow>
+        <boxGeometry args={[thickness, height, depth]} />
+        <WoodMaterial color={color} />
+      </mesh>
       
-      {/* Horizontal Shelves (for tall units) */}
-      {!isWallShelf && Array.from({ length: numShelves + 1 }).map((_, i) => (
-        <mesh key={i} position={[width / 2, i * shelfSpacing + 2, depth / 2]} castShadow receiveShadow>
-          <boxGeometry args={[width - 2, 2, depth - 1]} />
+      {/* Top & Bottom */}
+      <mesh position={[width / 2, thickness / 2, depth / 2]} castShadow receiveShadow>
+        <boxGeometry args={[width, thickness, depth]} />
+        <WoodMaterial color={color} />
+      </mesh>
+      <mesh position={[width / 2, height - thickness / 2, depth / 2]} castShadow receiveShadow>
+        <boxGeometry args={[width, thickness, depth]} />
+        <WoodMaterial color={color} />
+      </mesh>
+      
+      {/* Horizontal Shelves */}
+      {!isWallShelf && Array.from({ length: numShelves - 1 }).map((_, i) => (
+        <mesh key={i} position={[width / 2, (i + 1) * shelfSpacing + thickness, depth / 2]} castShadow receiveShadow>
+          <boxGeometry args={[width - thickness * 2, thickness, depth - 1]} />
           <WoodMaterial color={color} />
         </mesh>
       ))}
 
-      {/* Vertical Dividers */}
-      {(isWallShelf || hasDoors) && Array.from({ length: numVerticalDividers }).map((_, i) => (
-        <mesh key={i} position={[(i + 1) * dividerSpacing, height / 2, depth / 2]} castShadow receiveShadow>
-          <boxGeometry args={[1.5, height - 2, depth - 1]} />
-          <WoodMaterial color={color} />
-        </mesh>
-      ))}
-
-      {/* Side Panels for Wall Shelf */}
-      {isWallShelf && (
-        <>
-          <mesh position={[1, height / 2, depth / 2]} castShadow receiveShadow>
-            <boxGeometry args={[2, height, depth]} />
-            <WoodMaterial color={color} />
-          </mesh>
-          <mesh position={[width - 1, height / 2, depth / 2]} castShadow receiveShadow>
-            <boxGeometry args={[2, height, depth]} />
-            <WoodMaterial color={color} />
-          </mesh>
-        </>
-      )}
-      
       {/* Back Panel */}
       <mesh position={[width / 2, height / 2, 0.5]} castShadow receiveShadow>
-        <boxGeometry args={[width - 2, height, 1]} />
+        <boxGeometry args={[width - thickness * 2, height - thickness * 2, 1]} />
         <WoodMaterial color={color} opacity={0.5} transparent />
       </mesh>
 
@@ -365,19 +356,18 @@ export const Shelf3D: React.FC<ModelProps> = ({ width, depth, height, color, sec
         <group position={[0, height / 2, depth]}>
           {Array.from({ length: numSections }).map((_, i) => {
             const xPos = i * sectionWidth + sectionWidth / 2;
-            // Alternate handle position for double doors effect
             const handleSide = (i % 2 === 0) ? 1 : -1;
             const handleX = handleSide * (sectionWidth / 2 - 4);
             
             return (
               <group key={i} position={[xPos, 0, 0]}>
                 <mesh position={[0, 0, 0.6]} castShadow receiveShadow>
-                  <boxGeometry args={[sectionWidth - 0.5, height - 1, 1]} />
+                  <boxGeometry args={[sectionWidth - 0.5, height - thickness, 1]} />
                   <WoodMaterial color={doorColor} />
                 </mesh>
                 {/* Handle */}
                 <mesh position={[handleX, 0, 1.2]} castShadow receiveShadow>
-                  <boxGeometry args={[1, 12, 1]} />
+                  <boxGeometry args={[1, 10, 1]} />
                   <SmartMaterial color="#94a3b8" metalness={1} roughness={0.1} polygonOffset polygonOffsetFactor={-2} polygonOffsetUnits={-2} />
                 </mesh>
               </group>

@@ -1,0 +1,238 @@
+import * as THREE from 'three';
+
+interface FurnitureParams {
+  width: number;
+  height: number;
+  depth: number;
+  color: string;
+  secondaryColor?: string;
+}
+
+export const createFurnitureModel = (type: string, params: FurnitureParams): THREE.Group => {
+  const group = new THREE.Group();
+  const { width, height, depth, color, secondaryColor } = params;
+  const doorColor = secondaryColor || color;
+
+  const loader = new THREE.TextureLoader();
+  const woodTexture = loader.load(params.color.startsWith('#') ? 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0nNjQnIGhlaWdodD0nNjQnIHZpZXdCb3g9JzAgMCA2NCA2NCcgeG1sbnM9J2h0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnJz48cmVjdCB3aWR0aD0nNjQnIGhlaWdodD0nNjQnIGZpbGw9JyNmZmZmZmYnLz48ZyBvcGFjaXR5PScwLjA1Jz48cmVjdCB4PScwJyB5PScwJyB3aWR0aD0nMC41JyBoZWlnaHQ9JzY0JyBmaWxsPScjMDAwMDAwJy8+PHJlY3QgeD0nMTAnIHk9JzAnIHdpZHRoPScwLjUnIGhlaWdodD0nNjQnIGZpbGw9JyMwMDAwMDAnLz48cmVjdCB4PScyNScgeT0nMCcgd2lkdGg9JzAuNScgaGVpZ2h0PScMapJyBmaWxsPScjMDAwMDAwJy8+PHJlY3QgeD0nNDUnIHk9JzAnIHdpZHRoPScwLjUnIGhlaWdodD0nNjQnIGZpbGw9JyMwMDAwMDAnLz48cmVjdCB4PSc1NScgeT0nMCcgd2lkdGg9JzAuNScgaGVpZ2h0PSc2NCcgZmlsbD0nIzAwMDAwMCcvPjwvZz48L3N2Zz4=' : '');
+  if (woodTexture) {
+    woodTexture.wrapS = woodTexture.wrapT = THREE.RepeatWrapping;
+    woodTexture.repeat.set(0.02, 0.02);
+  }
+
+  const createBox = (w: number, h: number, d: number, col: string, pos: [number, number, number], name: string, useWood = true) => {
+    const geo = new THREE.BoxGeometry(w, h, d);
+    const mat = new THREE.MeshStandardMaterial({ 
+      color: col, 
+      roughness: 0.8,
+      map: (useWood && woodTexture.image) ? woodTexture : null
+    });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.set(...pos);
+    mesh.name = name;
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    return mesh;
+  };
+
+  switch (type.toLowerCase()) {
+    case 'wardrobe':
+    case 'closet': {
+      // Body
+      group.add(createBox(width, height, depth, color, [0, height / 2, 0], 'Carcass'));
+      // Doors
+      const numDoors = width < 100 ? 2 : 3;
+      const doorWidth = (width - 2) / numDoors;
+      for (let i = 0; i < numDoors; i++) {
+        const xPos = -width / 2 + (i * doorWidth + doorWidth / 2 + 1);
+        const door = createBox(doorWidth - 0.5, height - 2, 1, doorColor, [xPos, height / 2, depth / 2 + 0.6], `Door_${i}`);
+        group.add(door);
+        
+        // Handle
+        const handleX = xPos + (i % 2 === 0 ? doorWidth / 3 : -doorWidth / 3);
+        const handle = createBox(2, 15, 1, '#94a3b8', [handleX, height / 2, depth / 2 + 1.2], `Handle_${i}`);
+        group.add(handle);
+      }
+      break;
+    }
+
+    case 'bed': {
+      const frameH = height * 0.3;
+      const mattressH = height * 0.6;
+      group.add(createBox(width, frameH, depth, color, [0, frameH / 2, 0], 'Frame'));
+      group.add(createBox(width - 5, mattressH, depth - 5, doorColor, [0, frameH + mattressH / 2, 0], 'Mattress'));
+      // Pillows
+      group.add(createBox(width * 0.3, 5, depth * 0.2, doorColor, [-width * 0.25, frameH + mattressH + 2.5, -depth * 0.35], 'Pillow_L'));
+      group.add(createBox(width * 0.3, 5, depth * 0.2, doorColor, [width * 0.25, frameH + mattressH + 2.5, -depth * 0.35], 'Pillow_R'));
+      break;
+    }
+
+    case 'desk':
+    case 'table': {
+      const topH = 4;
+      group.add(createBox(width, topH, depth, color, [0, height - topH / 2, 0], 'Top'));
+      // Legs
+      const legPos = [
+        [-width / 2 + 3, -depth / 2 + 3],
+        [width / 2 - 3, -depth / 2 + 3],
+        [-width / 2 + 3, depth / 2 - 3],
+        [width / 2 - 3, depth / 2 - 3],
+      ];
+      legPos.forEach(([x, z], i) => {
+        const leg = createBox(4, height - topH, 4, '#334155', [x, (height - topH) / 2, z], `Leg_${i}`);
+        group.add(leg);
+      });
+      break;
+    }
+
+    case 'couch':
+    case 'sofa': {
+      const seatH = height * 0.5;
+      group.add(createBox(width, seatH, depth, color, [0, seatH / 2, 0], 'Seat'));
+      group.add(createBox(width, height - seatH, 15, color, [0, seatH + (height - seatH) / 2, -depth / 2 + 7.5], 'Backrest'));
+      group.add(createBox(15, height * 0.7, depth, color, [-width / 2 + 7.5, (height * 0.7) / 2, 0], 'Arm_L'));
+      group.add(createBox(15, height * 0.7, depth, color, [width / 2 - 7.5, (height * 0.7) / 2, 0], 'Arm_R'));
+      break;
+    }
+
+    case 'nightstand': {
+      group.add(createBox(width, height, depth, color, [0, height / 2, 0], 'Body'));
+      group.add(createBox(width - 2, 2, 2, '#94a3b8', [0, height - 10, depth / 2 + 0.1], 'Handle'));
+      break;
+    }
+
+    case 'dresser': {
+      const carcassThickness = 2;
+      // Bottom
+      group.add(createBox(width, carcassThickness, depth, color, [0, carcassThickness / 2, 0], 'Bottom'));
+      // Top
+      group.add(createBox(width, carcassThickness, depth, color, [0, height - carcassThickness / 2, 0], 'Top'));
+      // Sides
+      group.add(createBox(carcassThickness, height, depth, color, [-width / 2 + carcassThickness / 2, height / 2, 0], 'Side_L'));
+      group.add(createBox(carcassThickness, height, depth, color, [width / 2 - carcassThickness / 2, height / 2, 0], 'Side_R'));
+      // Back
+      group.add(createBox(width - carcassThickness * 2, height - carcassThickness * 2, 1, color, [0, height / 2, -depth / 2 + 0.5], 'Back'));
+
+      const numDrawers = Math.floor(height / 20);
+      for (let i = 0; i < numDrawers; i++) {
+        const yPos = (i + 0.5) * (height / numDrawers);
+        // Drawer front
+        group.add(createBox(width - carcassThickness * 2 - 1, (height / numDrawers) - 2, 1.5, doorColor, [0, yPos, depth / 2 + 0.2], `Drawer_${i}`));
+        // Handle
+        group.add(createBox(10, 2, 1, '#94a3b8', [0, yPos, depth / 2 + 1.2], `Handle_${i}`));
+      }
+      break;
+    }
+
+    case 'chair':
+    case 'office-chair': {
+      const seatH = height * 0.5;
+      const legSize = 3;
+      // Legs
+      const legPositions = [
+        [-width / 2 + legSize, -depth / 2 + legSize],
+        [width / 2 - legSize, -depth / 2 + legSize],
+        [-width / 2 + legSize, depth / 2 - legSize],
+        [width / 2 - legSize, depth / 2 - legSize],
+      ];
+      legPositions.forEach(([x, z], i) => {
+        group.add(createBox(legSize, seatH, legSize, '#334155', [x, seatH / 2, z], `Leg_${i}`));
+      });
+      // Seat
+      group.add(createBox(width, 4, depth, color, [0, seatH, 0], 'Seat'));
+      // Backrest
+      group.add(createBox(width, height - seatH, 4, color, [0, seatH + (height - seatH) / 2, -depth / 2 + 2], 'Backrest'));
+      break;
+    }
+
+    case 'armchair': {
+      const seatH = height * 0.45;
+      group.add(createBox(width, seatH, depth, color, [0, seatH / 2, 0], 'SeatBase'));
+      group.add(createBox(width - 20, 10, depth - 5, doorColor, [0, seatH + 5, 2.5], 'Cushion'));
+      group.add(createBox(width, height - seatH, 15, color, [0, seatH + (height - seatH) / 2, -depth / 2 + 7.5], 'Backrest'));
+      group.add(createBox(15, height * 0.7, depth, color, [-width / 2 + 7.5, (height * 0.7) / 2, 0], 'Arm_L'));
+      group.add(createBox(15, height * 0.7, depth, color, [width / 2 - 7.5, (height * 0.7) / 2, 0], 'Arm_R'));
+      break;
+    }
+
+    case 'picture': {
+      // Thin frame on the wall
+      group.add(createBox(width, height, 2, '#475569', [0, height / 2, 0], 'Frame'));
+      group.add(createBox(width - 4, height - 4, 0.5, '#ffffff', [0, height / 2, 1.1], 'Canvas'));
+      break;
+    }
+
+    case 'electronics': { // TV
+      group.add(createBox(width, height, 3, '#0f172a', [0, height / 2, 0], 'ScreenBody'));
+      group.add(createBox(width - 2, height - 2, 0.1, '#1e293b', [0, height / 2, 1.6], 'Display'));
+      // Stand if height is above floor
+      group.add(createBox(width * 0.4, 2, depth, '#0f172a', [0, -height/2, 0], 'Base'));
+      break;
+    }
+
+    case 'toilet': {
+      group.add(createBox(width, height * 0.6, depth * 0.6, '#ffffff', [0, height * 0.3, depth * 0.2], 'Bowl'));
+      group.add(createBox(width, height, depth * 0.3, '#ffffff', [0, height * 0.5, -depth * 0.35], 'Tank'));
+      break;
+    }
+
+    case 'bathtub': {
+      group.add(createBox(width, height, depth, '#ffffff', [0, height / 2, 0], 'Body'));
+      // Hollow it out slightly with a "water" plane or just top shadow
+      group.add(createBox(width - 10, 2, depth - 10, '#cbd5e1', [0, height - 2, 0], 'Interior'));
+      break;
+    }
+
+    case 'light': {
+      // Base
+      group.add(createBox(width * 0.5, 2, depth * 0.5, '#475569', [0, 0, 0], 'Base'));
+      // Pole
+      group.add(createBox(2, height - 15, 2, '#94a3b8', [0, (height - 15) / 2, 0], 'Pole'));
+      // Shade
+      group.add(createBox(width, 15, depth, color, [0, height - 7.5, 0], 'Shade'));
+      break;
+    }
+
+    case 'shelf': {
+      const shelfThickness = 2;
+
+      // Vertical Sides
+      group.add(createBox(shelfThickness, height, depth, color, [-width / 2 + shelfThickness / 2, height / 2, 0], 'Side_L'));
+      group.add(createBox(shelfThickness, height, depth, color, [width / 2 - shelfThickness / 2, height / 2, 0], 'Side_R'));
+      
+      // Top & Bottom
+      group.add(createBox(width, shelfThickness, depth, color, [0, shelfThickness / 2, 0], 'Bottom'));
+      group.add(createBox(width, shelfThickness, depth, color, [0, height - shelfThickness / 2, 0], 'Top'));
+
+      // Back panel
+      group.add(createBox(width - shelfThickness * 2, height - shelfThickness * 2, 0.5, color, [0, height / 2, -depth / 2 + 0.25], 'BackPanel'));
+
+      const numLevels = Math.floor(height / 40);
+      if (numLevels > 1) {
+        for (let i = 1; i < numLevels; i++) {
+          const y = (i / numLevels) * height;
+          group.add(createBox(width - shelfThickness * 2, shelfThickness, depth - 2, color, [0, y, 0], `InternalShelf_${i}`));
+        }
+      }
+
+      // Doors if it's a cabinet
+      if (width > 40 && height > 40 && (type.toLowerCase().includes('cabinet') || secondaryColor)) {
+         const doorW = width / 2;
+         group.add(createBox(doorW - 1, height - shelfThickness, 1.5, doorColor, [-doorW/2, height/2, depth/2 + 0.5], 'Door_L'));
+         group.add(createBox(doorW - 1, height - shelfThickness, 1.5, doorColor, [doorW/2, height/2, depth/2 + 0.5], 'Door_R'));
+         
+         // Handles
+         group.add(createBox(1, 10, 1, '#94a3b8', [-doorW/2 + (doorW/4), height/2, depth/2 + 1.5], 'Handle_L'));
+         group.add(createBox(1, 10, 1, '#94a3b8', [doorW/2 - (doorW/4), height/2, depth/2 + 1.5], 'Handle_R'));
+      }
+      break;
+    }
+
+    default: {
+      // Fallback to simple box
+      group.add(createBox(width, height, depth, color, [0, height / 2, 0], 'MainBody'));
+    }
+  }
+
+  return group;
+};

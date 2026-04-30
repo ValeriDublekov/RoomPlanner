@@ -11,7 +11,11 @@ export const exportToOBJ = (scene: THREE.Object3D) => {
 
   // 3. Traverse and clone only Meshes
   scene.traverse((object) => {
-    if ((object as THREE.Mesh).isMesh) {
+    const obj = object as any;
+    // Skip ground, helpers, and edge lines
+    if (obj.name === 'InfiniteFloor' || obj.isHelper || obj.name.includes('Edges')) return;
+    
+    if (obj.isMesh) {
       const mesh = object as THREE.Mesh;
       
       // Clone the mesh so we don't modify the original scene

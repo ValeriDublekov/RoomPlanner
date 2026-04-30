@@ -1,4 +1,5 @@
 import Konva from 'konva';
+import * as THREE from 'three';
 import { useStore } from '../store';
 import { getFurnitureVertices } from '../lib/geometry';
 import { exportToDXF } from '../lib/dxfExport';
@@ -310,29 +311,58 @@ export const useCanvasExport = (stageRef: React.RefObject<Konva.Stage>) => {
   };
 
   const handleExportOBJ = () => {
-    const { rooms, furniture, wallAttachments, pixelsPerCm, wallThickness, wallHeight } = useStore.getState();
-    const scene = generateProjectScene({
-      rooms,
-      furniture,
-      wallAttachments,
-      pixelsPerCm,
-      wallThickness,
-      wallHeight
-    });
-    exportToOBJ(scene);
+    const { threeScene, rooms, furniture, wallAttachments, pixelsPerCm, wallThickness, wallHeight, edgeMode3d, setEdgeMode3d } = useStore.getState();
+    const originalEdgeMode = edgeMode3d;
+
+    const performExport = (scene: THREE.Object3D) => {
+      if (originalEdgeMode) setEdgeMode3d(false);
+      // Small timeout to ensure re-render finishes if needed
+      setTimeout(() => {
+        exportToOBJ(scene);
+        if (originalEdgeMode) setEdgeMode3d(true);
+      }, 50);
+    };
+    
+    if (threeScene) {
+      performExport(threeScene);
+    } else {
+      const scene = generateProjectScene({
+        rooms,
+        furniture,
+        wallAttachments,
+        pixelsPerCm,
+        wallThickness,
+        wallHeight
+      });
+      exportToOBJ(scene);
+    }
   };
 
   const handleExportGLB = () => {
-    const { rooms, furniture, wallAttachments, pixelsPerCm, wallThickness, wallHeight } = useStore.getState();
-    const scene = generateProjectScene({
-      rooms,
-      furniture,
-      wallAttachments,
-      pixelsPerCm,
-      wallThickness,
-      wallHeight
-    });
-    exportToGLB(scene);
+    const { threeScene, rooms, furniture, wallAttachments, pixelsPerCm, wallThickness, wallHeight, edgeMode3d, setEdgeMode3d } = useStore.getState();
+    const originalEdgeMode = edgeMode3d;
+
+    const performExport = (scene: THREE.Object3D) => {
+      if (originalEdgeMode) setEdgeMode3d(false);
+      setTimeout(() => {
+        exportToGLB(scene);
+        if (originalEdgeMode) setEdgeMode3d(true);
+      }, 50);
+    };
+    
+    if (threeScene) {
+      performExport(threeScene);
+    } else {
+      const scene = generateProjectScene({
+        rooms,
+        furniture,
+        wallAttachments,
+        pixelsPerCm,
+        wallThickness,
+        wallHeight
+      });
+      exportToGLB(scene);
+    }
   };
 
   return { handleExport, handlePrint, getStageThumbnail, handleExportDXF, handleExportOBJ, handleExportGLB };

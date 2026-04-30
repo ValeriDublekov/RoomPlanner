@@ -2,16 +2,20 @@ import * as THREE from 'three';
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js';
 
 export const exportToGLB = (scene: THREE.Object3D) => {
-  // 1. Update Matrices (Critical for correct global positions)
+  // 1. Update Matrices (Ensures all children have correct world positions)
   scene.updateMatrixWorld(true);
 
-  // 2. Temporarily hide non-essential objects (Grid, Helpers, etc.)
-  // Designers usually only want Meshes. GLTFExporter naturally handles Groups.
+  // 2. Temporarily hide non-essential objects
   const hiddenObjects: THREE.Object3D[] = [];
   scene.traverse((object) => {
-    // We keep Meshes and Groups (for hierarchy). Hide others if they are helpers/lights/cameras.
     const obj = object as any;
-    if (!obj.isMesh && !obj.isGroup) {
+    
+    // Hide helpers, grids, axes, and the infinite ground plane
+    if (
+      obj.isHelper || 
+      obj.name === 'InfiniteFloor' || 
+      (!obj.isMesh && !obj.isGroup && !obj.isSprite)
+    ) {
       if (object.visible) {
         object.visible = false;
         hiddenObjects.push(object);
@@ -28,7 +32,7 @@ export const exportToGLB = (scene: THREE.Object3D) => {
   // 3. Setup Exporter
   const exporter = new GLTFExporter();
   
-  // 4. Parse the ORIGINAL scene to preserve hierarchy/coordinartes
+  // 4. Parse the scene to preserve hierarchy/coordinates
   exporter.parse(
     scene,
     (gltf) => {
@@ -51,9 +55,10 @@ export const exportToGLB = (scene: THREE.Object3D) => {
       }
     },
     (error) => {
-      console.error('An error happened during GLB export:', error);
+      console.error('GLB Export Error:', error);
       restoreVisibility();
     },
     { binary: true }
   );
 };
+

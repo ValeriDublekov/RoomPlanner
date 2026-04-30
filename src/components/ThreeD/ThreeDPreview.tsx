@@ -137,7 +137,7 @@ const Furniture = ({ item, pixelsPerCm, isChild = false, parentWidth = 0, parent
 };
 
 export const ThreeDPreview: React.FC = () => {
-  const { rooms, furniture, pixelsPerCm, setShow3d, wallThickness, wallHeight, setWallHeight, wallAttachments, edgeMode3d, setEdgeMode3d } = useStore();
+  const { rooms, furniture, pixelsPerCm, setShow3d, wallThickness, wallHeight, setWallHeight, wallAttachments, edgeMode3d, setEdgeMode3d, setThreeScene } = useStore();
   const [isExporting, setIsExporting] = useState(false);
   const [viewMode, setViewMode] = useState<'dollhouse' | 'first-person'>('dollhouse');
 
@@ -322,9 +322,9 @@ export const ThreeDPreview: React.FC = () => {
           )}
 
           <Suspense fallback={null}>
-            <group>
+            <group ref={setThreeScene}>
               {!edgeMode3d && (
-                <mesh rotation={[-Math.PI / 2, 0, 0]} position={[center.x, -0.2, center.z]} receiveShadow>
+                <mesh name="InfiniteFloor" rotation={[-Math.PI / 2, 0, 0]} position={[center.x, -0.2, center.z]} receiveShadow>
                   <planeGeometry args={[10000, 10000]} />
                   <meshStandardMaterial color="#f8fafc" roughness={1} />
                 </mesh>

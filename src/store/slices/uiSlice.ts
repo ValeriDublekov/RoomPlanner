@@ -46,6 +46,8 @@ export interface UISlice {
   setIsDraggingVertex: (isDragging: boolean) => void;
   setPendingFurniture: (furniture: Omit<FurnitureObject, 'id'> | null) => void;
   setContextMenu: (menu: UISlice['contextMenu']) => void;
+  threeScene: any | null;
+  setThreeScene: (scene: any | null) => void;
   viewport: { width: number; height: number };
   setViewport: (dimensions: { width: number; height: number }) => void;
   moveView: (dx: number, dy: number) => void;
@@ -122,6 +124,8 @@ export const createUISlice: StateCreator<AppState, [], [], UISlice> = (set, get)
   setIsDraggingVertex: (isDraggingVertex) => set({ isDraggingVertex }),
   setPendingFurniture: (pendingFurniture) => set({ pendingFurniture }),
   setContextMenu: (contextMenu) => set({ contextMenu }),
+  threeScene: null,
+  setThreeScene: (threeScene) => set({ threeScene }),
   
   moveView: (dx, dy) => set((state) => ({
     position: { x: state.position.x + dx, y: state.position.y + dy }

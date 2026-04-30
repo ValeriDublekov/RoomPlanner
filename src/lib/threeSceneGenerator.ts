@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { RoomObject, FurnitureObject, WallAttachment } from '../types';
 import { getOutwardNormal } from './geometry';
+import { createFurnitureModel } from './furnitureFactory';
 
 interface SceneData {
   rooms: RoomObject[];
@@ -128,52 +129,34 @@ export const generateProjectScene = (state: SceneData) => {
   });
 
   // 2. Process Furniture
-  const processFurnitureItem = (item: FurnitureObject, parentPX = 0, parentPY = 0, parentRot = 0): THREE.Object3D => {
+  furniture.forEach(item => {
+    // Determine the 3D model to use
     const width = item.width / pixelsPerCm;
     const depth = item.height / pixelsPerCm;
     const height = (item.height3d || 75 * pixelsPerCm) / pixelsPerCm;
     const elevation = (item.elevation || 0) / pixelsPerCm;
     const rotationRad = -(item.rotation * Math.PI) / 180;
     
-    // Position matches ThreeDPreview.tsx logic
-    const itemGroup = new THREE.Group();
-    itemGroup.name = item.name || item.furnitureType || 'Furniture';
-
-    if (item.type === 'group' && item.children) {
-      item.children.forEach(child => {
-        const childObj = processFurnitureItem(child, 0, 0, 0); // Children relative to group
-        // Calculate child position relative to group center
-        const localCX = (child.x + child.width / 2 - item.width / 2) / pixelsPerCm;
-        const localCZ = -(child.y + child.height / 2 - item.height / 2) / pixelsPerCm;
-        childObj.position.set(localCX, (child.elevation || 0) / pixelsPerCm, localCZ);
-        childObj.rotation.y = -(child.rotation * Math.PI) / 180;
-        itemGroup.add(childObj);
-      });
-    } else {
-      // Create a simple box representation for now to avoid massive duplication
-      // Special cases for common items
-      const color = item.color || "#f8fafc";
-      const geo = new THREE.BoxGeometry(width, height, depth);
-      const mesh = createMesh(geo, color, itemGroup.name, [0, height/2, 0]);
-      itemGroup.add(mesh);
-    }
-
-    // Set group world position
-    const worldRad = (parentRot * Math.PI) / 180;
-    const worldRotationRad = -(item.rotation * Math.PI) / 180;
-
+    // Get center positioning
     const centerX = (item.x + item.width / 2) / pixelsPerCm;
     const centerZ = (item.y + item.height / 2) / pixelsPerCm;
 
-    itemGroup.position.set(centerX, elevation, centerZ);
-    itemGroup.rotation.y = worldRotationRad;
+    // Use factory for detailed model
+    const furnitureModel = createFurnitureModel(item.furnitureType || 'generic', {
+      width,
+      height,
+      depth,
+      color: item.color || '#f8fafc',
+      secondaryColor: item.secondaryColor
+    });
 
-    return itemGroup;
-  };
+    furnitureModel.position.set(centerX, elevation, centerZ);
+    furnitureModel.rotation.y = rotationRad;
+    furnitureModel.name = item.name || item.furnitureType || 'Furniture';
 
-  furniture.forEach(item => {
-    mainGroup.add(processFurnitureItem(item));
+    mainGroup.add(furnitureModel);
   });
 
   return mainGroup;
 };
+
