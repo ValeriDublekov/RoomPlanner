@@ -83,7 +83,7 @@ const Furniture = ({ item, pixelsPerCm, isChild = false, parentWidth = 0, parent
       case 'bed': return <Bed3D {...props} />;
       case 'desk': return <Desk3D {...props} />;
       case 'wardrobe': return <Wardrobe3D {...props} />;
-      case 'dresser': return <Dresser3D {...props} />;
+      case 'dresser': return <Dresser3D {...props} drawerRows={item.drawerRows} drawerCols={item.drawerCols} />;
       case 'chair': return <Chair3D {...props} />;
       case 'shelf': return <Shelf3D {...props} hasDoors={item.hasDoors} />;
       case 'electronics': return <Electronics3D {...props} hideStand={item.hideStand} />;

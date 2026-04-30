@@ -202,27 +202,42 @@ export const Wardrobe3D: React.FC<ModelProps> = ({ width, depth, height, color, 
       </mesh>
       
       {/* Doors */}
-      {Array.from({ length: numDoors }).map((_, i) => (
-        <group key={i} position={[i * doorWidth + doorWidth / 2 + 1, height / 2, depth + 0.6]}>
-          <mesh castShadow receiveShadow>
-            <boxGeometry args={[doorWidth - 0.5, height - 2, 1]} />
-            <WoodMaterial color={doorColor} />
-          </mesh>
-          
-          {/* Handle */}
-          <mesh position={[i % 2 === 0 ? doorWidth / 3 : -doorWidth / 3, 0, 1.1]} castShadow receiveShadow>
-            <cylinderGeometry args={[handleRadius, handleRadius, handleHeight, 8]} />
-            <SmartMaterial color="#94a3b8" metalness={0.8} roughness={0.2} polygonOffset polygonOffsetFactor={-2} polygonOffsetUnits={-2} />
-          </mesh>
-        </group>
-      ))}
+      {Array.from({ length: numDoors }).map((_, i) => {
+        // Handle position logic: pair them up. 0-1, 2-3, etc.
+        // For the last door in an odd count, put handle on the "opening" side (usually right)
+        const isLeftDoorInPair = i % 2 === 0;
+        const isRightDoorInPair = i % 2 === 1;
+        const isLastOddDoor = i === numDoors - 1 && numDoors % 2 !== 0;
+        
+        const handleXOffset = (isLeftDoorInPair && !isLastOddDoor) 
+          ? doorWidth / 3 
+          : (isRightDoorInPair ? -doorWidth / 3 : -doorWidth / 3);
+
+        return (
+          <group key={i} position={[i * doorWidth + doorWidth / 2 + 1, height / 2, depth + 0.6]}>
+            <mesh castShadow receiveShadow>
+              <boxGeometry args={[doorWidth - 0.5, height - 2, 1]} />
+              <WoodMaterial color={doorColor} />
+            </mesh>
+            
+            {/* Handle */}
+            <mesh position={[handleXOffset, 0, 1.1]} castShadow receiveShadow>
+              <cylinderGeometry args={[handleRadius, handleRadius, handleHeight, 8]} />
+              <SmartMaterial color="#94a3b8" metalness={0.8} roughness={0.2} polygonOffset polygonOffsetFactor={-2} polygonOffsetUnits={-2} />
+            </mesh>
+          </group>
+        );
+      })}
     </group>
   );
 };
 
-export const Dresser3D: React.FC<ModelProps> = ({ width, depth, height, color, secondaryColor }) => {
-  const numDrawers = height < 90 ? 3 : 4;
-  const drawerHeight = (height - 4) / numDrawers;
+export const Dresser3D: React.FC<ModelProps & { drawerRows?: number, drawerCols?: number }> = ({ width, depth, height, color, secondaryColor, drawerRows, drawerCols }) => {
+  const finalCols = drawerCols || Math.ceil(width / 80);
+  const finalRows = drawerRows || Math.max(1, Math.floor(height / 20));
+  
+  const colWidth = (width - 4) / finalCols;
+  const rowHeight = (height - 4) / finalRows;
   const drawerColor = secondaryColor || color;
   const thickness = 2;
   
@@ -250,19 +265,29 @@ export const Dresser3D: React.FC<ModelProps> = ({ width, depth, height, color, s
         <WoodMaterial color={color} />
       </mesh>
       
+      {/* Internal Dividers for columns if more than 1 */}
+      {finalCols > 1 && Array.from({ length: finalCols - 1 }).map((_, i) => (
+        <mesh key={`div-${i}`} position={[(i + 1) * colWidth + 2, height / 2, depth / 2]} castShadow receiveShadow>
+          <boxGeometry args={[thickness, height - thickness * 2, depth - thickness]} />
+          <WoodMaterial color={color} />
+        </mesh>
+      ))}
+
       {/* Drawers */}
-      {Array.from({ length: numDrawers }).map((_, i) => (
-        <group key={i} position={[width / 2, i * drawerHeight + drawerHeight / 2 + 2, depth + 0.3]}>
-          <mesh castShadow receiveShadow>
-            <boxGeometry args={[width - thickness * 2 - 1, drawerHeight - 2, 0.8]} />
-            <WoodMaterial color={drawerColor} />
-          </mesh>
-          {/* Handle */}
-          <mesh position={[0, 0, 0.8]} castShadow receiveShadow>
-            <boxGeometry args={[10, 1, 1]} />
-            <SmartMaterial color="#94a3b8" metalness={0.8} roughness={0.2} polygonOffset polygonOffsetFactor={-2} polygonOffsetUnits={-2} />
-          </mesh>
-        </group>
+      {Array.from({ length: finalCols }).map((_, col) => (
+        Array.from({ length: finalRows }).map((_, row) => (
+          <group key={`${col}-${row}`} position={[col * colWidth + colWidth / 2 + 2, row * rowHeight + rowHeight / 2 + 2, depth + 0.3]}>
+            <mesh castShadow receiveShadow>
+              <boxGeometry args={[colWidth - 1, rowHeight - 2, 0.8]} />
+              <WoodMaterial color={drawerColor} />
+            </mesh>
+            {/* Handle */}
+            <mesh position={[0, 0, 0.8]} castShadow receiveShadow>
+              <boxGeometry args={[Math.min(10, colWidth * 0.5), 1, 1]} />
+              <SmartMaterial color="#94a3b8" metalness={0.8} roughness={0.2} polygonOffset polygonOffsetFactor={-2} polygonOffsetUnits={-2} />
+            </mesh>
+          </group>
+        ))
       ))}
     </group>
   );
@@ -356,7 +381,12 @@ export const Shelf3D: React.FC<ModelProps> = ({ width, depth, height, color, sec
         <group position={[0, height / 2, depth]}>
           {Array.from({ length: numSections }).map((_, i) => {
             const xPos = i * sectionWidth + sectionWidth / 2;
-            const handleSide = (i % 2 === 0) ? 1 : -1;
+            
+            const isLeftDoorInPair = i % 2 === 0;
+            const isRightDoorInPair = i % 2 === 1;
+            const isLastOddDoor = i === numSections - 1 && numSections % 2 !== 0;
+            
+            const handleSide = (isLeftDoorInPair && !isLastOddDoor) ? 1 : -1;
             const handleX = handleSide * (sectionWidth / 2 - 4);
             
             return (

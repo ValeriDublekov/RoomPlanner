@@ -232,49 +232,82 @@ export const FurnitureEditor: React.FC<FurnitureEditorProps> = ({
       </div>
 
       {(selectedFurniture.furnitureType === 'wardrobe' || selectedFurniture.furnitureType === 'dresser' || selectedFurniture.furnitureType === 'bed' || (selectedFurniture.furnitureType === 'shelf' && selectedFurniture.hasDoors)) && (
-        <div className="space-y-1.5 p-3 bg-slate-50 rounded-xl border border-slate-200">
-          <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">
-            {selectedFurniture.furnitureType === 'bed' ? 'Mattress / Pillows Color' : 'Doors / Drawers Color'}
-          </label>
-          <div className="flex gap-2 flex-wrap">
-            {WOOD_COLORS.map(wood => (
-              <button
-                key={wood.id}
-                onClick={() => updateFurniture(selectedFurniture.id, { secondaryColor: wood.color })}
-                className={cn(
-                  "w-6 h-6 rounded-full border-2 transition-all flex items-center justify-center overflow-hidden",
-                  selectedFurniture.secondaryColor === wood.color ? "border-indigo-500 scale-110" : "border-transparent"
-                )}
-                title={wood.name}
-                style={{ backgroundColor: wood.color }}
-              >
-                <div className="w-full h-full opacity-20 bg-[radial-gradient(circle,transparent_20%,#000_20%,#000_40%,transparent_40%,transparent_60%,#000_60%,#000_80%,transparent_80%)] bg-[length:4px_4px]" />
-              </button>
-            ))}
-            <div className="w-px h-6 bg-slate-200 mx-1" />
-            {['#f8fafc', '#f1f5f9', '#e2e8f0', '#cbd5e1', '#94a3b8', '#64748b', '#475569', '#334155'].map(color => (
-              <button
-                key={color}
-                onClick={() => updateFurniture(selectedFurniture.id, { secondaryColor: color })}
-                className={cn(
-                  "w-6 h-6 rounded-full border-2 transition-all",
-                  selectedFurniture.secondaryColor === color ? "border-indigo-500 scale-110" : "border-transparent"
-                )}
-                style={{ backgroundColor: color }}
+        <div className="space-y-3">
+          {selectedFurniture.furnitureType === 'dresser' && (
+            <div className="space-y-1.5 p-3 bg-indigo-50/50 rounded-xl border border-indigo-100 mb-2">
+              <label className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest ml-1">Drawers Configuration</label>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-[9px] font-bold text-slate-400 uppercase tracking-tight ml-1">Columns</label>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="Auto"
+                    value={selectedFurniture.drawerCols || ''}
+                    onChange={(e) => updateFurniture(selectedFurniture.id, { drawerCols: parseInt(e.target.value) || undefined })}
+                    className="w-full bg-white border border-indigo-200 rounded-lg px-3 py-1.5 text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-sm"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[9px] font-bold text-slate-400 uppercase tracking-tight ml-1">Rows</label>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="Auto"
+                    value={selectedFurniture.drawerRows || ''}
+                    onChange={(e) => updateFurniture(selectedFurniture.id, { drawerRows: parseInt(e.target.value) || undefined })}
+                    className="w-full bg-white border border-indigo-200 rounded-lg px-3 py-1.5 text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-sm"
+                  />
+                </div>
+              </div>
+              <p className="text-[8px] text-slate-400 mt-1 italic ml-1">Leave empty for automatic layout</p>
+            </div>
+          )}
+
+          <div className="space-y-1.5 p-3 bg-slate-50 rounded-xl border border-slate-200">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">
+              {selectedFurniture.furnitureType === 'bed' ? 'Mattress / Pillows Color' : 'Doors / Drawers Color'}
+            </label>
+            <div className="flex gap-2 flex-wrap">
+              {WOOD_COLORS.map(wood => (
+                <button
+                  key={wood.id}
+                  onClick={() => updateFurniture(selectedFurniture.id, { secondaryColor: wood.color })}
+                  className={cn(
+                    "w-6 h-6 rounded-full border-2 transition-all flex items-center justify-center overflow-hidden",
+                    selectedFurniture.secondaryColor === wood.color ? "border-indigo-500 scale-110" : "border-transparent"
+                  )}
+                  title={wood.name}
+                  style={{ backgroundColor: wood.color }}
+                >
+                  <div className="w-full h-full opacity-20 bg-[radial-gradient(circle,transparent_20%,#000_20%,#000_40%,transparent_40%,transparent_60%,#000_60%,#000_80%,transparent_80%)] bg-[length:4px_4px]" />
+                </button>
+              ))}
+              <div className="w-px h-6 bg-slate-200 mx-1" />
+              {['#f8fafc', '#f1f5f9', '#e2e8f0', '#cbd5e1', '#94a3b8', '#64748b', '#475569', '#334155'].map(color => (
+                <button
+                  key={color}
+                  onClick={() => updateFurniture(selectedFurniture.id, { secondaryColor: color })}
+                  className={cn(
+                    "w-6 h-6 rounded-full border-2 transition-all",
+                    selectedFurniture.secondaryColor === color ? "border-indigo-500 scale-110" : "border-transparent"
+                  )}
+                  style={{ backgroundColor: color }}
+                />
+              ))}
+              <input 
+                type="color" 
+                value={selectedFurniture.secondaryColor || selectedFurniture.color || '#f8fafc'} 
+                onChange={(e) => updateFurniture(selectedFurniture.id, { secondaryColor: e.target.value })}
+                className="w-6 h-6 rounded-full border-none p-0 overflow-hidden cursor-pointer"
               />
-            ))}
-            <input 
-              type="color" 
-              value={selectedFurniture.secondaryColor || selectedFurniture.color || '#f8fafc'} 
-              onChange={(e) => updateFurniture(selectedFurniture.id, { secondaryColor: e.target.value })}
-              className="w-6 h-6 rounded-full border-none p-0 overflow-hidden cursor-pointer"
-            />
-            <button
-              onClick={() => updateFurniture(selectedFurniture.id, { secondaryColor: undefined })}
-              className="text-[9px] text-slate-400 hover:text-indigo-500 font-bold uppercase tracking-tighter ml-auto"
-            >
-              Same as body
-            </button>
+              <button
+                onClick={() => updateFurniture(selectedFurniture.id, { secondaryColor: undefined })}
+                className="text-[9px] text-slate-400 hover:text-indigo-500 font-bold uppercase tracking-tighter ml-auto"
+              >
+                Same as body
+              </button>
+            </div>
           </div>
         </div>
       )}

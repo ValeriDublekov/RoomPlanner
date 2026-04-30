@@ -36,6 +36,8 @@ export interface FurnitureObject {
   hasDoors?: boolean; // For shelves/cabinets
   hideStand?: boolean; // For electronics/TV
   showLabel?: boolean; // Explicitly show name label
+  drawerRows?: number;
+  drawerCols?: number;
   children?: FurnitureObject[]; // For groups
 }
 

@@ -6,6 +6,9 @@ interface FurnitureParams {
   depth: number;
   color: string;
   secondaryColor?: string;
+  hasDoors?: boolean;
+  drawerRows?: number;
+  drawerCols?: number;
 }
 
 export const createFurnitureModel = (type: string, params: FurnitureParams): THREE.Group => {
@@ -48,9 +51,16 @@ export const createFurnitureModel = (type: string, params: FurnitureParams): THR
         const door = createBox(doorWidth - 0.5, height - 2, 1, doorColor, [xPos, height / 2, depth / 2 + 0.6], `Door_${i}`);
         group.add(door);
         
-        // Handle
-        const handleX = xPos + (i % 2 === 0 ? doorWidth / 3 : -doorWidth / 3);
-        const handle = createBox(2, 15, 1, '#94a3b8', [handleX, height / 2, depth / 2 + 1.2], `Handle_${i}`);
+        // Handle position logic: pair them up. 0-1, 2-3, etc.
+        const isLeftDoorInPair = i % 2 === 0;
+        const isRightDoorInPair = i % 2 === 1;
+        const isLastOddDoor = i === numDoors - 1 && numDoors % 2 !== 0;
+        
+        const handleXOffset = (isLeftDoorInPair && !isLastOddDoor) 
+          ? doorWidth / 3 
+          : (isRightDoorInPair ? -doorWidth / 3 : -doorWidth / 3);
+
+        const handle = createBox(2, 15, 1, '#94a3b8', [xPos + handleXOffset, height / 2, depth / 2 + 1.2], `Handle_${i}`);
         group.add(handle);
       }
       break;
@@ -113,13 +123,22 @@ export const createFurnitureModel = (type: string, params: FurnitureParams): THR
       // Back
       group.add(createBox(width - carcassThickness * 2, height - carcassThickness * 2, 1, color, [0, height / 2, -depth / 2 + 0.5], 'Back'));
 
-      const numDrawers = Math.floor(height / 20);
-      for (let i = 0; i < numDrawers; i++) {
-        const yPos = (i + 0.5) * (height / numDrawers);
-        // Drawer front
-        group.add(createBox(width - carcassThickness * 2 - 1, (height / numDrawers) - 2, 1.5, doorColor, [0, yPos, depth / 2 + 0.2], `Drawer_${i}`));
-        // Handle
-        group.add(createBox(10, 2, 1, '#94a3b8', [0, yPos, depth / 2 + 1.2], `Handle_${i}`));
+      const finalCols = params.drawerCols || Math.ceil(width / 80);
+      const finalRows = params.drawerRows || Math.max(1, Math.floor(height / 20));
+      
+      const colW = (width - 4) / finalCols;
+      const rowH = (height - 4) / finalRows;
+
+      for (let col = 0; col < finalCols; col++) {
+        for (let row = 0; row < finalRows; row++) {
+          const xPos = -width / 2 + (col * colW + colW / 2 + 2);
+          const yPos = row * rowH + rowH / 2 + 2;
+          
+          // Drawer front
+          group.add(createBox(colW - 1, rowH - 2, 1.5, doorColor, [xPos, yPos, depth / 2 + 0.2], `Drawer_${col}_${row}`));
+          // Handle
+          group.add(createBox(Math.min(10, colW * 0.5), 2, 1, '#94a3b8', [xPos, yPos, depth / 2 + 1.2], `Handle_${col}_${row}`));
+        }
       }
       break;
     }
@@ -217,13 +236,25 @@ export const createFurnitureModel = (type: string, params: FurnitureParams): THR
 
       // Doors if it's a cabinet
       if (width > 40 && height > 40 && (type.toLowerCase().includes('cabinet') || secondaryColor)) {
-         const doorW = width / 2;
-         group.add(createBox(doorW - 1, height - shelfThickness, 1.5, doorColor, [-doorW/2, height/2, depth/2 + 0.5], 'Door_L'));
-         group.add(createBox(doorW - 1, height - shelfThickness, 1.5, doorColor, [doorW/2, height/2, depth/2 + 0.5], 'Door_R'));
+         const numSections = Math.floor((width - 1) / 50) + 1;
+         const sectionWidth = width / numSections;
          
-         // Handles
-         group.add(createBox(1, 10, 1, '#94a3b8', [-doorW/2 + (doorW/4), height/2, depth/2 + 1.5], 'Handle_L'));
-         group.add(createBox(1, 10, 1, '#94a3b8', [doorW/2 - (doorW/4), height/2, depth/2 + 1.5], 'Handle_R'));
+         for (let i = 0; i < numSections; i++) {
+           const xPos = -width / 2 + (i * sectionWidth + sectionWidth / 2);
+           
+           const isLeftDoorInPair = i % 2 === 0;
+           const isRightDoorInPair = i % 2 === 1;
+           const isLastOddDoor = i === numSections - 1 && numSections % 2 !== 0;
+           
+           const handleSide = (isLeftDoorInPair && !isLastOddDoor) ? 1 : -1;
+           const handleX = handleSide * (sectionWidth / 2 - 4);
+           
+           // Door front
+           group.add(createBox(sectionWidth - 0.5, height - shelfThickness, 1.5, doorColor, [xPos, height / 2, depth / 2 + 0.5], `Door_${i}`));
+           
+           // Handle
+           group.add(createBox(1, 10, 1, '#94a3b8', [xPos + handleX, height / 2, depth / 2 + 1.5], `Handle_${i}`));
+         }
       }
       break;
     }
