@@ -41,8 +41,8 @@ This document tracks known logical complexities, suboptimal implementations, and
 - **Refactoring Strategy**: Move these into a cohesive `SettingsPanel.tsx` or handle via a single `SystemBar` component.
 
 ## 5. Viewport Logic
-
+ 
 ### Right Sidebar Overlap
-- **Status**: Improved but could be better
-- **Issue**: `fitToScreen` and `ensureVisible` use hardcoded offsets (60, 400) to account for the sidebar.
-- **Refactoring Strategy**: Use a dynamic layout listener to detect visible drawing area dimensions instead of hardcoding sidebar widths.
+- **Status**: Resolved
+- **Issue**: `fitToScreen` and `ensureVisible` used hardcoded offsets (60, 400) to account for the sidebar.
+- **Outcome**: Implemented `sidebarWidth` in store, dynamically updated via `ResizeObserver` in `RightSidebar.tsx`. Updated `fitToScreen` and `ensureVisible` to use this dynamic width.

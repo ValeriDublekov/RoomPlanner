@@ -29,7 +29,8 @@ export const Canvas: React.FC = () => {
     selectedId, selectedRoomId, selectedDimensionId, selectedAttachmentId,
     wallAttachments, dimensions: savedDimensions,
     ensureVisible,
-    setViewport
+    setViewport,
+    sidebarWidth
   } = useStore();
 
   // Auto-focus selected object if it's covered by UI
@@ -68,7 +69,7 @@ export const Canvas: React.FC = () => {
     if (bounds) {
       ensureVisible(bounds);
     }
-  }, [selectedId, selectedRoomId, selectedDimensionId, selectedAttachmentId, dimensions.width, dimensions.height, furniture, rooms, savedDimensions, wallAttachments, ensureVisible]);
+  }, [selectedId, selectedRoomId, selectedDimensionId, selectedAttachmentId, dimensions.width, dimensions.height, furniture, rooms, savedDimensions, wallAttachments, ensureVisible, sidebarWidth]);
 
   const [hasAutoFitted, setHasAutoFitted] = useState(false);
   const [bgImage] = useImage(backgroundImage || '');

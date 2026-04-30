@@ -3,6 +3,8 @@ import { useStore } from '../store';
 import { PropertyEditor } from './Sidebar/PropertyEditor';
 
 export const RightSidebar: React.FC = () => {
+  const sidebarRef = React.useRef<HTMLDivElement>(null);
+  const setSidebarWidth = useStore(state => state.setSidebarWidth);
   const selectedId = useStore(state => state.selectedId);
   const furniture = useStore(state => state.furniture);
   const updateFurniture = useStore(state => state.updateFurniture);
@@ -31,12 +33,31 @@ export const RightSidebar: React.FC = () => {
   const selectedDimension = dimensions.find(d => d.id === selectedDimensionId);
   const selectedAttachment = wallAttachments.find(a => a.id === selectedAttachmentId);
 
-  if (!selectedFurniture && !selectedRoom && !selectedDimension && !selectedAttachment) {
+  const isVisible = !!(selectedFurniture || selectedRoom || selectedDimension || selectedAttachment);
+
+  React.useEffect(() => {
+    if (isVisible && sidebarRef.current) {
+      const resizeObserver = new ResizeObserver((entries) => {
+        for (const entry of entries) {
+          setSidebarWidth(entry.contentRect.width);
+        }
+      });
+      resizeObserver.observe(sidebarRef.current);
+      return () => resizeObserver.disconnect();
+    } else {
+      setSidebarWidth(0);
+    }
+  }, [isVisible, setSidebarWidth]);
+
+  if (!isVisible) {
     return null;
   }
 
   return (
-    <aside className="w-80 lg:w-[350px] xl:w-[400px] flex-shrink-0 bg-white border-l border-slate-200 flex flex-col h-full shadow-2xl lg:shadow-sm z-30 overflow-hidden absolute lg:relative right-0 top-0 bottom-0 max-w-[calc(100vw-4rem)]">
+    <aside 
+      ref={sidebarRef}
+      className="w-80 lg:w-[350px] xl:w-[400px] flex-shrink-0 bg-white border-l border-slate-200 flex flex-col h-full shadow-2xl lg:shadow-sm z-30 overflow-hidden absolute lg:relative right-0 top-0 bottom-0 max-w-[calc(100vw-4rem)]"
+    >
       <div className="h-14 border-b border-slate-100 flex items-center justify-between px-6 bg-slate-50/50">
         <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Properties</h2>
         <button 

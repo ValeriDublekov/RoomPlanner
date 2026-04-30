@@ -49,6 +49,8 @@ export interface UISlice {
   threeScene: any | null;
   setThreeScene: (scene: any | null) => void;
   viewport: { width: number; height: number };
+  sidebarWidth: number;
+  setSidebarWidth: (width: number) => void;
   setViewport: (dimensions: { width: number; height: number }) => void;
   moveView: (dx: number, dy: number) => void;
   resetView: () => void;
@@ -82,7 +84,9 @@ export const createUISlice: StateCreator<AppState, [], [], UISlice> = (set, get)
     targetType: null,
   },
   viewport: { width: 0, height: 0 },
+  sidebarWidth: 0,
   setViewport: (viewport) => set({ viewport }),
+  setSidebarWidth: (sidebarWidth) => set({ sidebarWidth }),
 
   setScale: (scale) => set({ scale }),
   setPosition: (position) => set({ position }),
@@ -134,8 +138,11 @@ export const createUISlice: StateCreator<AppState, [], [], UISlice> = (set, get)
   resetView: () => set({ scale: 1, position: { x: 0, y: 0 } }),
   
   fitToScreen: (width, height) => {
-    const { rooms, furniture, viewport } = get();
-    const w = width ?? viewport.width;
+    const { rooms, furniture, viewport, sidebarWidth } = get();
+    // Account for overlapping sidebar if viewport width is small (below lg breakpoint)
+    const activeSidebarWidth = window.innerWidth < 1024 ? sidebarWidth : 0;
+    
+    const w = (width ?? viewport.width) - activeSidebarWidth;
     const h = height ?? viewport.height;
     
     if (w === 0 || h === 0) return;
@@ -178,16 +185,17 @@ export const createUISlice: StateCreator<AppState, [], [], UISlice> = (set, get)
   },
 
   ensureVisible: (bounds, width, height) => {
-    const { scale, position, viewport } = get();
+    const { scale, position, viewport, sidebarWidth } = get();
     const w = width ?? viewport.width;
     const h = height ?? viewport.height;
     
     if (w === 0 || h === 0) return;
-    // Sidebar on the right occupies space. On large screens it's relative, 
-    // but on smaller it might be absolute or the layout might not have updated yet.
-    // We add a significant right padding to account for the property editor.
+    
+    // Account for overlapping sidebar if viewport width is small (below lg breakpoint)
+    const activeSidebarWidth = window.innerWidth < 1024 ? sidebarWidth : 0;
+    
     const padding = 60; 
-    const rightPadding = w > 1024 ? 60 : 400; // Account for right sidebar if it's likely absolute/overlapping
+    const rightMargin = padding + activeSidebarWidth;
     
     // Convert world bounds to screen bounds
     const screenMinX = bounds.minX * scale + position.x;
@@ -198,8 +206,8 @@ export const createUISlice: StateCreator<AppState, [], [], UISlice> = (set, get)
     let dx = 0;
     let dy = 0;
 
-    // Check right edge (property sidebar side)
-    const effectiveWidth = w - rightPadding;
+    // Check right edge
+    const effectiveWidth = w - rightMargin;
     if (screenMaxX > effectiveWidth) {
       dx = effectiveWidth - screenMaxX;
     }
