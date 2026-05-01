@@ -34,9 +34,20 @@ export interface ObjectMaterials {
 export interface InteriorTheme {
   id: string;
   name: string;
-  wallPalette: string[]; // [main, secondary, accent]
-  woodPalette: string[]; // [base, front]
-  textilePalette: string[]; // [bed/sheets, sofa/rug, accent]
+  wallColors: {
+    base: string;
+    secondary: string;
+    accent: string;
+  };
+  woodColors: {
+    base: string;
+    front: string;
+  };
+  textileColors: {
+    main: string;
+    secondary: string;
+    accent: string;
+  };
 }
 
 export interface FurnitureObject {

@@ -1,21 +1,7 @@
 import { InteriorTheme, FurnitureObject, ObjectMaterials, RoomObject } from '../types';
+import { INTERIOR_THEMES } from '../config/themes';
 
-export const INTERIOR_THEMES: InteriorTheme[] = [
-  {
-    id: 'scandi_light',
-    name: 'Scandinavian Light',
-    wallPalette: ['#F0EDE5', '#E6D6C5', '#9DC183'],
-    woodPalette: ['#d1bfae', '#FFFFFF'],
-    textilePalette: ['#FFFFFF', '#D3D3D3', '#FFDB58']
-  },
-  {
-    id: 'industrial_dark',
-    name: 'Industrial Loft',
-    wallPalette: ['#2D2D2D', '#4A4A4A', '#C6714E'],
-    woodPalette: ['#5D4037', '#212121'],
-    textilePalette: ['#BDBDBD', '#424242', '#C6714E']
-  }
-];
+export { INTERIOR_THEMES };
 
 export const applyThemeToMaterials = (
   materials: ObjectMaterials, 
@@ -25,26 +11,26 @@ export const applyThemeToMaterials = (
   const newMaterials = { ...materials };
 
   if (newMaterials.woodBase) {
-    newMaterials.woodBase = { source: 'theme', value: theme.woodPalette[0] };
+    newMaterials.woodBase = { source: 'theme', value: theme.woodColors.base };
   }
   
   if (newMaterials.woodFront) {
     newMaterials.woodFront = { 
       source: 'theme', 
-      value: theme.woodPalette[1] || theme.woodPalette[0] 
+      value: theme.woodColors.front 
     };
   }
 
   if (newMaterials.textileMain) {
     if (furnitureType === 'bed') {
-      newMaterials.textileMain = { source: 'theme', value: theme.textilePalette[0] };
+      newMaterials.textileMain = { source: 'theme', value: theme.textileColors.main };
     } else {
-      newMaterials.textileMain = { source: 'theme', value: theme.textilePalette[1] };
+      newMaterials.textileMain = { source: 'theme', value: theme.textileColors.secondary };
     }
   }
 
   if (newMaterials.textileAccent) {
-    newMaterials.textileAccent = { source: 'theme', value: theme.textilePalette[2] };
+    newMaterials.textileAccent = { source: 'theme', value: theme.textileColors.accent };
   }
 
   return newMaterials;
@@ -74,14 +60,14 @@ export const applyThemeToRoom = (
   theme: InteriorTheme
 ): RoomObject => {
   const currentMaterials = room.materials || {
-    wallBase: { source: 'theme', value: theme.wallPalette[0] }
+    wallBase: { source: 'theme', value: theme.wallColors.base }
   };
 
   return {
     ...room,
     materials: {
       ...currentMaterials,
-      wallBase: { source: 'theme', value: theme.wallPalette[0] }
+      wallBase: { source: 'theme', value: theme.wallColors.base }
     }
   };
 };

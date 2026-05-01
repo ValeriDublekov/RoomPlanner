@@ -1,0 +1,18 @@
+{
+  "id": "scandi_breeze",
+  "name": "Scandinavian Breeze",
+  "wallColors": {
+    "base": "#F4F6F7",
+    "secondary": "#E5E9EB",
+    "accent": "#A3B1C6"
+  },
+  "woodColors": {
+    "base": "#D4CFC9",
+    "front": "#FFFFFF"
+  },
+  "textileColors": {
+    "main": "#FFFFFF",
+    "secondary": "#CFD4D8",
+    "accent": "#6D8299"
+  }
+}

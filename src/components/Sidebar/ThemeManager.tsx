@@ -48,32 +48,32 @@ export const ThemeManager: React.FC = () => {
                 )}
               </div>
 
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <div className="text-[9px] font-bold text-slate-400 uppercase w-12 text-right">Walls</div>
-                  <div className="flex gap-1">
-                    {theme.wallPalette.map((c, i) => (
-                      <div key={i} className="w-5 h-5 rounded-full border border-slate-200" style={{ backgroundColor: c }} />
-                    ))}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="text-[9px] font-bold text-slate-400 uppercase w-12 text-right">Walls</div>
+                    <div className="flex gap-1">
+                      {[theme.wallColors.base, theme.wallColors.secondary, theme.wallColors.accent].map((c, i) => (
+                        <div key={i} className="w-5 h-5 rounded-full border border-slate-200" style={{ backgroundColor: c }} />
+                      ))}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="text-[9px] font-bold text-slate-400 uppercase w-12 text-right">Wood</div>
+                    <div className="flex gap-1">
+                      {[theme.woodColors.base, theme.woodColors.front].map((c, i) => (
+                        <div key={i} className="w-5 h-5 rounded-md border border-slate-200" style={{ backgroundColor: c }} />
+                      ))}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="text-[9px] font-bold text-slate-400 uppercase w-12 text-right">Textile</div>
+                    <div className="flex gap-1">
+                      {[theme.textileColors.main, theme.textileColors.secondary, theme.textileColors.accent].map((c, i) => (
+                        <div key={i} className="w-5 h-5 rounded-sm border border-slate-200" style={{ backgroundColor: c }} />
+                      ))}
+                    </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="text-[9px] font-bold text-slate-400 uppercase w-12 text-right">Wood</div>
-                  <div className="flex gap-1">
-                    {theme.woodPalette.map((c, i) => (
-                      <div key={i} className="w-5 h-5 rounded-md border border-slate-200" style={{ backgroundColor: c }} />
-                    ))}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="text-[9px] font-bold text-slate-400 uppercase w-12 text-right">Textile</div>
-                  <div className="flex gap-1">
-                    {theme.textilePalette.map((c, i) => (
-                      <div key={i} className="w-5 h-5 rounded-sm border border-slate-200" style={{ backgroundColor: c }} />
-                    ))}
-                  </div>
-                </div>
-              </div>
             </button>
           ))}
         </div>

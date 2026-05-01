@@ -1,0 +1,18 @@
+{
+  "id": "scandi_nature",
+  "name": "Scandinavian Nature",
+  "wallColors": {
+    "base": "#F5F5F0",
+    "secondary": "#EAEBE4",
+    "accent": "#A8B8A5"
+  },
+  "woodColors": {
+    "base": "#C9B7A6",
+    "front": "#FFFFFF"
+  },
+  "textileColors": {
+    "main": "#F9F9F9",
+    "secondary": "#B5C1B2",
+    "accent": "#C48B71"
+  }
+}

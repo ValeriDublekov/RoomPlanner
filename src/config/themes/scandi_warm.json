@@ -1,0 +1,18 @@
+{
+  "id": "scandi_warm",
+  "name": "Scandinavian Warmth",
+  "wallColors": {
+    "base": "#FAF8F5",
+    "secondary": "#E8E2D9",
+    "accent": "#D2C5B8"
+  },
+  "woodColors": {
+    "base": "#C8A98B",
+    "front": "#F0ECE3"
+  },
+  "textileColors": {
+    "main": "#FEFCF5",
+    "secondary": "#D9CFC4",
+    "accent": "#D49A89"
+  }
+}

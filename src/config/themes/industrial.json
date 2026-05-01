@@ -1,0 +1,18 @@
+{
+  "id": "industrial_dark",
+  "name": "Industrial Loft",
+  "wallColors": {
+    "base": "#2D2D2D",
+    "secondary": "#4A4A4A",
+    "accent": "#C6714E"
+  },
+  "woodColors": {
+    "base": "#5D4037",
+    "front": "#212121"
+  },
+  "textileColors": {
+    "main": "#BDBDBD",
+    "secondary": "#424242",
+    "accent": "#C6714E"
+  }
+}

@@ -3,10 +3,40 @@ import { X, RotateCcw, RotateCw, ArrowUpToLine, ChevronUp, ChevronDown, ArrowDow
 import { FurnitureObject, MaterialSlot, ObjectMaterials, InteriorTheme } from '../../../types';
 import { WOOD_COLORS } from '../../../constants';
 import { cn } from '../../../lib/utils';
-import { Palette, Link, Link2Off } from 'lucide-react';
+import { Palette, Link, Link2Off, Pipette } from 'lucide-react';
 import { useStore } from '../../../store';
 import { INTERIOR_THEMES } from '../../../lib/themes';
 import { getDefaultMaterialsForType } from '../../../lib/materials';
+
+const CURATED_PALETTES = {
+  hard: {
+    wood: [
+      { name: 'Light Oak', color: '#d1bfae' },
+      { name: 'Walnut', color: '#5c4033' },
+      { name: 'Cherry', color: '#7b3f00' }
+    ],
+    solid: [
+      { name: 'Matte White', color: '#FAFAFA' },
+      { name: 'Matte Black', color: '#2b2b2b' },
+      { name: 'Light Grey', color: '#D3D3D3' },
+      { name: 'Graphite', color: '#4a4a4a' }
+    ]
+  },
+  soft: {
+    foundation: [
+      { name: 'White', color: '#FFFFFF' },
+      { name: 'Linen', color: '#e8dcc4' },
+      { name: 'Light Grey', color: '#d3d3d3' },
+      { name: 'Dark Grey', color: '#5a5a5a' }
+    ],
+    colors: [
+      { name: 'Royal Blue', color: '#1c39bb' },
+      { name: 'Mustard', color: '#ffdb58' },
+      { name: 'Emerald', color: '#50c878' },
+      { name: 'Pale Pink', color: '#f8c8dc' }
+    ]
+  }
+};
 
 interface FurnitureEditorProps {
   selectedFurniture: FurnitureObject;
@@ -30,10 +60,12 @@ const MaterialPicker: React.FC<{
 }> = ({ label, slot, onChange, activeTheme, slotType, furnitureType }) => {
   if (!slot) return null;
 
+  const [showAdvanced, setShowAdvanced] = React.useState(false);
+
   const getThemePalette = () => {
     if (!activeTheme) return [];
-    if (slotType === 'woodBase' || slotType === 'woodFront') return activeTheme.woodPalette;
-    if (slotType === 'textileMain' || slotType === 'textileAccent') return activeTheme.textilePalette;
+    if (slotType === 'woodBase' || slotType === 'woodFront') return [activeTheme.woodColors.base, activeTheme.woodColors.front];
+    if (slotType === 'textileMain' || slotType === 'textileAccent') return [activeTheme.textileColors.main, activeTheme.textileColors.secondary, activeTheme.textileColors.accent];
     return [];
   };
 
@@ -45,12 +77,12 @@ const MaterialPicker: React.FC<{
       // Switching to Theme mode - reset to default for this slot
       let resetValue = slot.value;
       if (activeTheme) {
-        if (slotType === 'woodBase') resetValue = activeTheme.woodPalette[0];
-        if (slotType === 'woodFront') resetValue = activeTheme.woodPalette[1] || activeTheme.woodPalette[0];
+        if (slotType === 'woodBase') resetValue = activeTheme.woodColors.base;
+        if (slotType === 'woodFront') resetValue = activeTheme.woodColors.front;
         if (slotType === 'textileMain') {
-          resetValue = (furnitureType === 'bed') ? activeTheme.textilePalette[0] : activeTheme.textilePalette[1];
+          resetValue = (furnitureType === 'bed') ? activeTheme.textileColors.main : activeTheme.textileColors.secondary;
         }
-        if (slotType === 'textileAccent') resetValue = activeTheme.textilePalette[2];
+        if (slotType === 'textileAccent') resetValue = activeTheme.textileColors.accent;
       }
       onChange({ source: 'theme', value: resetValue });
     } else {
@@ -58,10 +90,16 @@ const MaterialPicker: React.FC<{
     }
   };
 
+  const isHardMaterial = slotType === 'woodBase' || slotType === 'woodFront';
+  const curated = isHardMaterial ? CURATED_PALETTES.hard : CURATED_PALETTES.soft;
+
   return (
-    <div className="space-y-2 p-3 bg-slate-50 rounded-2xl border border-slate-200 shadow-sm transition-all hover:bg-white hover:shadow-md">
+    <div className="space-y-3 p-3 bg-slate-50 rounded-2xl border border-slate-200 shadow-sm transition-all hover:bg-white hover:shadow-md">
       <div className="flex items-center justify-between">
-        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">{label}</label>
+        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
+          <Palette size={12} className="text-slate-400" />
+          {label}
+        </label>
         <div className="flex bg-slate-200 p-0.5 rounded-lg">
           <button
             onClick={() => isThemeMode ? null : handleToggle()}
@@ -84,15 +122,15 @@ const MaterialPicker: React.FC<{
         </div>
       </div>
 
-      <div className="flex gap-2 flex-wrap items-center">
+      <div className="space-y-3">
         {isThemeMode ? (
-          <>
+          <div className="flex gap-2 flex-wrap items-center">
             {palette.map((color, i) => (
               <button
                 key={i}
                 onClick={() => onChange({ value: color })}
                 className={cn(
-                  "w-6 h-6 rounded-full border-2 transition-all",
+                  "w-7 h-7 rounded-full border-2 transition-all",
                   slot.value === color ? "border-indigo-500 scale-110 shadow-sm" : "border-white hover:scale-105"
                 )}
                 style={{ backgroundColor: color }}
@@ -101,42 +139,63 @@ const MaterialPicker: React.FC<{
             {palette.length === 0 && (
               <span className="text-[10px] text-slate-400 italic">No theme active</span>
             )}
-          </>
+          </div>
         ) : (
-          <>
-            {WOOD_COLORS.map(wood => (
+          <div className="space-y-3">
+            <div className="space-y-2">
+              {Object.entries(curated).map(([groupName, colors]) => (
+                <div key={groupName} className="space-y-1">
+                  <span className="text-[8px] font-semibold text-slate-400 uppercase tracking-tighter ml-0.5">
+                    {groupName}
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {colors.map((c) => (
+                      <button
+                        key={c.color}
+                        onClick={() => onChange({ value: c.color })}
+                        className={cn(
+                          "w-6 h-6 rounded-lg border-2 transition-all relative overflow-hidden",
+                          slot.value === c.color ? "border-amber-500 scale-110 z-10 shadow-md" : "border-transparent hover:scale-105"
+                        )}
+                        title={c.name}
+                        style={{ backgroundColor: c.color }}
+                      >
+                        {isHardMaterial && groupName === 'wood' && (
+                           <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle,transparent_20%,#000_20%,#000_40%,transparent_40%,transparent_60%,#000_60%,#000_80%,transparent_80%)] bg-[length:4px_4px]" />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="pt-1 mt-1 border-t border-slate-100 flex items-center justify-between">
               <button
-                key={wood.id}
-                onClick={() => onChange({ value: wood.color })}
+                onClick={() => setShowAdvanced(!showAdvanced)}
                 className={cn(
-                  "w-6 h-6 rounded-full border-2 transition-all flex items-center justify-center overflow-hidden",
-                  slot.value === wood.color ? "border-indigo-500 scale-110 shadow-sm" : "border-transparent hover:scale-105"
+                  "flex items-center gap-1.5 text-[10px] font-medium transition-colors p-1 rounded-md",
+                  showAdvanced ? "text-indigo-600 bg-indigo-50" : "text-slate-400 hover:text-slate-600 hover:bg-slate-100"
                 )}
-                title={wood.name}
-                style={{ backgroundColor: wood.color }}
               >
-                <div className="w-full h-full opacity-20 bg-[radial-gradient(circle,transparent_20%,#000_20%,#000_40%,transparent_40%,transparent_60%,#000_60%,#000_80%,transparent_80%)] bg-[length:4px_4px]" />
+                <Pipette size={12} />
+                Advanced
               </button>
-            ))}
-            <div className="w-px h-6 bg-slate-200 mx-1" />
-            {['#f8fafc', '#f1f5f9', '#e2e8f0', '#cbd5e1', '#94a3b8', '#64748b', '#475569', '#334155'].map(color => (
-              <button
-                key={color}
-                onClick={() => onChange({ value: color })}
-                className={cn(
-                  "w-6 h-6 rounded-full border-2 transition-all",
-                  slot.value === color ? "border-indigo-500 scale-110 shadow-sm" : "border-transparent hover:scale-105"
-                )}
-                style={{ backgroundColor: color }}
-              />
-            ))}
-            <input 
-              type="color" 
-              value={slot.value} 
-              onChange={(e) => onChange({ value: e.target.value })}
-              className="w-6 h-6 rounded-full border-none p-0 overflow-hidden cursor-pointer hover:scale-105 transition-transform"
-            />
-          </>
+              {showAdvanced && (
+                <div className="flex items-center gap-2">
+                  <div className="text-[10px] font-mono text-slate-500 bg-white px-2 py-0.5 rounded border border-slate-200 uppercase">
+                    {slot.value}
+                  </div>
+                  <input 
+                    type="color" 
+                    value={slot.value} 
+                    onChange={(e) => onChange({ value: e.target.value })}
+                    className="w-6 h-6 rounded-full border-none p-0 overflow-hidden cursor-pointer hover:scale-110 transition-transform"
+                  />
+                </div>
+              )}
+            </div>
+          </div>
         )}
       </div>
     </div>

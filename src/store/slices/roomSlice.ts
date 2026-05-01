@@ -161,7 +161,7 @@ export const createRoomSlice: StateCreator<AppState, [], [], RoomSlice> = (set, 
       materials: {
         wallBase: { 
           source: 'theme', 
-          value: activeTheme ? activeTheme.wallPalette[0] : '#f8fafc' 
+          value: activeTheme ? activeTheme.wallColors.base : '#f8fafc' 
         }
       }
     };
@@ -190,7 +190,7 @@ export const createRoomSlice: StateCreator<AppState, [], [], RoomSlice> = (set, 
       materials: {
         wallBase: { 
           source: 'theme', 
-          value: activeTheme ? activeTheme.wallPalette[0] : '#f8fafc' 
+          value: activeTheme ? activeTheme.wallColors.base : '#f8fafc' 
         }
       }
     };

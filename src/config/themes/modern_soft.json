@@ -1,0 +1,18 @@
+{
+  "id": "modern_soft",
+  "name": "Soft Minimalist",
+  "wallColors": {
+    "base": "#FCFCFC",
+    "secondary": "#EBEBEB",
+    "accent": "#C9C9C9"
+  },
+  "woodColors": {
+    "base": "#DFD8CD",
+    "front": "#E0E0E0"
+  },
+  "textileColors": {
+    "main": "#FFFFFF",
+    "secondary": "#BDBDBD",
+    "accent": "#CBAEAE"
+  }
+}

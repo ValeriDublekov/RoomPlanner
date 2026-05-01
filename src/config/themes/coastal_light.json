@@ -1,0 +1,18 @@
+{
+  "id": "coastal_light",
+  "name": "Coastal Light",
+  "wallColors": {
+    "base": "#FFFFFF",
+    "secondary": "#F0EAD6",
+    "accent": "#B0D0D3"
+  },
+  "woodColors": {
+    "base": "#D7D0C8",
+    "front": "#FFFFFF"
+  },
+  "textileColors": {
+    "main": "#FFFFFF",
+    "secondary": "#E0D4C3",
+    "accent": "#4F758B"
+  }
+}

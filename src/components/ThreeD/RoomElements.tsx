@@ -196,7 +196,7 @@ export const WallSegments: React.FC<{
       
       // If we don't have materials or specifically set wall colors, and there's a theme, use theme default
       if (!room.wallColors?.[i] && !room.materials?.wallBase && activeTheme) {
-        segmentColor = activeTheme.wallPalette[0];
+        segmentColor = activeTheme.wallColors.base;
       }
 
       const normal = getOutwardNormal(room.points, i);
