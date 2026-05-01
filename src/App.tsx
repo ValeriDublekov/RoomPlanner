@@ -20,6 +20,7 @@ export default function App() {
   const toggleJsonViewer = useStore(state => state.toggleJsonViewer);
   const setCurrentUser = useStore(state => state.setCurrentUser);
   const setIsAuthLoading = useStore(state => state.setIsAuthLoading);
+  const tempCalibrationDist = useStore(state => state.tempCalibrationDist);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -31,7 +32,7 @@ export default function App() {
 
   return (
     <div className="flex h-screen w-full bg-slate-100 overflow-hidden font-sans antialiased text-slate-900">
-      <CalibrationModal />
+      {tempCalibrationDist !== null && <CalibrationModal />}
       <JsonViewerModal isOpen={showJsonViewer} onClose={() => toggleJsonViewer(false)} />
       {show3d && (
         <ErrorBoundary>

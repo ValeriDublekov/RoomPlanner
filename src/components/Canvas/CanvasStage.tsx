@@ -10,7 +10,7 @@ import { ContextMenu } from './ContextMenu';
 import { useStageContextMenu } from '../../hooks/useStageContextMenu';
 
 interface CanvasStageProps {
-  stageRef: React.RefObject<Konva.Stage>;
+  stageRef: React.RefObject<Konva.Stage | null>;
   dimensions: { width: number; height: number };
   scale: number;
   position: { x: number; y: number };
@@ -23,8 +23,8 @@ interface CanvasStageProps {
   onDblClick: (e: Konva.KonvaEventObject<MouseEvent>) => void;
   onMouseMove: (e: Konva.KonvaEventObject<MouseEvent>) => void;
   bgImage: HTMLImageElement | undefined;
-  bgRef: React.RefObject<Konva.Image>;
-  bgTrRef: React.RefObject<Konva.Transformer>;
+  bgRef: React.RefObject<Konva.Image | null>;
+  bgTrRef: React.RefObject<Konva.Transformer | null>;
   snappedMouse: { x: number; y: number };
   mousePos: { x: number; y: number };
 }

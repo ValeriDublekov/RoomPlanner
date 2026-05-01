@@ -5,8 +5,8 @@ import { useStore } from '../../../store';
 
 interface BackgroundLayerProps {
   bgImage: HTMLImageElement | undefined;
-  bgRef: React.RefObject<Konva.Image>;
-  bgTrRef: React.RefObject<Konva.Transformer>;
+  bgRef: React.RefObject<Konva.Image | null>;
+  bgTrRef: React.RefObject<Konva.Transformer | null>;
 }
 
 export const BackgroundLayer: React.FC<BackgroundLayerProps> = ({

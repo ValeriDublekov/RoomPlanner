@@ -2,8 +2,35 @@ import React from 'react';
 import { useStore } from '@/src/store';
 import { PropertyEditor, SceneExplorer } from '@/src/components/Sidebar';
 import { ThemeManager } from '@/src/components/Sidebar/ThemeManager';
-import { PanelLeftClose, Settings2, ListTree, Sparkles } from 'lucide-react';
+import { PanelLeftClose, Settings2, ListTree, Sparkles, LucideIcon } from 'lucide-react';
 import { cn } from '../lib/utils';
+
+interface TabButtonProps {
+  id: 'explorer' | 'properties' | 'themes';
+  activeTab: 'explorer' | 'properties' | 'themes';
+  setActiveTab: (tab: 'explorer' | 'properties' | 'themes') => void;
+  icon: LucideIcon;
+  label: string;
+  isObjectSelected: boolean;
+}
+
+const TabButton: React.FC<TabButtonProps> = ({ id, activeTab, setActiveTab, icon: Icon, label, isObjectSelected }) => (
+  <button
+    onClick={() => setActiveTab(id)}
+    className={cn(
+      "flex-1 flex items-center justify-center gap-2 py-3 px-2 text-[10px] font-bold uppercase tracking-wider transition-all border-b-2",
+      activeTab === id 
+        ? "text-indigo-600 border-indigo-600 bg-indigo-50/30" 
+        : "text-slate-400 border-transparent hover:text-slate-600 hover:bg-slate-50"
+    )}
+  >
+    <Icon size={14} />
+    <span className="hidden sm:inline">{label}</span>
+    {id === 'properties' && isObjectSelected && (
+      <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
+    )}
+  </button>
+);
 
 export const RightSidebar: React.FC = () => {
   const sidebarRef = React.useRef<HTMLDivElement>(null);
@@ -48,6 +75,7 @@ export const RightSidebar: React.FC = () => {
   // Automatically switch to properties when something is selected
   React.useEffect(() => {
     if (isObjectSelected) {
+      /* eslint-disable-next-line react-hooks/set-state-in-effect */
       setActiveTab('properties');
     }
   }, [isObjectSelected]);
@@ -64,24 +92,6 @@ export const RightSidebar: React.FC = () => {
     }
   }, [setSidebarWidth]);
 
-  const TabButton = ({ id, icon: Icon, label }: { id: typeof activeTab, icon: any, label: string }) => (
-    <button
-      onClick={() => setActiveTab(id)}
-      className={cn(
-        "flex-1 flex items-center justify-center gap-2 py-3 px-2 text-[10px] font-bold uppercase tracking-wider transition-all border-b-2",
-        activeTab === id 
-          ? "text-indigo-600 border-indigo-600 bg-indigo-50/30" 
-          : "text-slate-400 border-transparent hover:text-slate-600 hover:bg-slate-50"
-      )}
-    >
-      <Icon size={14} />
-      <span className="hidden sm:inline">{label}</span>
-      {id === 'properties' && isObjectSelected && (
-        <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
-      )}
-    </button>
-  );
-
   return (
     <aside 
       ref={sidebarRef}
@@ -92,9 +102,9 @@ export const RightSidebar: React.FC = () => {
     >
       {/* Tabs Header */}
       <div className="flex border-b border-slate-100 bg-white">
-        <TabButton id="explorer" icon={ListTree} label="Explorer" />
-        <TabButton id="properties" icon={Settings2} label="Properties" />
-        <TabButton id="themes" icon={Sparkles} label="Themes" />
+        <TabButton id="explorer" activeTab={activeTab} setActiveTab={setActiveTab} icon={ListTree} label="Explorer" isObjectSelected={isObjectSelected} />
+        <TabButton id="properties" activeTab={activeTab} setActiveTab={setActiveTab} icon={Settings2} label="Properties" isObjectSelected={isObjectSelected} />
+        <TabButton id="themes" activeTab={activeTab} setActiveTab={setActiveTab} icon={Sparkles} label="Themes" isObjectSelected={isObjectSelected} />
       </div>
 
       <div className="flex-1 overflow-hidden relative">

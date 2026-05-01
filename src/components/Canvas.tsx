@@ -71,8 +71,8 @@ export const Canvas: React.FC = () => {
     }
   }, [selectedId, selectedRoomId, selectedDimensionId, selectedAttachmentId, dimensions.width, dimensions.height, furniture, rooms, savedDimensions, wallAttachments, ensureVisible, sidebarWidth]);
 
-  const [hasAutoFitted, setHasAutoFitted] = useState(false);
   const [bgImage] = useImage(backgroundImage || '');
+  const hasAutoFittedRef = useRef(false);
   const bgRef = useRef<Konva.Image>(null);
   const bgTrRef = useRef<Konva.Transformer>(null);
 
@@ -95,11 +95,11 @@ export const Canvas: React.FC = () => {
 
   // Auto-fit on initial load
   useEffect(() => {
-    if (!hasAutoFitted && dimensions.width > 0 && (rooms.length > 0 || furniture.length > 0)) {
+    if (!hasAutoFittedRef.current && dimensions.width > 0 && (rooms.length > 0 || furniture.length > 0)) {
       fitToScreen();
-      setHasAutoFitted(true);
+      hasAutoFittedRef.current = true;
     }
-  }, [dimensions.width, dimensions.height, rooms.length, furniture.length, hasAutoFitted, fitToScreen]);
+  }, [dimensions.width, dimensions.height, rooms.length, furniture.length, fitToScreen]);
 
   useEffect(() => {
     if (activeLayer === 'blueprint' && bgTrRef.current && bgRef.current) {
@@ -129,7 +129,7 @@ export const Canvas: React.FC = () => {
     });
     observer.observe(containerRef.current);
     return () => observer.disconnect();
-  }, []);
+  }, [setViewport]);
 
   const handleDragMove = (e: Konva.KonvaEventObject<DragEvent>) => {
     if (e.target instanceof Konva.Stage) {

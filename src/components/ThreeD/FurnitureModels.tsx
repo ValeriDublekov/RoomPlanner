@@ -23,8 +23,12 @@ const getSlotColor = (materials: import('../../types').ObjectMaterials | undefin
 const WoodMaterial: React.FC<{ color: string, opacity?: number, transparent?: boolean }> = ({ color, opacity = 1, transparent = false }) => {
   const edgeMode = useStore(state => state.edgeMode3d);
   const texture = useTexture(WOOD_GRAIN);
-  texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-  texture.repeat.set(0.02, 0.02);
+  
+  React.useLayoutEffect(() => {
+    /* eslint-disable-next-line react-hooks/immutability */
+    texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+    texture.repeat.set(0.02, 0.02);
+  }, [texture]);
   
   if (edgeMode) {
     return (
@@ -38,12 +42,23 @@ const WoodMaterial: React.FC<{ color: string, opacity?: number, transparent?: bo
   return <meshStandardMaterial color={color} map={texture} roughness={0.8} opacity={opacity} transparent={transparent} />;
 };
 
+/* eslint-disable @typescript-eslint/no-unused-vars */
 const SmartMaterial = (props: any) => {
   const edgeMode = useStore(state => state.edgeMode3d);
   if (edgeMode) {
     // In Edge Mode, we strictly want black surfaces and white outlines.
     // We ignore color, map and emissive to prevent surfaces from appearing white/textured.
-    const { color, map, emissive, emissiveIntensity, transparent, opacity, side, ...otherProps } = props;
+    const { 
+      color: _c, 
+      map: _m, 
+      emissive: _e, 
+      emissiveIntensity: _ei, 
+      transparent, 
+      opacity, 
+      side, 
+      ...otherProps 
+    } = props;
+/* eslint-enable @typescript-eslint/no-unused-vars */
     return (
       <>
         <meshBasicMaterial 
@@ -481,7 +496,6 @@ export const Shelf3D: React.FC<ModelProps> = ({ width, depth, height, color, sec
 };
 
 export const Picture3D: React.FC<ModelProps> = ({ width, depth, height, color, imageUrl }) => {
-  const texture = imageUrl ? useTexture(imageUrl) : null;
   const frameThickness = 2; // 2cm frame
   const wallOffset = 0.1; // 1mm offset from wall to prevent z-fighting
   
@@ -502,25 +516,40 @@ export const Picture3D: React.FC<ModelProps> = ({ width, depth, height, color, i
       {/* Canvas/Image */}
       <mesh position={[width / 2, height / 2, depth + wallOffset + 0.05]} castShadow receiveShadow>
         <boxGeometry args={[width - frameThickness * 2, height - frameThickness * 2, 0.1]} />
-        {texture ? (
-          <meshStandardMaterial 
-            map={texture} 
-            roughness={0.3} 
-            polygonOffset 
-            polygonOffsetFactor={-2} 
-            polygonOffsetUnits={-2}
-          />
-        ) : (
-          <meshStandardMaterial 
-            color="#ffffff" 
-            roughness={1} 
-            polygonOffset 
-            polygonOffsetFactor={-2} 
-            polygonOffsetUnits={-2}
-          />
-        )}
+        <PictureMaterial imageUrl={imageUrl} />
       </mesh>
     </group>
+  );
+};
+
+const PictureMaterial: React.FC<{ imageUrl?: string }> = ({ imageUrl }) => {
+  // We must not call useTexture conditionally.
+  // If no imageUrl, we skip useTexture entirely by using a separate component or a fallback.
+  if (!imageUrl) {
+    return (
+      <meshStandardMaterial 
+        color="#ffffff" 
+        roughness={1} 
+        polygonOffset 
+        polygonOffsetFactor={-2} 
+        polygonOffsetUnits={-2}
+      />
+    );
+  }
+
+  return <TexturedPictureMaterial imageUrl={imageUrl} />;
+};
+
+const TexturedPictureMaterial: React.FC<{ imageUrl: string }> = ({ imageUrl }) => {
+  const texture = useTexture(imageUrl);
+  return (
+    <meshStandardMaterial 
+      map={texture} 
+      roughness={0.3} 
+      polygonOffset 
+      polygonOffsetFactor={-2} 
+      polygonOffsetUnits={-2}
+    />
   );
 };
 

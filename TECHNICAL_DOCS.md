@@ -101,6 +101,12 @@ When dragging furniture:
 - **Winding**: Positive = Clockwise (CW), Negative = Counter-Clockwise (CCW).
 - **Importance**: Used to determine "outward" normals for walls.
 
+### Wall Geometry
+- **Reference Line**: The points defined in a `RoomObject` represent the **centerline** of the walls.
+- **Thickness**: Walls have a thickness (default 20cm). This thickness is distributed equally on both sides of the centerline (10cm inside, 10cm outside).
+- **Inner Face (Finished)**: The actual usable surface of the wall is located at `wallThickness / 2` distance from the centerline towards the interior of the room.
+- **Outer Face**: The exterior surface is at `wallThickness / 2` distance from the centerline towards the exterior.
+
 ### Wall Normals
 Calculated to determine which way a wall "faces" (e.g., for placing windows or doors).
 - For CW winding, the right-hand normal `(dy, -dx)` points outside.
@@ -126,8 +132,24 @@ During dragging, the system calculates and displays distances to the nearest wal
 
 ---
 
-## 7. Common Debugging Patterns
+## 7. Regression Prevention (Geometry & Alignment)
+To avoid discrepancies between 2D and 3D:
+- **Single Source of Truth**: Always use `getOutwardNormal` for any wall-relative positioning.
+- **Visual Tests**: Verify that a window placed on a wall does not protrude into the room in either view.
+- **Winding Awareness**: Ensure all polygon operations (Area, Normal, Inset) use the `getSignedArea` to detect winding order.
+- **Furniture Origin**: Always use the top-left corner as the primary anchor for furniture in both 2D and 3D.
+
+## 8. Common Debugging Patterns
 
 - **Discrepancy between 2D and 3D**: Check if the rotation negation is applied correctly and if the Z-axis (3D) correctly maps to the Y-axis (2D).
 - **Group items jumping on ungroup**: Verify the world-space calculation in `ungroupSelected` accounts for the group's rotation pivot (center).
+
+## 9. Drawing Lifecycle (Rooms)
+A room drawing goes through four phases:
+1. **Initiation**: Selecting tool, initializing points.
+2. **Adding Points**: Snapping (Grid, Object, Image), Ortho Mode, Manual Input.
+3. **Closing/Finishing**:
+   - **Closed Polygon**: Clicking first point (min 3 points) creates `isClosed: true` area.
+   - **Partial Path**: Finishing without closing (min 2 points) creates `isClosed: false` path.
+4. **Modification**: Vertex editing, continuing open paths, closing later.
 - **Collision not triggering**: Ensure `getFurnitureVertices` is using the same center-based logic as the renderer.

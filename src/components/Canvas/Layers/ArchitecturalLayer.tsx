@@ -55,7 +55,7 @@ export const ArchitecturalLayer: React.FC<ArchitecturalLayerProps> = ({ scale })
       scale={scale}
       isLocked={false} 
     />
-  )), [rooms, selectedRoomId, scale, activeLayer, setSelectedRoomId, mode]);
+  )), [rooms, selectedRoomId, scale, setSelectedRoomId]);
 
   const beamElements = React.useMemo(() => beams.map((beam) => (
     <BeamItem
@@ -71,7 +71,7 @@ export const ArchitecturalLayer: React.FC<ArchitecturalLayerProps> = ({ scale })
       scale={scale}
       mode={mode}
     />
-  )), [beams, selectedBeamId, scale, setSelectedBeamId, setMode, mode, activeLayer]);
+  )), [beams, selectedBeamId, scale, setSelectedBeamId, setMode, mode]);
 
   const furnitureElements = React.useMemo(() => [...furniture].sort((a, b) => (a.elevation || 0) - (b.elevation || 0)).map((item) => (
     <FurnitureItem

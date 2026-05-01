@@ -25,12 +25,14 @@ export const PromptModal: React.FC<PromptModalProps> = ({
   onCancel
 }) => {
   const [value, setValue] = useState(defaultValue);
+  const [lastIsOpen, setLastIsOpen] = useState(isOpen);
 
-  useEffect(() => {
+  if (isOpen !== lastIsOpen) {
+    setLastIsOpen(isOpen);
     if (isOpen) {
       setValue(defaultValue);
     }
-  }, [isOpen, defaultValue]);
+  }
 
   if (!isOpen) return null;
 

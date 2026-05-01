@@ -58,9 +58,9 @@ const MaterialPicker: React.FC<{
   slotType: keyof ObjectMaterials;
   furnitureType?: string;
 }> = ({ label, slot, onChange, activeTheme, slotType, furnitureType }) => {
-  if (!slot) return null;
-
   const [showAdvanced, setShowAdvanced] = React.useState(false);
+
+  if (!slot) return null;
 
   const getThemePalette = () => {
     if (!activeTheme) return [];

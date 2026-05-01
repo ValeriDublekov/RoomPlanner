@@ -9,13 +9,9 @@ export const CalibrationModal: React.FC = () => {
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (tempCalibrationDist !== null) {
-      setValue('');
-      setTimeout(() => inputRef.current?.focus(), 100);
-    }
-  }, [tempCalibrationDist]);
-
-  if (tempCalibrationDist === null) return null;
+    // Focus when mounting
+    setTimeout(() => inputRef.current?.focus(), 100);
+  }, []);
 
   const handleSubmit = (e?: React.FormEvent) => {
     e?.preventDefault();

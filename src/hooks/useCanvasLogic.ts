@@ -6,7 +6,7 @@ import { getToolHandler } from '../lib/tools/registry';
 import { ToolContext } from '../lib/tools/types';
 
 export const useCanvasLogic = (
-  stageRef: React.RefObject<Konva.Stage>,
+  stageRef: React.RefObject<Konva.Stage | null>,
   dimensions: { width: number, height: number },
   isCtrlPressed: boolean,
   isAltPressed: boolean
@@ -22,7 +22,7 @@ export const useCanvasLogic = (
 
   const currentTool = useMemo(() => getToolHandler(mode), [mode]);
 
-  const toolContext: ToolContext | null = useMemo(() => {
+  const getToolContext = useCallback((): ToolContext | null => {
     const stage = stageRef.current;
     if (!stage) return null;
     return {
@@ -32,7 +32,7 @@ export const useCanvasLogic = (
       stage,
       scale
     };
-  }, [getSnappedMousePos, mousePos, stageRef.current, scale]);
+  }, [getSnappedMousePos, mousePos, stageRef, scale]);
 
   const handleWheel = (e: Konva.KonvaEventObject<WheelEvent>) => {
     e.evt.preventDefault();
@@ -62,6 +62,7 @@ export const useCanvasLogic = (
 
   const handleMouseDown = (e: Konva.KonvaEventObject<MouseEvent>) => {
     if (e.evt.button !== 0) return;
+    const toolContext = getToolContext();
     if (currentTool.onMouseDown && toolContext) {
       currentTool.onMouseDown(e, toolContext);
     }
@@ -77,6 +78,7 @@ export const useCanvasLogic = (
         y: (pointer.y - stage.y()) / stage.scaleY(),
       };
       setMousePos(p);
+      const toolContext = getToolContext();
       if (currentTool.onMouseMove && toolContext) {
         currentTool.onMouseMove(e, { ...toolContext, mousePos: p });
       }
@@ -84,6 +86,7 @@ export const useCanvasLogic = (
   };
 
   const handleMouseUp = (e: Konva.KonvaEventObject<MouseEvent>) => {
+    const toolContext = getToolContext();
     if (currentTool.onMouseUp && toolContext) {
       currentTool.onMouseUp(e, toolContext);
     }
@@ -93,22 +96,25 @@ export const useCanvasLogic = (
     if (e.evt.button !== 0) return;
     setContextMenu({ visible: false, x: 0, y: 0, targetId: null, targetType: null });
     
+    const toolContext = getToolContext();
     if (currentTool.onClick && toolContext) {
       currentTool.onClick(e, toolContext);
     }
   };
 
   const handleDblClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
+    const toolContext = getToolContext();
     if (currentTool.onDblClick && toolContext) {
       currentTool.onDblClick(e, toolContext);
     }
   };
 
   const handleDimensionSubmit = useCallback(() => {
+    const toolContext = getToolContext();
     if (currentTool.onSubmitDimension && toolContext) {
       currentTool.onSubmitDimension(toolContext);
     }
-  }, [currentTool, toolContext]);
+  }, [currentTool, getToolContext]);
 
   return {
     mousePos,

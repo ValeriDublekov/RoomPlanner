@@ -107,7 +107,7 @@ export const getSnappedPosition = (
             }
 
             const d = Math.sqrt(Math.pow(x - imgX, 2) + Math.pow(y - imgY, 2));
-            let junctionBonus = (neighbors > 2 || neighbors === 1) ? 3.0 : 0.0;
+            const junctionBonus = (neighbors > 2 || neighbors === 1) ? 3.0 : 0.0;
             let directionBonus = 0;
             if (lastImgX !== -1) {
               const dx1 = x - lastImgX;
@@ -159,8 +159,8 @@ export const getSnappedFurniturePosition = (
   threshold: number,
   ignoredId?: string
 ): Vector2d => {
-  let currentPos = { ...centerPos };
-  let snappedTargetIds = new Set<string>();
+  const currentPos = { ...centerPos };
+  const snappedTargetIds = new Set<string>();
 
   for (let pass = 0; pass < 2; pass++) {
     let bestSnap = null;

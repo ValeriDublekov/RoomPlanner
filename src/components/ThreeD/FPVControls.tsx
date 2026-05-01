@@ -10,7 +10,7 @@ interface FPVControlsProps {
 export const FPVControls: React.FC<FPVControlsProps> = ({ initialPosition }) => {
   const { camera, gl } = useThree();
   const { rooms, wallAttachments, pixelsPerCm } = useStore();
-  const velocity = useRef(new THREE.Vector3());
+  const _velocity = useRef(new THREE.Vector3());
   const direction = useRef(new THREE.Vector3());
   const moveState = useRef({
     forward: false,
@@ -20,9 +20,11 @@ export const FPVControls: React.FC<FPVControlsProps> = ({ initialPosition }) => 
   });
 
   useEffect(() => {
+    /* eslint-disable react-hooks/immutability */
     camera.position.set(initialPosition.x, 160, initialPosition.z);
     camera.lookAt(initialPosition.x + 100, 160, initialPosition.z);
     camera.rotation.order = 'YXZ';
+    /* eslint-enable react-hooks/immutability */
   }, [camera, initialPosition]);
 
   useEffect(() => {
@@ -133,14 +135,14 @@ export const FPVControls: React.FC<FPVControlsProps> = ({ initialPosition }) => 
         const p1 = { x: p1_raw.x / pixelsPerCm, z: p1_raw.y / pixelsPerCm };
         const p2 = { x: p2_raw.x / pixelsPerCm, z: p2_raw.y / pixelsPerCm };
 
-        // Vector p1 -> p2
+        // Project point onto line
         const dx = p2.x - p1.x;
         const dz = p2.z - p1.z;
         const lenSq = dx * dx + dz * dz;
         if (lenSq === 0) continue;
 
         // Project point onto line
-        let t = ((targetPos.x - p1.x) * dx + (targetPos.z - p1.z) * dz) / lenSq;
+        const t = ((targetPos.x - p1.x) * dx + (targetPos.z - p1.z) * dz) / lenSq;
         const clampedT = Math.max(0, Math.min(1, t));
         
         const projX = p1.x + clampedT * dx;
@@ -175,7 +177,8 @@ export const FPVControls: React.FC<FPVControlsProps> = ({ initialPosition }) => 
     return false;
   };
 
-  useFrame((state, delta) => {
+  /* eslint-disable react-hooks/immutability */
+  useFrame((_state, delta) => {
     const moveSpeed = 400 * delta;
     
     direction.current.z = Number(moveState.current.forward) - Number(moveState.current.backward);
@@ -210,6 +213,7 @@ export const FPVControls: React.FC<FPVControlsProps> = ({ initialPosition }) => 
     
     camera.position.y = 160;
   });
+  /* eslint-enable react-hooks/immutability */
 
   return null;
 };

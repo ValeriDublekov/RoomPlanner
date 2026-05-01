@@ -31,13 +31,7 @@ export const CloudLoadModal: React.FC<CloudLoadModalProps> = ({ isOpen, onClose 
   const [alertInfo, setAlertInfo] = useState<{ isOpen: boolean; title: string; message: string }>({ isOpen: false, title: '', message: '' });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    if (isOpen && currentUser) {
-      fetchProjects();
-    }
-  }, [isOpen, currentUser]);
-
-  const fetchProjects = async () => {
+  const fetchProjects = React.useCallback(async () => {
     if (!currentUser) return;
     setIsLoading(true);
     try {
@@ -64,7 +58,14 @@ export const CloudLoadModal: React.FC<CloudLoadModalProps> = ({ isOpen, onClose 
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [currentUser]);
+
+  useEffect(() => {
+    if (isOpen && currentUser) {
+      /* eslint-disable-next-line react-hooks/set-state-in-effect */
+      fetchProjects();
+    }
+  }, [isOpen, currentUser, fetchProjects]);
 
   const handleSelectProject = (project: ProjectSummary) => {
     try {

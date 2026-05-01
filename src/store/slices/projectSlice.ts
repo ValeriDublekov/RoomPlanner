@@ -111,7 +111,7 @@ export const createProjectSlice: StateCreator<AppState, [], [], ProjectSlice> = 
     
     const migrateFurniture = (items: any[]): any[] => {
       return items.map((f: any) => {
-        let updated = { ...f };
+        const updated = { ...f };
         if (f.children) {
           updated.children = migrateFurniture(f.children);
         }
@@ -175,7 +175,7 @@ export const createProjectSlice: StateCreator<AppState, [], [], ProjectSlice> = 
     const { currentUser } = state;
 
     const projectData = PERSISTED_KEYS.reduce((acc, key) => {
-      // @ts-ignore
+      // @ts-expect-error - Zustand standard pattern for accessing state in actions
       acc[key] = (state as any)[key];
       return acc;
     }, { version: 2 } as PersistedState);
@@ -194,7 +194,7 @@ export const createProjectSlice: StateCreator<AppState, [], [], ProjectSlice> = 
     if (currentUser) {
       set({ isSaving: true });
       try {
-        let targetId = forceOverwriteId || state.projectId;
+        const targetId = forceOverwriteId || state.projectId;
         const nameToSave = nameOverride || state.cloudName || state.projectName || 'Untitled Project';
 
         const savePayload: any = {

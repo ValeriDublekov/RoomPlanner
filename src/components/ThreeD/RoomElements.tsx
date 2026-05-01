@@ -1,8 +1,6 @@
-import React, { useMemo } from 'react';
-import * as THREE from 'three';
-import { useTexture, Edges } from '@react-three/drei';
-import { RoomObject, WallAttachment, BeamObject, InteriorTheme } from '../../types';
-import { FLOOR_TEXTURES, WOOD_GRAIN } from '../../constants';
+import React from 'react';
+import { RoomObject, WallAttachment, BeamObject } from '../../types';
+import { FLOOR_TEXTURES } from '../../constants';
 import { getOutwardNormal } from '../../lib/geometry';
 import { useStore } from '../../store';
 import { INTERIOR_THEMES } from '../../lib/themes';
@@ -33,12 +31,30 @@ export const Beam3D: React.FC<{
   );
 };
 
+/* eslint-disable @typescript-eslint/no-unused-vars */
 const SmartMaterial = (props: any) => {
   const edgeMode = useStore(state => state.edgeMode3d);
   if (edgeMode) {
+    const { 
+      color: _c, 
+      map: _m, 
+      emissive: _e, 
+      emissiveIntensity: _ei, 
+      transparent, 
+      opacity, 
+      side, 
+      ...otherProps 
+    } = props;
+/* eslint-enable @typescript-eslint/no-unused-vars */
     return (
       <>
-        <meshBasicMaterial color="black" transparent={props.transparent} opacity={props.opacity} side={props.side || THREE.FrontSide} />
+        <meshBasicMaterial 
+          color="black" 
+          transparent={transparent} 
+          opacity={opacity} 
+          side={side || THREE.FrontSide} 
+          {...otherProps}
+        />
         <Edges color="white" threshold={20} />
       </>
     );
@@ -59,29 +75,46 @@ export const Floor: React.FC<{ room: RoomObject, pixelsPerCm: number }> = ({ roo
   }, [room.points, pixelsPerCm]);
 
   const textureData = FLOOR_TEXTURES.find(t => t.id === room.floorTexture);
-  const texture = textureData?.url ? useTexture(textureData.url) : null;
-
-  if (texture) {
-    texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-    texture.anisotropy = 16;
-    let sizeCm = 100;
-    if (room.floorTexture === 'laminate' || room.floorTexture === 'wood' || room.floorTexture === 'parquet') sizeCm = 64;
-    if (room.floorTexture === 'tiles') sizeCm = 80;
-    
-    const repeatScale = 1 / sizeCm;
-    texture.repeat.set(repeatScale, repeatScale);
-  }
+  const floorColor = room.floorColor || (textureData ? "#ffffff" : "#e2e8f0");
 
   return (
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.1, 0]} receiveShadow>
       <shapeGeometry args={[floorShape]} />
-      <SmartMaterial 
-        color={texture ? (room.floorColor || "#ffffff") : (room.floorColor || "#e2e8f0")} 
-        map={texture} 
-        roughness={0.9} 
-        side={THREE.DoubleSide} 
-      />
+      {textureData?.url ? (
+        <FloorTexturedMaterial url={textureData.url} color={floorColor} floorTexture={room.floorTexture || ''} />
+      ) : (
+        <SmartMaterial 
+          color={floorColor} 
+          roughness={0.9} 
+          side={THREE.DoubleSide} 
+        />
+      )}
     </mesh>
+  );
+};
+
+const FloorTexturedMaterial: React.FC<{ url: string, color: string, floorTexture: string }> = ({ url, color, floorTexture }) => {
+  const texture = useTexture(url);
+
+  React.useLayoutEffect(() => {
+    /* eslint-disable-next-line react-hooks/immutability */
+    texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+    texture.anisotropy = 16;
+    let sizeCm = 100;
+    if (floorTexture === 'laminate' || floorTexture === 'wood' || floorTexture === 'parquet') sizeCm = 64;
+    if (floorTexture === 'tiles') sizeCm = 80;
+    
+    const repeatScale = 1 / sizeCm;
+    texture.repeat.set(repeatScale, repeatScale);
+  }, [texture, floorTexture]);
+
+  return (
+    <SmartMaterial 
+      color={color} 
+      map={texture} 
+      roughness={0.9} 
+      side={THREE.DoubleSide} 
+    />
   );
 };
 
@@ -361,7 +394,7 @@ export const WallSegments: React.FC<{
       }
     }
     return segs;
-  }, [room.points, pixelsPerCm, attachments, room.wallColors, room.defaultWallColor, room.materials, activeThemeId, wallHeight, wallThickness]);
+  }, [room.points, pixelsPerCm, attachments, room.wallColors, room.defaultWallColor, room.materials, activeThemeId, activeTheme, wallHeight, wallThickness, room.id, room.isClosed]);
 
   return (
     <group>

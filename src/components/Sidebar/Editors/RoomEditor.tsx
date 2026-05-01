@@ -40,9 +40,9 @@ const MaterialPicker: React.FC<{
   activeTheme: InteriorTheme | undefined;
   slotType: 'wallBase' | 'floorBase';
 }> = ({ label, slot, onChange, activeTheme, slotType }) => {
-  if (!slot) return null;
-
   const [showAdvanced, setShowAdvanced] = React.useState(false);
+
+  if (!slot) return null;
 
   const isThemeMode = slot.source === 'theme';
   const palette = activeTheme ? (slotType === 'wallBase' ? [activeTheme.wallColors.base, activeTheme.wallColors.secondary, activeTheme.wallColors.accent] : []) : [];

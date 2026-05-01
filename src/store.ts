@@ -59,7 +59,7 @@ export const useStore = create<AppState>()(
        */
       partialize: (state): PersistedState => {
         return PERSISTED_KEYS.reduce((acc, key) => {
-          // @ts-ignore - dynamic key assignment based on trusted list
+          // @ts-expect-error - dynamic key assignment based on trusted list
           acc[key] = state[key];
           return acc;
         }, {} as PersistedState);

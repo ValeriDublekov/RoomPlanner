@@ -7,7 +7,7 @@ import { exportToOBJ } from '../lib/objExport';
 import { exportToGLB } from '../lib/glbExport';
 import { generateProjectScene } from '../lib/threeSceneGenerator';
 
-export const useCanvasExport = (stageRef: React.RefObject<Konva.Stage>) => {
+export const useCanvasExport = (stageRef: React.RefObject<Konva.Stage | null>) => {
   const handleExport = async () => {
     const stage = stageRef.current;
     if (!stage) return;

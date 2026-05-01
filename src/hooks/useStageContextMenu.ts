@@ -1,7 +1,7 @@
 import Konva from 'konva';
 import { useStore } from '../store';
 
-export const useStageContextMenu = (stageRef: React.RefObject<Konva.Stage>) => {
+export const useStageContextMenu = (stageRef: React.RefObject<Konva.Stage | null>) => {
   const rooms = useStore(state => state.rooms);
   const furniture = useStore(state => state.furniture);
   const savedDimensions = useStore(state => state.dimensions);

@@ -267,7 +267,7 @@ export const createRoomSlice: StateCreator<AppState, [], [], RoomSlice> = (set, 
     });
 
     const newBeams = state.beams.map(b => {
-      let updated = { ...b };
+      const updated = { ...b };
       if (b.p1Attachment && b.p1Attachment.roomId === roomId) {
         if (b.p1Attachment.wallIndex > segmentIndex) {
           updated.p1Attachment = { ...b.p1Attachment, wallIndex: b.p1Attachment.wallIndex + 1 };
@@ -350,7 +350,7 @@ export const createRoomSlice: StateCreator<AppState, [], [], RoomSlice> = (set, 
       }
       return true;
     }).map(b => {
-      let updated = { ...b };
+      const updated = { ...b };
       if (updated.p1Attachment && updated.p1Attachment.roomId === roomId && updated.p1Attachment.wallIndex > pointIndex) {
         updated.p1Attachment = { ...updated.p1Attachment, wallIndex: updated.p1Attachment.wallIndex - 1 };
       }
