@@ -15,6 +15,7 @@ const tools = [
   { id: 'dimension', icon: Ruler, label: 'Dimension (D)' },
   { id: 'add-door', icon: DoorOpen, label: 'Add Door' },
   { id: 'add-window', icon: Layout, label: 'Add Window' },
+  { id: 'draw-beam', icon: Pencil, label: 'Add Beam' },
 ] as const;
 
 export const Sidebar: React.FC = () => {
@@ -33,6 +34,7 @@ export const Sidebar: React.FC = () => {
   const setSelectedRoomId = useStore(state => state.setSelectedRoomId);
   const setSelectedDimensionId = useStore(state => state.setSelectedDimensionId);
   const setSelectedAttachmentId = useStore(state => state.setSelectedAttachmentId);
+  const setSelectedBeamId = useStore(state => state.setSelectedBeamId);
   const currentUser = useStore(state => state.currentUser);
   const isAuthLoading = useStore(state => state.isAuthLoading);
 
@@ -61,7 +63,7 @@ export const Sidebar: React.FC = () => {
               .filter(tool => {
                 if (tool.id === 'select') return true;
                 if (activeLayer === 'blueprint') return tool.id === 'calibrate';
-                if (activeLayer === 'room') return tool.id === 'draw-room' || tool.id === 'add-door' || tool.id === 'add-window';
+                if (activeLayer === 'room') return tool.id === 'draw-room' || tool.id === 'add-door' || tool.id === 'add-window' || tool.id === 'draw-beam';
                 if (activeLayer === 'furniture') return tool.id === 'add-box' || tool.id === 'draw-circle' || tool.id === 'draw-furniture' || tool.id === 'measure' || tool.id === 'dimension';
                 return false;
               })
@@ -79,6 +81,7 @@ export const Sidebar: React.FC = () => {
                     setSelectedRoomId(null);
                     setSelectedDimensionId(null);
                     setSelectedAttachmentId(null);
+                    setSelectedBeamId(null);
                   }}
                 />
               ))}

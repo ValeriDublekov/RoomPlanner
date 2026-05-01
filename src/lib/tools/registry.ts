@@ -7,6 +7,7 @@ import { DrawTool } from './DrawTool';
 import { PrimitiveTool } from './PrimitiveTool';
 import { PlaceFurnitureTool } from './PlaceFurnitureTool';
 import { AttachmentTool } from './AttachmentTool';
+import { BeamTool } from './BeamTool';
 
 export const TOOL_REGISTRY: Record<AppMode, ToolHandler> = {
   'select': SelectTool,
@@ -19,7 +20,8 @@ export const TOOL_REGISTRY: Record<AppMode, ToolHandler> = {
   'draw-circle': PrimitiveTool,
   'place-furniture': PlaceFurnitureTool,
   'add-door': AttachmentTool,
-  'add-window': AttachmentTool
+  'add-window': AttachmentTool,
+  'draw-beam': BeamTool
 };
 
 export const getToolHandler = (mode: AppMode): ToolHandler => {

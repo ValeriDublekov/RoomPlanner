@@ -1,10 +1,36 @@
 import React, { useMemo } from 'react';
 import * as THREE from 'three';
 import { useTexture, Edges } from '@react-three/drei';
-import { RoomObject, WallAttachment } from '../../types';
+import { RoomObject, WallAttachment, BeamObject } from '../../types';
 import { FLOOR_TEXTURES } from '../../constants';
 import { getOutwardNormal } from '../../lib/geometry';
 import { useStore } from '../../store';
+
+export const Beam3D: React.FC<{ 
+  beam: BeamObject, 
+  pixelsPerCm: number 
+}> = ({ beam, pixelsPerCm }) => {
+  const dx = (beam.p2.x - beam.p1.x) / pixelsPerCm;
+  const dy = (beam.p2.y - beam.p1.y) / pixelsPerCm;
+  const length = Math.sqrt(dx * dx + dy * dy);
+  const angle = Math.atan2(dy, dx);
+  
+  const midX = (beam.p1.x + beam.p2.x) / (2 * pixelsPerCm);
+  const midZ = (beam.p1.y + beam.p2.y) / (2 * pixelsPerCm);
+  const y = (beam.elevation + beam.height / 2);
+
+  return (
+    <mesh 
+      position={[midX, y, midZ]} 
+      rotation={[0, -angle, 0]}
+      castShadow
+      receiveShadow
+    >
+      <boxGeometry args={[length, beam.height, beam.width]} />
+      <SmartMaterial color={beam.color || '#e2e8f0'} roughness={1} />
+    </mesh>
+  );
+};
 
 const SmartMaterial = (props: any) => {
   const edgeMode = useStore(state => state.edgeMode3d);

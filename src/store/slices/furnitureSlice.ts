@@ -58,7 +58,9 @@ export const createFurnitureSlice: StateCreator<AppState, [], [], FurnitureSlice
     selectedIds: selectedId ? [selectedId] : [],
     selectedDimensionId: null,
     selectedRoomId: null,
-    selectedAttachmentId: null
+    selectedWallIndex: null,
+    selectedAttachmentId: null,
+    selectedBeamId: null,
   }),
   
   setSelectedIds: (selectedIds) => set({ 
@@ -66,7 +68,9 @@ export const createFurnitureSlice: StateCreator<AppState, [], [], FurnitureSlice
     selectedId: selectedIds.length === 1 ? selectedIds[0] : null,
     selectedDimensionId: null,
     selectedRoomId: null,
-    selectedAttachmentId: null
+    selectedWallIndex: null,
+    selectedAttachmentId: null,
+    selectedBeamId: null,
   }),
   
   groupSelected: () => set((state) => {

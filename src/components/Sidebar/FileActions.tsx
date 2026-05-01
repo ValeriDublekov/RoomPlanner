@@ -1,5 +1,6 @@
 import React, { useRef } from 'react';
 import { Download, Upload, Image as ImageIcon, Eye, EyeOff, FileCode } from 'lucide-react';
+import { useStore } from '@/src/store';
 
 interface FileActionsProps {
   onImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -27,6 +28,7 @@ export const FileActions: React.FC<FileActionsProps> = ({
   canExportDXF,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const resetApp = useStore(state => state.resetApp);
 
   return (
     <div className="space-y-4">
@@ -84,7 +86,7 @@ export const FileActions: React.FC<FileActionsProps> = ({
               />
               <button 
                 onClick={removeBackgroundImage}
-                className="text-[10px] font-bold text-red-500 uppercase tracking-widest hover:text-red-600 transition-colors"
+                className="text-[10px] font-bold text-red-500 uppercase tracking-widest hover:text-red-600 transition-colors block w-full text-left"
               >
                 Remove Image
               </button>
@@ -92,6 +94,24 @@ export const FileActions: React.FC<FileActionsProps> = ({
           )}
         </div>
       )}
+
+      <button 
+        onClick={() => {
+          if (confirm('Are you sure you want to reset the app? This will clear all data and reload.')) {
+            resetApp();
+          }
+        }}
+        className="w-full mt-4 text-[10px] uppercase tracking-widest font-bold text-red-500 hover:text-red-700 transition-colors text-center"
+      >
+        Reset App
+      </button>
+
+      <button 
+        onClick={() => useStore.getState().toggleJsonViewer(true)}
+        className="w-full mt-2 text-[10px] uppercase tracking-widest font-bold text-slate-500 hover:text-slate-700 transition-colors text-center"
+      >
+        View Project Source
+      </button>
     </div>
   );
 };

@@ -50,7 +50,7 @@ export const useKeyboardShortcuts = (
       if (e.key === 'ArrowLeft') { moveView(panStep, 0); return; }
       if (e.key === 'ArrowRight') { moveView(-panStep, 0); return; }
 
-      if ((mode === 'draw-room' || mode === 'draw-furniture') && roomPoints.length > 0) {
+      if ((mode === 'draw-room' || mode === 'draw-furniture' || mode === 'draw-beam') && roomPoints.length > 0) {
         if (e.key >= '0' && e.key <= '9' || e.key === '.') {
           setDimensionInput(dimensionInput + e.key);
           return;
@@ -71,6 +71,9 @@ export const useKeyboardShortcuts = (
       } else if (e.key === 'Escape') {
         setSelectedId(null);
         setSelectedRoomId(null);
+        setSelectedDimensionId(null);
+        useStore.getState().setSelectedAttachmentId(null);
+        useStore.getState().setSelectedBeamId(null);
         useStore.getState().setPendingFurniture(null);
         setMode('select');
         return;
@@ -137,6 +140,8 @@ export const useKeyboardShortcuts = (
           if (selectedId) useStore.getState().deleteSelected();
           if (selectedRoomId) deleteRoom(selectedRoomId);
           if (selectedDimensionId) deleteDimension(selectedDimensionId);
+          if (useStore.getState().selectedBeamId) useStore.getState().deleteBeam(useStore.getState().selectedBeamId!);
+          if (useStore.getState().selectedAttachmentId) useStore.getState().deleteWallAttachment(useStore.getState().selectedAttachmentId!);
         }
       }
 

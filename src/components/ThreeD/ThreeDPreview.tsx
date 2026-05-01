@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { useStore } from '@/src/store';
 import { FurnitureObject } from '@/src/types';
 import { Camera, MousePointer2, Box } from 'lucide-react';
-import { FPVControls, WallSegments, Ceiling, Bed3D, Desk3D, Wardrobe3D, Dresser3D, Chair3D, 
+import { FPVControls, WallSegments, Ceiling, Beam3D, Bed3D, Desk3D, Wardrobe3D, Dresser3D, Chair3D, 
   Shelf3D, Electronics3D, Table3D, GenericFurniture3D,
   Sofa3D, Nightstand3D, Toilet3D, Bathtub3D, Light3D,
   Picture3D } from './';
@@ -133,7 +133,7 @@ const Furniture = ({ item, pixelsPerCm, isChild = false, parentWidth = 0, parent
 };
 
 export const ThreeDPreview: React.FC = () => {
-  const { rooms, furniture, pixelsPerCm, setShow3d, wallThickness, wallHeight, setWallHeight, wallAttachments, edgeMode3d, setEdgeMode3d, setThreeScene } = useStore();
+  const { rooms, furniture, beams, pixelsPerCm, setShow3d, wallThickness, wallHeight, setWallHeight, wallAttachments, edgeMode3d, setEdgeMode3d, setThreeScene } = useStore();
   const [isExporting, setIsExporting] = useState(false);
   const [viewMode, setViewMode] = useState<'dollhouse' | 'first-person'>('dollhouse');
 
@@ -343,6 +343,10 @@ export const ThreeDPreview: React.FC = () => {
                     />
                   )}
                 </React.Fragment>
+              ))}
+
+              {beams.map(beam => (
+                <Beam3D key={beam.id} beam={beam} pixelsPerCm={pixelsPerCm} />
               ))}
 
               {furniture.map(item => (

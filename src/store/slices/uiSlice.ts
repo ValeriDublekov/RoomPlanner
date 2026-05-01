@@ -56,6 +56,9 @@ export interface UISlice {
   resetView: () => void;
   fitToScreen: (width?: number, height?: number) => void;
   ensureVisible: (targetBounds: { minX: number, minY: number, maxX: number, maxY: number }, viewWidth?: number, viewHeight?: number) => void;
+  showJsonViewer: boolean;
+  toggleJsonViewer: (show: boolean) => void;
+  resetApp: () => void;
 }
 
 export const createUISlice: StateCreator<AppState, [], [], UISlice> = (set, get) => ({
@@ -85,35 +88,32 @@ export const createUISlice: StateCreator<AppState, [], [], UISlice> = (set, get)
   },
   viewport: { width: 0, height: 0 },
   sidebarWidth: 0,
+  showJsonViewer: false,
   setViewport: (viewport) => set({ viewport }),
   setSidebarWidth: (sidebarWidth) => set({ sidebarWidth }),
+  toggleJsonViewer: (showJsonViewer) => set({ showJsonViewer }),
 
   setScale: (scale) => set({ scale }),
   setPosition: (position) => set({ position }),
-  setMode: (mode) => set({ 
-    mode, 
-    roomPoints: [], 
-    measurePoints: [], 
-    dimensionInput: '',
-    selectedId: null,
-    selectedIds: [],
-    selectedRoomId: null,
-    selectedWallIndex: null,
-    selectedDimensionId: null
-  }),
-  setActiveLayer: (activeLayer) => set({ 
-    activeLayer,
-    mode: 'select',
-    selectedId: null,
-    selectedIds: [],
-    selectedRoomId: null,
-    selectedWallIndex: null,
-    selectedAttachmentId: null,
-    selectedDimensionId: null,
-    roomPoints: [],
-    measurePoints: [],
-    dimensionInput: ''
-  }),
+  setMode: (mode) => {
+    console.log('setMode called with:', mode);
+    set({ 
+      mode, 
+      roomPoints: [], 
+      measurePoints: [], 
+      dimensionInput: '',
+    });
+  },
+  setActiveLayer: (activeLayer) => {
+    console.log('setActiveLayer called with:', activeLayer);
+    set({ 
+      activeLayer,
+      mode: 'select',
+      roomPoints: [], 
+      measurePoints: [], 
+      dimensionInput: ''
+    });
+  },
   setOrthoMode: (orthoMode) => set({ orthoMode }),
   setSnapToGrid: (snapToGrid) => set({ snapToGrid }),
   setSnapToObjects: (snapToObjects) => set({ snapToObjects }),
@@ -239,5 +239,9 @@ export const createUISlice: StateCreator<AppState, [], [], UISlice> = (set, get)
         }
       });
     }
+  },
+  resetApp: () => {
+    localStorage.removeItem('floor-plan-storage');
+    window.location.reload();
   },
 });

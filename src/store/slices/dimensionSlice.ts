@@ -72,6 +72,8 @@ export const createDimensionSlice: StateCreator<AppState, [], [], DimensionSlice
     selectedId: null,
     selectedIds: [],
     selectedRoomId: null,
-    selectedAttachmentId: null
+    selectedWallIndex: null,
+    selectedAttachmentId: null,
+    selectedBeamId: null
   }),
 });

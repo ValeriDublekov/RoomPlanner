@@ -77,7 +77,8 @@ export const createProjectSlice: StateCreator<AppState, [], [], ProjectSlice> = 
       rooms: state.rooms, 
       furniture: state.furniture, 
       dimensions: state.dimensions,
-      wallAttachments: state.wallAttachments 
+      wallAttachments: state.wallAttachments,
+      beams: state.beams
     } as any].slice(-50)
   })),
 
@@ -89,6 +90,7 @@ export const createProjectSlice: StateCreator<AppState, [], [], ProjectSlice> = 
       furniture: previous.furniture,
       dimensions: previous.dimensions,
       wallAttachments: (previous as any).wallAttachments || state.wallAttachments,
+      beams: (previous as any).beams || state.beams,
       history: state.history.slice(0, -1),
       selectedId: null,
       selectedRoomId: null,
@@ -145,6 +147,7 @@ export const createProjectSlice: StateCreator<AppState, [], [], ProjectSlice> = 
       furniture,
       dimensions: projectData.dimensions || [],
       wallAttachments,
+      beams: projectData.beams || [],
       wallThickness: projectData.wallThickness || 20,
       wallHeight: projectData.wallHeight || 250,
       backgroundImage: projectData.backgroundImage || null,
@@ -261,6 +264,7 @@ export const createProjectSlice: StateCreator<AppState, [], [], ProjectSlice> = 
       furniture: [],
       dimensions: [],
       wallAttachments: [],
+      beams: [],
       roomPoints: [],
       measurePoints: [],
       history: [],
@@ -269,6 +273,7 @@ export const createProjectSlice: StateCreator<AppState, [], [], ProjectSlice> = 
       selectedIds: [],
       selectedRoomId: null,
       selectedAttachmentId: null,
+      selectedBeamId: null,
       selectedDimensionId: null,
       scale: 1,
       position: { x: 0, y: 0 },

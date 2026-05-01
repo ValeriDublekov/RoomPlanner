@@ -70,9 +70,9 @@ export const scalePoints = (points: Vector2d[], scaleX: number, scaleY: number):
 /**
  * Calculates the distance from a point to a line segment.
  */
-export const getDistanceToSegment = (p: Vector2d, v: Vector2d, w: Vector2d): { distance: number, point: Vector2d } => {
+export const getDistanceToSegment = (p: Vector2d, v: Vector2d, w: Vector2d): { distance: number, point: Vector2d, t: number } => {
   const l2 = Math.pow(getDistance(v, w), 2);
-  if (l2 === 0) return { distance: getDistance(p, v), point: v };
+  if (l2 === 0) return { distance: getDistance(p, v), point: v, t: 0 };
   let t = ((p.x - v.x) * (w.x - v.x) + (p.y - v.y) * (w.y - v.y)) / l2;
   t = Math.max(0, Math.min(1, t));
   const projection = {
@@ -81,6 +81,7 @@ export const getDistanceToSegment = (p: Vector2d, v: Vector2d, w: Vector2d): { d
   };
   return {
     distance: getDistance(p, projection),
-    point: projection
+    point: projection,
+    t: t
   };
 };

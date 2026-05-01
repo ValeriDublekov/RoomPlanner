@@ -1,15 +1,60 @@
 import { StateCreator } from 'zustand';
 import { AppState } from '../../store';
-import { Vector2d, RoomObject, WallAttachment, FurnitureObject } from '../../types';
+import { Vector2d, RoomObject, WallAttachment, FurnitureObject, BeamObject } from '../../types';
 import { getDistance } from '../../lib/geometry';
+
+const syncBeams = (rooms: RoomObject[], beams: BeamObject[]): BeamObject[] => {
+  return beams.map(beam => {
+    if (!beam.p1Attachment && !beam.p2Attachment) return beam;
+
+    let newP1 = { ...beam.p1 };
+    let newP2 = { ...beam.p2 };
+
+    if (beam.p1Attachment) {
+      const room = rooms.find(r => r.id === beam.p1Attachment?.roomId);
+      if (room) {
+        const p1 = room.points[beam.p1Attachment.wallIndex];
+        const p2 = room.points[(beam.p1Attachment.wallIndex + 1) % room.points.length];
+        if (p1 && p2) {
+          const t = beam.p1Attachment.t;
+          newP1 = {
+            x: p1.x + t * (p2.x - p1.x),
+            y: p1.y + t * (p2.y - p1.y)
+          };
+          console.log(`[syncBeams] Updated p1 for beam ${beam.id}`, { t, newP1, wallIdx: beam.p1Attachment.wallIndex });
+        }
+      }
+    }
+
+    if (beam.p2Attachment) {
+      const room = rooms.find(r => r.id === beam.p2Attachment?.roomId);
+      if (room) {
+        const p1 = room.points[beam.p2Attachment.wallIndex];
+        const p2 = room.points[(beam.p2Attachment.wallIndex + 1) % room.points.length];
+        if (p1 && p2) {
+          const t = beam.p2Attachment.t;
+          newP2 = {
+            x: p1.x + t * (p2.x - p1.x),
+            y: p1.y + t * (p2.y - p1.y)
+          };
+          console.log(`[syncBeams] Updated p2 for beam ${beam.id}`, { t, newP2, wallIdx: beam.p2Attachment.wallIndex });
+        }
+      }
+    }
+
+    return { ...beam, p1: newP1, p2: newP2 };
+  });
+};
 
 export interface RoomSlice {
   roomPoints: Vector2d[];
   rooms: RoomObject[];
   wallAttachments: WallAttachment[];
+  beams: BeamObject[];
   selectedRoomId: string | null;
   selectedWallIndex: number | null;
   selectedAttachmentId: string | null;
+  selectedBeamId: string | null;
   dimensionInput: string;
   wallThickness: number;
   wallHeight: number;
@@ -35,15 +80,21 @@ export interface RoomSlice {
   addWallAttachment: (attachment: Omit<WallAttachment, 'id'>) => void;
   updateWallAttachment: (id: string, updates: Partial<WallAttachment>) => void;
   deleteWallAttachment: (id: string) => void;
+  addBeam: (beam: BeamObject) => void;
+  updateBeam: (id: string, updates: Partial<BeamObject>) => void;
+  deleteBeam: (id: string) => void;
+  setSelectedBeamId: (id: string | null) => void;
 }
 
 export const createRoomSlice: StateCreator<AppState, [], [], RoomSlice> = (set, get) => ({
   roomPoints: [],
   rooms: [],
   wallAttachments: [],
+  beams: [],
   selectedRoomId: null,
   selectedWallIndex: null,
   selectedAttachmentId: null,
+  selectedBeamId: null,
   dimensionInput: '',
   wallThickness: 20,
   wallHeight: 250,
@@ -135,28 +186,40 @@ export const createRoomSlice: StateCreator<AppState, [], [], RoomSlice> = (set, 
 
   setDimensionInput: (dimensionInput) => set({ dimensionInput }),
   
-  setSelectedRoomId: (selectedRoomId) => set({ 
-    selectedRoomId,
-    selectedWallIndex: null,
-    selectedAttachmentId: null,
-    selectedId: null,
-    selectedDimensionId: null
-  }),
+  setSelectedRoomId: (selectedRoomId) => {
+    console.log('setSelectedRoomId called with:', selectedRoomId);
+    set({ 
+      selectedRoomId,
+      selectedWallIndex: null,
+      selectedAttachmentId: null,
+      selectedId: null,
+      selectedIds: [],
+      selectedBeamId: null,
+      selectedDimensionId: null
+    });
+  },
 
-  setSelectedWallIndex: (selectedWallIndex) => set({ selectedWallIndex }),
+  setSelectedWallIndex: (selectedWallIndex) => {
+    console.log('setSelectedWallIndex called with:', selectedWallIndex);
+    set({ selectedWallIndex });
+  },
   
   updateRoom: (id, updates) => set((state) => ({
     rooms: state.rooms.map(r => r.id === id ? { ...r, ...updates } : r)
   })),
 
-  updateRoomPoint: (roomId, pointIndex, newPos) => set((state) => ({
-    rooms: state.rooms.map(r => {
+  updateRoomPoint: (roomId, pointIndex, newPos) => set((state) => {
+    const newRooms = state.rooms.map(r => {
       if (r.id !== roomId) return r;
       const newPoints = [...r.points];
       newPoints[pointIndex] = newPos;
       return { ...r, points: newPoints };
-    })
-  })),
+    });
+    return {
+      rooms: newRooms,
+      beams: syncBeams(newRooms, state.beams)
+    };
+  }),
 
   splitWallSegment: (roomId, segmentIndex, pos) => set((state) => {
     const room = state.rooms.find(r => r.id === roomId);
@@ -184,11 +247,42 @@ export const createRoomSlice: StateCreator<AppState, [], [], RoomSlice> = (set, 
       return a;
     });
 
-    return { rooms: newRooms, wallAttachments: newAttachments };
+    const newBeams = state.beams.map(b => {
+      let updated = { ...b };
+      if (b.p1Attachment && b.p1Attachment.roomId === roomId) {
+        if (b.p1Attachment.wallIndex > segmentIndex) {
+          updated.p1Attachment = { ...b.p1Attachment, wallIndex: b.p1Attachment.wallIndex + 1 };
+        } else if (b.p1Attachment.wallIndex === segmentIndex) {
+          if (b.p1Attachment.t < 0.5) {
+            updated.p1Attachment = { ...b.p1Attachment, t: b.p1Attachment.t * 2 };
+          } else {
+            updated.p1Attachment = { ...b.p1Attachment, wallIndex: b.p1Attachment.wallIndex + 1, t: (b.p1Attachment.t - 0.5) * 2 };
+          }
+        }
+      }
+      if (b.p2Attachment && b.p2Attachment.roomId === roomId) {
+        if (b.p2Attachment.wallIndex > segmentIndex) {
+          updated.p2Attachment = { ...b.p2Attachment, wallIndex: b.p2Attachment.wallIndex + 1 };
+        } else if (b.p2Attachment.wallIndex === segmentIndex) {
+          if (b.p2Attachment.t < 0.5) {
+            updated.p2Attachment = { ...b.p2Attachment, t: b.p2Attachment.t * 2 };
+          } else {
+            updated.p2Attachment = { ...b.p2Attachment, wallIndex: b.p2Attachment.wallIndex + 1, t: (b.p2Attachment.t - 0.5) * 2 };
+          }
+        }
+      }
+      return updated;
+    });
+
+    return { 
+      rooms: newRooms, 
+      wallAttachments: newAttachments,
+      beams: syncBeams(newRooms, newBeams)
+    };
   }),
 
-  moveWallSegment: (roomId, segmentIndex, delta) => set((state) => ({
-    rooms: state.rooms.map(r => {
+  moveWallSegment: (roomId, segmentIndex, delta) => set((state) => {
+    const newRooms = state.rooms.map(r => {
       if (r.id !== roomId) return r;
       const newPoints = [...r.points];
       const p1Idx = segmentIndex;
@@ -197,8 +291,12 @@ export const createRoomSlice: StateCreator<AppState, [], [], RoomSlice> = (set, 
       newPoints[p1Idx] = { x: newPoints[p1Idx].x + delta.x, y: newPoints[p1Idx].y + delta.y };
       newPoints[p2Idx] = { x: newPoints[p2Idx].x + delta.x, y: newPoints[p2Idx].y + delta.y };
       return { ...r, points: newPoints };
-    })
-  })),
+    });
+    return {
+      rooms: newRooms,
+      beams: syncBeams(newRooms, state.beams)
+    };
+  }),
 
   removeRoomVertex: (roomId, pointIndex) => set((state) => {
     const room = state.rooms.find(r => r.id === roomId);
@@ -222,7 +320,32 @@ export const createRoomSlice: StateCreator<AppState, [], [], RoomSlice> = (set, 
       return a;
     });
 
-    return { rooms: newRooms, wallAttachments: newAttachments };
+    const newBeams = state.beams.filter(b => {
+      const p1Att = b.p1Attachment;
+      const p2Att = b.p2Attachment;
+      if (p1Att && p1Att.roomId === roomId) {
+        if (p1Att.wallIndex === pointIndex || p1Att.wallIndex === (pointIndex - 1 + room.points.length) % room.points.length) return false;
+      }
+      if (p2Att && p2Att.roomId === roomId) {
+        if (p2Att.wallIndex === pointIndex || p2Att.wallIndex === (pointIndex - 1 + room.points.length) % room.points.length) return false;
+      }
+      return true;
+    }).map(b => {
+      let updated = { ...b };
+      if (updated.p1Attachment && updated.p1Attachment.roomId === roomId && updated.p1Attachment.wallIndex > pointIndex) {
+        updated.p1Attachment = { ...updated.p1Attachment, wallIndex: updated.p1Attachment.wallIndex - 1 };
+      }
+      if (updated.p2Attachment && updated.p2Attachment.roomId === roomId && updated.p2Attachment.wallIndex > pointIndex) {
+        updated.p2Attachment = { ...updated.p2Attachment, wallIndex: updated.p2Attachment.wallIndex - 1 };
+      }
+      return updated;
+    });
+
+    return { 
+      rooms: newRooms, 
+      wallAttachments: newAttachments,
+      beams: syncBeams(newRooms, newBeams)
+    };
   }),
 
   continueRoom: (roomId) => set((state) => {
@@ -283,4 +406,39 @@ export const createRoomSlice: StateCreator<AppState, [], [], RoomSlice> = (set, 
       selectedAttachmentId: null
     };
   }),
+  
+  addBeam: (beam) => set((state) => {
+    state.saveHistory();
+    const newBeam: BeamObject = {
+      ...beam,
+      colorType: 'manual',
+      manualColor: beam.color
+    };
+    return { beams: [...state.beams, newBeam] };
+  }),
+
+  updateBeam: (id, updates) => set((state) => ({
+    beams: state.beams.map(b => b.id === id ? { ...b, ...updates } : b)
+  })),
+
+  deleteBeam: (id) => set((state) => {
+    state.saveHistory();
+    return {
+      beams: state.beams.filter(b => b.id !== id),
+      selectedBeamId: null
+    };
+  }),
+
+  setSelectedBeamId: (id) => {
+    console.log('setSelectedBeamId called with:', id);
+    set({ 
+      selectedBeamId: id,
+      selectedId: null,
+      selectedIds: [],
+      selectedRoomId: null,
+      selectedWallIndex: null,
+      selectedAttachmentId: null,
+      selectedDimensionId: null
+    });
+  },
 });

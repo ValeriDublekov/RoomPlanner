@@ -47,7 +47,7 @@ export const useMouseSnapping = (mousePos: { x: number, y: number }, isCtrlPress
         );
       } else {
         // Standard point/edge snapping for cursor
-        const lastPoint = (mode === 'draw-room' || mode === 'draw-furniture') && roomPoints.length > 0
+        const lastPoint = (mode === 'draw-room' || mode === 'draw-furniture' || mode === 'draw-beam') && roomPoints.length > 0
           ? roomPoints[roomPoints.length - 1]
           : (mode === 'measure' || mode === 'dimension') && measurePoints.length > 0
             ? measurePoints[measurePoints.length - 1]
@@ -80,7 +80,7 @@ export const useMouseSnapping = (mousePos: { x: number, y: number }, isCtrlPress
 
     // 3. Ortho Snapping (Highest priority for drawing/measuring)
     const isOrthoActive = orthoMode || isCtrlPressed;
-    const drawingModes = ['draw-room', 'draw-furniture', 'measure', 'dimension'];
+    const drawingModes = ['draw-room', 'draw-furniture', 'measure', 'dimension', 'draw-beam'];
     if (drawingModes.includes(mode) && isOrthoActive) {
       const lastPoint = (mode === 'measure' || mode === 'dimension') 
         ? (measurePoints.length > 0 ? measurePoints[measurePoints.length - 1] : null)

@@ -20,6 +20,10 @@ export const RightSidebar: React.FC = () => {
   const selectedAttachmentId = useStore(state => state.selectedAttachmentId);
   const updateWallAttachment = useStore(state => state.updateWallAttachment);
   const deleteWallAttachment = useStore(state => state.deleteWallAttachment);
+  const beams = useStore(state => state.beams);
+  const selectedBeamId = useStore(state => state.selectedBeamId);
+  const updateBeam = useStore(state => state.updateBeam);
+  const deleteBeam = useStore(state => state.deleteBeam);
   const saveHistory = useStore(state => state.saveHistory);
   const bringToFront = useStore(state => state.bringToFront);
   const sendToBack = useStore(state => state.sendToBack);
@@ -32,8 +36,17 @@ export const RightSidebar: React.FC = () => {
   const selectedRoom = rooms.find(r => r.id === selectedRoomId);
   const selectedDimension = dimensions.find(d => d.id === selectedDimensionId);
   const selectedAttachment = wallAttachments.find(a => a.id === selectedAttachmentId);
+  const selectedBeam = beams.find(b => b.id === selectedBeamId);
 
-  const isVisible = !!(selectedFurniture || selectedRoom || selectedDimension || selectedAttachment);
+  if (selectedBeamId && !selectedBeam) {
+    console.warn('selectedBeamId exists but beam not found in beams array:', selectedBeamId);
+  }
+
+  const isVisible = !!(selectedFurniture || selectedRoom || selectedDimension || selectedAttachment || selectedBeam);
+
+  if (selectedBeamId) {
+    console.log('RightSidebar: Beam selected:', selectedBeamId, 'found:', !!selectedBeam);
+  }
 
   React.useEffect(() => {
     if (isVisible && sidebarRef.current) {
@@ -67,6 +80,7 @@ export const RightSidebar: React.FC = () => {
             useStore.getState().setSelectedRoomId(null);
             useStore.getState().setSelectedDimensionId(null);
             useStore.getState().setSelectedAttachmentId(null);
+            useStore.getState().setSelectedBeamId(null);
             useStore.getState().setSelectedIds([]);
           }}
         >
@@ -80,6 +94,7 @@ export const RightSidebar: React.FC = () => {
           selectedWallIndex={selectedWallIndex}
           selectedDimension={selectedDimension}
           selectedAttachment={selectedAttachment}
+          selectedBeam={selectedBeam}
           pixelsPerCm={pixelsPerCm}
           updateFurniture={updateFurniture}
           updateRoom={updateRoom}
@@ -88,6 +103,8 @@ export const RightSidebar: React.FC = () => {
           deleteDimension={deleteDimension}
           updateAttachment={updateWallAttachment}
           deleteAttachment={deleteWallAttachment}
+          updateBeam={updateBeam}
+          deleteBeam={deleteBeam}
           saveHistory={saveHistory}
           bringToFront={bringToFront}
           sendToBack={sendToBack}

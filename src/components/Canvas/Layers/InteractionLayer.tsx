@@ -25,7 +25,7 @@ export const InteractionLayer: React.FC<InteractionLayerProps> = ({
     pendingFurniture
   } = useStore();
 
-  const isDrawing = (mode === 'draw-room' || mode === 'draw-furniture') && roomPoints.length > 0;
+  const isDrawing = (mode === 'draw-room' || mode === 'draw-furniture' || mode === 'draw-beam') && roomPoints.length > 0;
   const isDragDrawing = (mode === 'add-box' || mode === 'draw-circle') && roomPoints.length === 1;
   const isCalibrating = mode === 'calibrate' && calibrationPoints && calibrationPoints.length === 1;
   const isPlacingFurniture = mode === 'place-furniture' && pendingFurniture !== null;

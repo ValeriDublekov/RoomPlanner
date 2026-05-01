@@ -83,7 +83,28 @@ export interface WallAttachment {
   thickCurtainColor?: string;
 }
 
-export type AppMode = 'select' | 'draw-room' | 'draw-furniture' | 'draw-circle' | 'calibrate' | 'add-box' | 'measure' | 'dimension' | 'add-door' | 'add-window' | 'place-furniture';
+export interface BeamAttachment {
+  roomId: string;
+  wallIndex: number;
+  t: number; // 0..1 along the wall segment
+}
+
+export interface BeamObject {
+  id: string;
+  p1: Vector2d;
+  p2: Vector2d;
+  width: number; // thickness in cm
+  height: number; // height in cm
+  elevation: number; // elevation from floor in cm
+  color: string; // The active color
+  colorType: 'manual' | 'wall' | 'ceiling';
+  manualColor?: string;
+  alignment: 'left' | 'right' | 'center';
+  p1Attachment?: BeamAttachment;
+  p2Attachment?: BeamAttachment;
+}
+
+export type AppMode = 'select' | 'draw-room' | 'draw-furniture' | 'draw-circle' | 'calibrate' | 'add-box' | 'measure' | 'dimension' | 'add-door' | 'add-window' | 'place-furniture' | 'draw-beam';
 export type LayerType = 'blueprint' | 'room' | 'furniture';
 
 export interface EdgeMap {

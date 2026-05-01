@@ -22,13 +22,19 @@ export const DrawingLayer: React.FC<DrawingLayerProps> = ({
   scale,
   pixelsPerCm,
 }) => {
-  const isDrawing = (mode === 'draw-room' || mode === 'draw-furniture') && roomPoints.length > 0;
+  const isDrawing = (mode === 'draw-room' || mode === 'draw-furniture' || mode === 'draw-beam') && roomPoints.length > 0;
+  const isStartingBeam = mode === 'draw-beam' && roomPoints.length === 0;
+  
   const isDragDrawing = (mode === 'add-box' || mode === 'draw-circle') && roomPoints.length === 1;
   const isCalibrating = mode === 'calibrate' && calibrationPoints && calibrationPoints.length === 1;
-  const isActive = isDrawing || isDragDrawing || isCalibrating;
+  const isActive = isDrawing || isDragDrawing || isCalibrating || isStartingBeam;
 
   return (
     <Group listening={isActive}>
+      {/* Start cursor for beam */}
+      {isStartingBeam && (
+        <Circle x={snappedMouse.x} y={snappedMouse.y} radius={4 / scale} fill="#6366f1" stroke="white" strokeWidth={1/scale} />
+      )}
       {/* Drag-to-draw preview for furniture */}
       {isDragDrawing && (
         <Group>
@@ -55,16 +61,28 @@ export const DrawingLayer: React.FC<DrawingLayerProps> = ({
         </Group>
       )}
 
-      {/* Current Drawing (Room or Furniture) */}
+      {/* Current Drawing (Room or Furniture or Beam) */}
       {isDrawing && (
         <Group>
-          <Line
-            points={[...roomPoints.flatMap((p) => [p.x, p.y]), snappedMouse.x, snappedMouse.y]}
-            stroke="#6366f1"
-            strokeWidth={2 / scale}
-            lineJoin="round"
-            lineCap="round"
-          />
+          {mode === 'draw-beam' ? (
+            <Line
+              points={[roomPoints[0].x, roomPoints[0].y, snappedMouse.x, snappedMouse.y]}
+              stroke="#6366f1"
+              strokeWidth={20 / scale} // Placeholder for beam width preview if possible, or just a line
+              lineJoin="round"
+              lineCap="round"
+              opacity={0.5}
+            />
+          ) : (
+            <Line
+              points={[...roomPoints.flatMap((p) => [p.x, p.y]), snappedMouse.x, snappedMouse.y]}
+              stroke="#6366f1"
+              strokeWidth={2 / scale}
+              lineJoin="round"
+              lineCap="round"
+            />
+          )}
+
           {roomPoints.map((p, i) => (
             <Circle
               key={i}

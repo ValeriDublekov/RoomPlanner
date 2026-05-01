@@ -22,6 +22,10 @@ export const RoomItem: React.FC<RoomItemProps> = ({
   scale,
   isLocked,
 }) => {
+  React.useEffect(() => {
+    console.log('RoomItem rendered for:', room.id, 'isSelected:', isSelected);
+  }, [isSelected, room.id]);
+  
   const wallThicknessCm = useStore((state) => state.wallThickness);
   const pixelsPerCm = useStore((state) => state.pixelsPerCm);
   
@@ -106,43 +110,17 @@ export const RoomItem: React.FC<RoomItemProps> = ({
     <Group 
       id={room.id}
       onClick={(e) => {
+        console.log('RoomItem Group onClick:', room.id, 'target name:', e.target.name(), 'activeLayer:', activeLayer, 'mode:', mode);
+        // Remove strict target check to allow bubbling from floor area to select the room
         if (e.evt.button !== 0 || mode !== 'select' || activeLayer !== 'room') return;
+        
         e.cancelBubble = true;
-        
-        // Check if we clicked on a wall specifically
-        console.log('RoomItem Clicked, target name:', e.target.name(), 'activeLayer:', activeLayer);
-        if (e.target.name() !== 'wall-attachment') {
-          const stage = e.target.getStage();
-          const pointer = stage?.getPointerPosition();
-          if (pointer) {
-            const worldPos = {
-              x: (pointer.x - stage!.x()) / stage!.scaleX(),
-              y: (pointer.y - stage!.y()) / stage!.scaleY()
-            };
-            
-            let clickedWallIndex = -1;
-            for (const seg of wallSegments) {
-              const dist = getDistanceToSegment(worldPos, seg.p1, seg.p2).distance;
-              if (dist < wallThicknessCm) {
-                clickedWallIndex = seg.index;
-                break;
-              }
-            }
-            
-            if (clickedWallIndex !== -1) {
-              setSelectedWallIndex(clickedWallIndex);
-              setSelectedRoomId(null);
-              setSelectedId(null);
-              setSelectedIds([]);
-              return;
-            }
-          }
-        }
-        
         onSelect();
         setSelectedWallIndex(null);
       }} 
       onTap={(e) => {
+        console.log('RoomItem Group onTap:', room.id);
+        if (e.target !== e.currentTarget) return;
         if (mode !== 'select') return;
         e.cancelBubble = true;
         onSelect();
@@ -187,6 +165,7 @@ export const RoomItem: React.FC<RoomItemProps> = ({
           lineJoin="miter"
           lineCap="butt"
           opacity={wallOpacity}
+          listening={false}
         />
 
         {/* Individual Wall Coloring */}
@@ -198,9 +177,18 @@ export const RoomItem: React.FC<RoomItemProps> = ({
               points={[seg.p1.x, seg.p1.y, seg.p2.x, seg.p2.y]}
               stroke={isWallSelected ? "#4f46e5" : (room.wallColors?.[seg.index] || room.defaultWallColor || "#1e293b")}
               strokeWidth={wallThicknessPx * 2 - 2}
+              hitStrokeWidth={wallThicknessPx * 2 + 10}
               opacity={wallOpacity}
               lineCap="butt"
-              listening={false}
+              listening={true}
+              onClick={(e) => {
+                console.log('Wall clicked:', seg.index, 'activeLayer:', activeLayer, 'mode:', mode);
+                if (mode !== 'select' || activeLayer !== 'room') return;
+                e.cancelBubble = true;
+                onSelect();
+                setSelectedWallIndex(seg.index);
+                // All selection resets are now handled inside setSelectedRoomId in the slice
+              }}
             />
           );
         })}
@@ -235,6 +223,13 @@ export const RoomItem: React.FC<RoomItemProps> = ({
             fillPriority={textureImage ? "pattern" : "color"}
             lineJoin="miter"
             opacity={floorOpacity}
+            onClick={(e) => {
+              console.log('Room Floor clicked:', room.id, 'mode:', mode);
+              if (mode !== 'select' || activeLayer !== 'room') return;
+              e.cancelBubble = true;
+              onSelect();
+              setSelectedWallIndex(null);
+            }}
           />
           {isSelected && !isDragging && (
             <Line

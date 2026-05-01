@@ -4,6 +4,7 @@ import { useStore } from '../../../store';
 import { RoomItem } from '../RoomItem';
 import { FurnitureItem } from '../FurnitureItem';
 import { WallAttachmentItem } from '../WallAttachmentItem';
+import { BeamItem } from '../BeamItem';
 import { RoomEditor } from '../RoomEditor';
 import { RoomAreaLabel } from '../RoomAreaLabel';
 
@@ -27,19 +28,50 @@ export const ArchitecturalLayer: React.FC<ArchitecturalLayerProps> = ({ scale })
     wallAttachments,
     selectedAttachmentId,
     setSelectedAttachmentId,
+    beams,
+    selectedBeamId,
+    setSelectedBeamId,
     setMode,
+    mode
   } = useStore();
+
+  React.useEffect(() => {
+    console.log('ArchitecturalLayer: selectedRoomId changed to', selectedRoomId);
+  }, [selectedRoomId]);
+
+  React.useEffect(() => {
+    console.log('ArchitecturalLayer: selectedBeamId changed to', selectedBeamId);
+  }, [selectedBeamId]);
 
   const roomElements = React.useMemo(() => rooms.map((room) => (
     <RoomItem
       key={room.id}
       room={room}
       isSelected={selectedRoomId === room.id}
-      onSelect={() => setSelectedRoomId(room.id)}
+      onSelect={() => {
+        console.log('ArchitecturalLayer: RoomItem onSelect triggered for room:', room.id);
+        setSelectedRoomId(room.id);
+      }}
       scale={scale}
       isLocked={false} 
     />
-  )), [rooms, selectedRoomId, scale, activeLayer, setSelectedRoomId]);
+  )), [rooms, selectedRoomId, scale, activeLayer, setSelectedRoomId, mode]);
+
+  const beamElements = React.useMemo(() => beams.map((beam) => (
+    <BeamItem
+      key={beam.id}
+      beam={beam}
+      isSelected={selectedBeamId === beam.id}
+      onSelect={() => {
+        console.log('ArchitecturalLayer: onSelect beam triggered, id:', beam.id);
+        setSelectedBeamId(beam.id);
+        console.log('ArchitecturalLayer: setSelectedBeamId called');
+        setMode('select');
+      }}
+      scale={scale}
+      mode={mode}
+    />
+  )), [beams, selectedBeamId, scale, setSelectedBeamId, setMode, mode, activeLayer]);
 
   const furnitureElements = React.useMemo(() => [...furniture].sort((a, b) => (a.elevation || 0) - (b.elevation || 0)).map((item) => (
     <FurnitureItem
@@ -83,16 +115,10 @@ export const ArchitecturalLayer: React.FC<ArchitecturalLayerProps> = ({ scale })
 
   return (
     <Layer id="architectural-layer" visible={activeLayer !== 'blueprint'}>
-      {/* 1. Base Rooms */}
+      {/* 1. Base Rooms (Floors & Walls) */}
       {roomElements}
 
-      {/* 2. Furniture (if in room mode, it's below attachments) */}
-      {activeLayer === 'room' && furnitureElements}
-
-      {/* 4. Furniture (if NOT in room mode, it's above attachments) */}
-      {activeLayer !== 'room' && furnitureElements}
-
-      {/* 5. Room Editor (Handles & Drag Distances) */}
+      {/* 2. Room Editor (Handles & Drag Distances) - Below beams but above walls */}
       {selectedRoomId && rooms.find(r => r.id === selectedRoomId) && (
         <RoomEditor
           room={rooms.find(r => r.id === selectedRoomId)!}
@@ -100,7 +126,14 @@ export const ArchitecturalLayer: React.FC<ArchitecturalLayerProps> = ({ scale })
         />
       )}
 
-      {/* 6. Room Area Labels */}
+      {/* 3. Furniture */}
+      {activeLayer === 'room' && furnitureElements}
+      {activeLayer !== 'room' && furnitureElements}
+
+      {/* 4. Beams - On top of walls and furniture in architecture mode */}
+      {activeLayer === 'room' && beamElements}
+
+      {/* 5. Room Area Labels */}
       {rooms.map((room) => (
         <RoomAreaLabel
           key={`label-${room.id}`}
@@ -109,7 +142,7 @@ export const ArchitecturalLayer: React.FC<ArchitecturalLayerProps> = ({ scale })
         />
       ))}
 
-      {/* 6. Wall Attachments (Top priority for selection in room mode) */}
+      {/* 6. Wall Attachments (Doors/Windows) - Always findable/clickable */}
       {attachmentElements}
     </Layer>
   );
