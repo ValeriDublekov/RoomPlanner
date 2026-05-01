@@ -19,7 +19,9 @@ import {
   ChevronRight,
   ChevronDown,
   LayoutGrid,
-  Hash
+  Hash,
+  Link,
+  Link2Off
 } from 'lucide-react';
 import { useStore } from '../../store';
 import { cn } from '../../lib/utils';
@@ -132,9 +134,32 @@ export const SceneExplorer: React.FC = () => {
         {icon}
       </span>
       <span className="truncate flex-1">{label}</span>
+      {id && (
+        <ThemeIcon id={id} />
+      )}
       {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" />}
     </button>
   );
+
+  const ThemeIcon = ({ id }: { id: string }) => {
+    const item = furniture.find(f => f.id === id);
+    const room = rooms.find(r => r.id === id);
+    const materials = item?.materials || room?.materials;
+    
+    if (!materials) return null;
+    
+    // Check if any material is NOT source: 'theme'
+    const isDetached = Object.values(materials).some(slot => slot.source === 'custom');
+    
+    return (
+      <div className={cn(
+        "px-1 py-0.5 rounded transition-colors mr-1",
+        isDetached ? "text-amber-400" : "text-indigo-400"
+      )}>
+        {isDetached ? <Link2Off size={10} /> : <Link size={10} />}
+      </div>
+    );
+  };
 
   const GroupHeader = ({ title, count, group }: { title: string, count: number, group: string }) => (
     <button 

@@ -192,10 +192,10 @@ export const WallSegments: React.FC<{
         .filter(a => a.roomId === room.id && a.wallSegmentIndex === i)
         .sort((a, b) => a.positionAlongWall - b.positionAlongWall);
 
-      let segmentColor = room.wallColors?.[i] || room.defaultWallColor || "#f0f0f0";
+      let segmentColor = room.wallColors?.[i] || room.materials?.wallBase?.value || room.defaultWallColor || "#f0f0f0";
       
-      // Override default wall color with theme if active
-      if (activeTheme && (!room.wallColors?.[i] || room.wallColors?.[i] === room.defaultWallColor)) {
+      // If we don't have materials or specifically set wall colors, and there's a theme, use theme default
+      if (!room.wallColors?.[i] && !room.materials?.wallBase && activeTheme) {
         segmentColor = activeTheme.wallPalette[0];
       }
 
@@ -361,7 +361,7 @@ export const WallSegments: React.FC<{
       }
     }
     return segs;
-  }, [room.points, pixelsPerCm, attachments, room.wallColors, room.defaultWallColor, wallHeight, wallThickness]);
+  }, [room.points, pixelsPerCm, attachments, room.wallColors, room.defaultWallColor, room.materials, activeThemeId, wallHeight, wallThickness]);
 
   return (
     <group>

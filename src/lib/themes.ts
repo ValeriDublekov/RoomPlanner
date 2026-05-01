@@ -1,4 +1,4 @@
-import { InteriorTheme, FurnitureObject, ObjectMaterials } from '../types';
+import { InteriorTheme, FurnitureObject, ObjectMaterials, RoomObject } from '../types';
 
 export const INTERIOR_THEMES: InteriorTheme[] = [
   {
@@ -66,5 +66,22 @@ export const applyThemeToFurniture = (
   return {
     ...item,
     materials: applyThemeToMaterials(item.materials, theme, item.furnitureType)
+  };
+};
+
+export const applyThemeToRoom = (
+  room: RoomObject,
+  theme: InteriorTheme
+): RoomObject => {
+  const currentMaterials = room.materials || {
+    wallBase: { source: 'theme', value: theme.wallPalette[0] }
+  };
+
+  return {
+    ...room,
+    materials: {
+      ...currentMaterials,
+      wallBase: { source: 'theme', value: theme.wallPalette[0] }
+    }
   };
 };

@@ -1,9 +1,12 @@
 import React from 'react';
 import { X, RotateCcw, RotateCw, ArrowUpToLine, ChevronUp, ChevronDown, ArrowDownToLine } from 'lucide-react';
-import { FurnitureObject, MaterialSlot, ObjectMaterials } from '../../../types';
+import { FurnitureObject, MaterialSlot, ObjectMaterials, InteriorTheme } from '../../../types';
 import { WOOD_COLORS } from '../../../constants';
 import { cn } from '../../../lib/utils';
 import { Palette, Link, Link2Off } from 'lucide-react';
+import { useStore } from '../../../store';
+import { INTERIOR_THEMES } from '../../../lib/themes';
+import { getDefaultMaterialsForType } from '../../../lib/materials';
 
 interface FurnitureEditorProps {
   selectedFurniture: FurnitureObject;
@@ -21,63 +24,120 @@ const MaterialPicker: React.FC<{
   label: string;
   slot: MaterialSlot | undefined;
   onChange: (updates: Partial<MaterialSlot>) => void;
-}> = ({ label, slot, onChange }) => {
+  activeTheme: InteriorTheme | undefined;
+  slotType: keyof ObjectMaterials;
+  furnitureType?: string;
+}> = ({ label, slot, onChange, activeTheme, slotType, furnitureType }) => {
   if (!slot) return null;
+
+  const getThemePalette = () => {
+    if (!activeTheme) return [];
+    if (slotType === 'woodBase' || slotType === 'woodFront') return activeTheme.woodPalette;
+    if (slotType === 'textileMain' || slotType === 'textileAccent') return activeTheme.textilePalette;
+    return [];
+  };
+
+  const palette = getThemePalette();
+  const isThemeMode = slot.source === 'theme';
+
+  const handleToggle = () => {
+    if (!isThemeMode) {
+      // Switching to Theme mode - reset to default for this slot
+      let resetValue = slot.value;
+      if (activeTheme) {
+        if (slotType === 'woodBase') resetValue = activeTheme.woodPalette[0];
+        if (slotType === 'woodFront') resetValue = activeTheme.woodPalette[1] || activeTheme.woodPalette[0];
+        if (slotType === 'textileMain') {
+          resetValue = (furnitureType === 'bed') ? activeTheme.textilePalette[0] : activeTheme.textilePalette[1];
+        }
+        if (slotType === 'textileAccent') resetValue = activeTheme.textilePalette[2];
+      }
+      onChange({ source: 'theme', value: resetValue });
+    } else {
+      onChange({ source: 'custom' });
+    }
+  };
 
   return (
     <div className="space-y-2 p-3 bg-slate-50 rounded-2xl border border-slate-200 shadow-sm transition-all hover:bg-white hover:shadow-md">
       <div className="flex items-center justify-between">
         <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">{label}</label>
-        <button
-          onClick={() => onChange({ source: slot.source === 'theme' ? 'custom' : 'theme' })}
-          className={cn(
-            "flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-tight transition-all",
-            slot.source === 'theme' 
-              ? "bg-indigo-50 text-indigo-600 border border-indigo-100" 
-              : "bg-amber-50 text-amber-600 border border-amber-100"
-          )}
-        >
-          {slot.source === 'theme' ? (
-            <><Link size={10} /> Following Theme</>
-          ) : (
-            <><Link2Off size={10} /> Detached</>
-          )}
-        </button>
+        <div className="flex bg-slate-200 p-0.5 rounded-lg">
+          <button
+            onClick={() => isThemeMode ? null : handleToggle()}
+            className={cn(
+              "flex items-center gap-1.5 px-2 py-1 rounded-md text-[9px] font-bold uppercase transition-all",
+              isThemeMode ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
+            )}
+          >
+            <Link size={10} /> Theme
+          </button>
+          <button
+            onClick={() => !isThemeMode ? null : handleToggle()}
+            className={cn(
+              "flex items-center gap-1.5 px-2 py-1 rounded-md text-[9px] font-bold uppercase transition-all",
+              !isThemeMode ? "bg-white text-amber-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
+            )}
+          >
+            <Link2Off size={10} /> Custom
+          </button>
+        </div>
       </div>
 
-      <div className="flex gap-2 flex-wrap">
-        {WOOD_COLORS.map(wood => (
-          <button
-            key={wood.id}
-            onClick={() => onChange({ value: wood.color, source: 'custom' })}
-            className={cn(
-              "w-6 h-6 rounded-full border-2 transition-all flex items-center justify-center overflow-hidden",
-              slot.value === wood.color ? "border-indigo-500 scale-110 shadow-sm" : "border-transparent hover:scale-105"
+      <div className="flex gap-2 flex-wrap items-center">
+        {isThemeMode ? (
+          <>
+            {palette.map((color, i) => (
+              <button
+                key={i}
+                onClick={() => onChange({ value: color })}
+                className={cn(
+                  "w-6 h-6 rounded-full border-2 transition-all",
+                  slot.value === color ? "border-indigo-500 scale-110 shadow-sm" : "border-white hover:scale-105"
+                )}
+                style={{ backgroundColor: color }}
+              />
+            ))}
+            {palette.length === 0 && (
+              <span className="text-[10px] text-slate-400 italic">No theme active</span>
             )}
-            title={wood.name}
-            style={{ backgroundColor: wood.color }}
-          >
-            <div className="w-full h-full opacity-20 bg-[radial-gradient(circle,transparent_20%,#000_20%,#000_40%,transparent_40%,transparent_60%,#000_60%,#000_80%,transparent_80%)] bg-[length:4px_4px]" />
-          </button>
-        ))}
-        <div className="w-px h-6 bg-slate-200 mx-1" />
-        {['#f8fafc', '#f1f5f9', '#e2e8f0', '#cbd5e1', '#94a3b8', '#64748b', '#475569', '#334155'].map(color => (
-          <button
-            key={color}
-            onClick={() => onChange({ value: color, source: 'custom' })}
-            className={cn(
-              "w-6 h-6 rounded-full border-2 transition-all",
-              slot.value === color ? "border-indigo-500 scale-110 shadow-sm" : "border-transparent hover:scale-105"
-            )}
-            style={{ backgroundColor: color }}
-          />
-        ))}
-        <input 
-          type="color" 
-          value={slot.value} 
-          onChange={(e) => onChange({ value: e.target.value, source: 'custom' })}
-          className="w-6 h-6 rounded-full border-none p-0 overflow-hidden cursor-pointer hover:scale-105 transition-transform"
-        />
+          </>
+        ) : (
+          <>
+            {WOOD_COLORS.map(wood => (
+              <button
+                key={wood.id}
+                onClick={() => onChange({ value: wood.color })}
+                className={cn(
+                  "w-6 h-6 rounded-full border-2 transition-all flex items-center justify-center overflow-hidden",
+                  slot.value === wood.color ? "border-indigo-500 scale-110 shadow-sm" : "border-transparent hover:scale-105"
+                )}
+                title={wood.name}
+                style={{ backgroundColor: wood.color }}
+              >
+                <div className="w-full h-full opacity-20 bg-[radial-gradient(circle,transparent_20%,#000_20%,#000_40%,transparent_40%,transparent_60%,#000_60%,#000_80%,transparent_80%)] bg-[length:4px_4px]" />
+              </button>
+            ))}
+            <div className="w-px h-6 bg-slate-200 mx-1" />
+            {['#f8fafc', '#f1f5f9', '#e2e8f0', '#cbd5e1', '#94a3b8', '#64748b', '#475569', '#334155'].map(color => (
+              <button
+                key={color}
+                onClick={() => onChange({ value: color })}
+                className={cn(
+                  "w-6 h-6 rounded-full border-2 transition-all",
+                  slot.value === color ? "border-indigo-500 scale-110 shadow-sm" : "border-transparent hover:scale-105"
+                )}
+                style={{ backgroundColor: color }}
+              />
+            ))}
+            <input 
+              type="color" 
+              value={slot.value} 
+              onChange={(e) => onChange({ value: e.target.value })}
+              className="w-6 h-6 rounded-full border-none p-0 overflow-hidden cursor-pointer hover:scale-105 transition-transform"
+            />
+          </>
+        )}
       </div>
     </div>
   );
@@ -95,6 +155,8 @@ export const FurnitureEditor: React.FC<FurnitureEditorProps> = ({
   sendBackward,
 }) => {
   const materials = selectedFurniture.materials || {};
+  const activeThemeId = useStore(state => state.activeThemeId);
+  const activeTheme = INTERIOR_THEMES.find(t => t.id === activeThemeId);
   
   const updateMaterialSlot = (slotName: keyof ObjectMaterials, updates: Partial<MaterialSlot>) => {
     saveHistory();
@@ -130,7 +192,15 @@ export const FurnitureEditor: React.FC<FurnitureEditorProps> = ({
         <select
           value={selectedFurniture.furnitureType || 'generic'}
           onFocus={saveHistory}
-          onChange={(e) => updateFurniture(selectedFurniture.id, { furnitureType: e.target.value as any })}
+          onChange={(e) => {
+            const newType = e.target.value as any;
+            const currentMaterials = selectedFurniture.materials || {};
+            const newDefaults = getDefaultMaterialsForType(newType);
+            updateFurniture(selectedFurniture.id, { 
+              furnitureType: newType,
+              materials: { ...newDefaults, ...currentMaterials } // Merge: keep existing, add new defaults
+            });
+          }}
           className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all appearance-none"
         >
           <option value="generic">Generic Box</option>
@@ -282,54 +352,93 @@ export const FurnitureEditor: React.FC<FurnitureEditorProps> = ({
       )}
 
       <div className="space-y-4 pt-2">
-        {materials.woodBase && (
-          <MaterialPicker 
-            label="Body / Base Material" 
-            slot={materials.woodBase} 
-            onChange={(u) => updateMaterialSlot('woodBase', u)} 
-          />
-        )}
-        {materials.woodFront && (
-          <MaterialPicker 
-            label="Front / Door Material" 
-            slot={materials.woodFront} 
-            onChange={(u) => updateMaterialSlot('woodFront', u)} 
-          />
-        )}
-        {materials.textileMain && (
-          <MaterialPicker 
-            label="Main Textile" 
-            slot={materials.textileMain} 
-            onChange={(u) => updateMaterialSlot('textileMain', u)} 
-          />
-        )}
-        {materials.textileAccent && (
-          <MaterialPicker 
-            label="Accent Textile" 
-            slot={materials.textileAccent} 
-            onChange={(u) => updateMaterialSlot('textileAccent', u)} 
-          />
-        )}
-        
-        {/* Fallback if no semantic materials yet (shouldn't happen with migration) */}
-        {!materials.woodBase && !materials.textileMain && (
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Main Color</label>
-            <div className="flex gap-2 flex-wrap">
-              {['#f8fafc', '#f1f5f9', '#e2e8f0', '#cbd5e1', '#94a3b8', '#64748b', '#475569', '#334155'].map(color => (
-                <button
-                  key={color}
-                  onClick={() => updateFurniture(selectedFurniture.id, { color })}
-                  className={cn(
-                    "w-6 h-6 rounded-full border-2 transition-all",
-                    selectedFurniture.color === color ? "border-indigo-500 scale-110" : "border-transparent"
-                  )}
-                  style={{ backgroundColor: color }}
+        {/* Helper to check if a slot should be visible for this furniture type */}
+        {(() => {
+          const type = selectedFurniture.furnitureType || 'generic';
+          const showWoodBase = [
+            'generic', 'bed', 'desk', 'wardrobe', 'dresser', 'shelf', 'table', 'nightstand', 'electronics'
+          ].includes(type);
+          const showWoodFront = [
+            'wardrobe', 'dresser'
+          ].includes(type) || (type === 'shelf' && selectedFurniture.hasDoors);
+          const showTextileMain = [
+            'bed', 'sofa', 'armchair', 'chair'
+          ].includes(type);
+          const showTextileAccent = [
+            'bed', 'armchair', 'chair'
+          ].includes(type);
+
+          return (
+            <>
+              {showWoodBase && (
+                <MaterialPicker 
+                  label={type === 'bed' ? "Bed Frame Material" : (type === 'generic' ? "Main Material" : "Body / Base Material")}
+                  slot={materials.woodBase} 
+                  slotType="woodBase"
+                  activeTheme={activeTheme}
+                  furnitureType={type}
+                  onChange={(u) => updateMaterialSlot('woodBase', u)} 
                 />
-              ))}
-            </div>
-          </div>
-        )}
+              )}
+              {showWoodFront && (
+                <MaterialPicker 
+                  label="Front / Doors Material" 
+                  slot={materials.woodFront} 
+                  slotType="woodFront"
+                  activeTheme={activeTheme}
+                  furnitureType={type}
+                  onChange={(u) => updateMaterialSlot('woodFront', u)} 
+                />
+              )}
+              {showTextileMain && (
+                <MaterialPicker 
+                  label={type === 'bed' ? "Mattress Material" : "Main Textile"} 
+                  slot={materials.textileMain} 
+                  slotType="textileMain"
+                  activeTheme={activeTheme}
+                  furnitureType={type}
+                  onChange={(u) => updateMaterialSlot('textileMain', u)} 
+                />
+              )}
+              {showTextileAccent && (
+                <MaterialPicker 
+                  label={type === 'bed' ? "Pillows Material" : "Accent Textile"} 
+                  slot={materials.textileAccent} 
+                  slotType="textileAccent"
+                  activeTheme={activeTheme}
+                  furnitureType={type}
+                  onChange={(u) => updateMaterialSlot('textileAccent', u)} 
+                />
+              )}
+              
+              {/* Fallback for objects without semantic slots (Picture, Light, Toilet, etc) */}
+              {!showWoodBase && !showTextileMain && (
+                <div className="space-y-2 p-3 bg-slate-50 rounded-2xl border border-slate-200">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Main Color</label>
+                  <div className="flex gap-2 flex-wrap items-center">
+                    {['#f8fafc', '#f1f5f9', '#e2e8f0', '#cbd5e1', '#94a3b8', '#64748b', '#475569', '#334155'].map(color => (
+                      <button
+                        key={color}
+                        onClick={() => updateFurniture(selectedFurniture.id, { color })}
+                        className={cn(
+                          "w-6 h-6 rounded-full border-2 transition-all",
+                          selectedFurniture.color === color ? "border-indigo-500 scale-110 shadow-sm" : "border-white"
+                        )}
+                        style={{ backgroundColor: color }}
+                      />
+                    ))}
+                    <input 
+                      type="color" 
+                      value={selectedFurniture.color || '#f8fafc'} 
+                      onChange={(e) => updateFurniture(selectedFurniture.id, { color: e.target.value })}
+                      className="w-6 h-6 rounded-full border-none p-0 overflow-hidden cursor-pointer hover:scale-110 transition-transform"
+                    />
+                  </div>
+                </div>
+              )}
+            </>
+          );
+        })()}
       </div>
 
       {(selectedFurniture.furnitureType === 'wardrobe' || selectedFurniture.furnitureType === 'dresser' || selectedFurniture.furnitureType === 'bed' || (selectedFurniture.furnitureType === 'shelf' && selectedFurniture.hasDoors)) && (

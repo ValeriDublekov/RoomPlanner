@@ -2,6 +2,7 @@ import { StateCreator } from 'zustand';
 import { AppState } from '../../store';
 import { Vector2d, RoomObject, WallAttachment, FurnitureObject, BeamObject } from '../../types';
 import { getDistance } from '../../lib/geometry';
+import { INTERIOR_THEMES } from '../../lib/themes';
 
 const syncBeams = (rooms: RoomObject[], beams: BeamObject[]): BeamObject[] => {
   return beams.map(beam => {
@@ -150,10 +151,19 @@ export const createRoomSlice: StateCreator<AppState, [], [], RoomSlice> = (set, 
       };
     }
 
+    const activeThemeId = state.activeThemeId;
+    const activeTheme = INTERIOR_THEMES.find(t => t.id === activeThemeId);
+
     const newRoom: RoomObject = {
       id: Math.random().toString(36).substr(2, 9),
       points: uniquePoints,
-      isClosed: true
+      isClosed: true,
+      materials: {
+        wallBase: { 
+          source: 'theme', 
+          value: activeTheme ? activeTheme.wallPalette[0] : '#f8fafc' 
+        }
+      }
     };
 
     return {
@@ -170,10 +180,19 @@ export const createRoomSlice: StateCreator<AppState, [], [], RoomSlice> = (set, 
     state.saveHistory();
     const historyEntry = { rooms: state.rooms, furniture: state.furniture, dimensions: state.dimensions, wallAttachments: state.wallAttachments };
     
+    const activeThemeId = state.activeThemeId;
+    const activeTheme = INTERIOR_THEMES.find(t => t.id === activeThemeId);
+
     const newRoom: RoomObject = {
       id: Math.random().toString(36).substr(2, 9),
       points: [...state.roomPoints],
-      isClosed: false
+      isClosed: false,
+      materials: {
+        wallBase: { 
+          source: 'theme', 
+          value: activeTheme ? activeTheme.wallPalette[0] : '#f8fafc' 
+        }
+      }
     };
 
     return {

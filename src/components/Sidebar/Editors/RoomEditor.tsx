@@ -1,9 +1,103 @@
 import React from 'react';
-import { X, Ruler } from 'lucide-react';
-import { RoomObject } from '../../../types';
-import { FLOOR_TEXTURES } from '../../../constants';
+import { X, Ruler, Link, Link2Off, Palette } from 'lucide-react';
+import { RoomObject, MaterialSlot, InteriorTheme } from '../../../types';
+import { FLOOR_TEXTURES, WOOD_COLORS } from '../../../constants';
 import { cn } from '../../../lib/utils';
 import { useStore } from '../../../store';
+import { INTERIOR_THEMES } from '../../../lib/themes';
+
+const MaterialPicker: React.FC<{
+  label: string;
+  slot: MaterialSlot | undefined;
+  onChange: (updates: Partial<MaterialSlot>) => void;
+  activeTheme: InteriorTheme | undefined;
+  slotType: 'wallBase' | 'floorBase';
+}> = ({ label, slot, onChange, activeTheme, slotType }) => {
+  if (!slot) return null;
+
+  const isThemeMode = slot.source === 'theme';
+  const palette = activeTheme ? (slotType === 'wallBase' ? activeTheme.wallPalette : []) : [];
+
+  const handleToggle = () => {
+    if (!isThemeMode) {
+      onChange({ source: 'theme', value: activeTheme ? (slotType === 'wallBase' ? activeTheme.wallPalette[0] : slot.value) : slot.value });
+    } else {
+      onChange({ source: 'custom' });
+    }
+  };
+
+  return (
+    <div className="space-y-2 p-3 bg-slate-50 rounded-2xl border border-slate-200 shadow-sm transition-all hover:bg-white hover:shadow-md">
+      <div className="flex items-center justify-between">
+        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
+          <Palette size={12} className="text-slate-400" />
+          {label}
+        </label>
+        <div className="flex bg-slate-200 p-0.5 rounded-lg">
+          <button
+            onClick={() => isThemeMode ? null : handleToggle()}
+            className={cn(
+              "flex items-center gap-1.5 px-2 py-1 rounded-md text-[9px] font-bold uppercase transition-all",
+              isThemeMode ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
+            )}
+          >
+            <Link size={10} /> Theme
+          </button>
+          <button
+            onClick={() => !isThemeMode ? null : handleToggle()}
+            className={cn(
+              "flex items-center gap-1.5 px-2 py-1 rounded-md text-[9px] font-bold uppercase transition-all",
+              !isThemeMode ? "bg-white text-amber-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
+            )}
+          >
+            <Link2Off size={10} /> Custom
+          </button>
+        </div>
+      </div>
+
+      <div className="flex gap-2 flex-wrap items-center">
+        {isThemeMode ? (
+          <>
+            {palette.map((color, i) => (
+              <button
+                key={i}
+                onClick={() => onChange({ value: color })}
+                className={cn(
+                  "w-6 h-6 rounded-full border-2 transition-all",
+                  slot.value === color ? "border-indigo-500 scale-110 shadow-sm" : "border-white hover:scale-105"
+                )}
+                style={{ backgroundColor: color }}
+              />
+            ))}
+            {palette.length === 0 && (
+              <span className="text-[10px] text-slate-400 italic">No theme active</span>
+            )}
+          </>
+        ) : (
+          <>
+            {['#f8fafc', '#f1f5f9', '#e2e8f0', '#cbd5e1', '#94a3b8', '#64748b', '#475569', '#334155'].map(color => (
+              <button
+                key={color}
+                onClick={() => onChange({ value: color })}
+                className={cn(
+                  "w-6 h-6 rounded-full border-2 transition-all",
+                  slot.value === color ? "border-indigo-500 scale-110 shadow-sm" : "border-transparent hover:scale-105"
+                )}
+                style={{ backgroundColor: color }}
+              />
+            ))}
+            <input 
+              type="color" 
+              value={slot.value} 
+              onChange={(e) => onChange({ value: e.target.value })}
+              className="w-6 h-6 rounded-full border-none p-0 overflow-hidden cursor-pointer hover:scale-105 transition-transform"
+            />
+          </>
+        )}
+      </div>
+    </div>
+  );
+};
 
 interface RoomEditorProps {
   selectedRoom: RoomObject;
@@ -22,6 +116,26 @@ export const RoomEditor: React.FC<RoomEditorProps> = ({
   const setWallThickness = useStore(state => state.setWallThickness);
   const wallHeight = useStore(state => state.wallHeight);
   const setWallHeight = useStore(state => state.setWallHeight);
+  const activeThemeId = useStore(state => state.activeThemeId);
+  const activeTheme = INTERIOR_THEMES.find(t => t.id === activeThemeId);
+  
+  const saveHistory = useStore(state => state.saveHistory);
+  
+  const materials = selectedRoom.materials || {
+    wallBase: { source: 'theme', value: activeTheme ? activeTheme.wallPalette[0] : (selectedRoom.defaultWallColor || '#f8fafc') },
+  };
+
+  const updateMaterialSlot = (slotName: 'wallBase' | 'floorBase', updates: Partial<MaterialSlot>) => {
+    saveHistory();
+    const newMaterials = { ...materials };
+    newMaterials[slotName] = { ...newMaterials[slotName]!, ...updates };
+    
+    updateRoom(selectedRoom.id, { 
+      materials: newMaterials,
+      // Keep legacy fields in sync for backward compatibility
+      defaultWallColor: slotName === 'wallBase' ? (updates.value || newMaterials.wallBase?.value) : selectedRoom.defaultWallColor
+    });
+  };
 
   return (
     <>
@@ -111,27 +225,14 @@ export const RoomEditor: React.FC<RoomEditorProps> = ({
         </div>
       </div>
 
-      <div className="space-y-1.5">
-        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Default Wall Color</label>
-        <div className="flex gap-2 flex-wrap">
-          {['#f8fafc', '#f1f5f9', '#e2e8f0', '#cbd5e1', '#94a3b8', '#64748b', '#475569', '#334155'].map(color => (
-            <button
-              key={color}
-              onClick={() => updateRoom(selectedRoom.id, { defaultWallColor: color })}
-              className={cn(
-                "w-6 h-6 rounded-full border-2 transition-all",
-                selectedRoom.defaultWallColor === color ? "border-indigo-500 scale-110" : "border-transparent"
-              )}
-              style={{ backgroundColor: color }}
-            />
-          ))}
-          <input 
-            type="color" 
-            value={selectedRoom.defaultWallColor || '#f8fafc'} 
-            onChange={(e) => updateRoom(selectedRoom.id, { defaultWallColor: e.target.value })}
-            className="w-6 h-6 rounded-full border-none p-0 overflow-hidden cursor-pointer"
-          />
-        </div>
+      <div className="space-y-4 pt-2">
+        <MaterialPicker 
+          label="Default Wall Material" 
+          slot={materials.wallBase} 
+          slotType="wallBase"
+          activeTheme={activeTheme}
+          onChange={(u) => updateMaterialSlot('wallBase', u)} 
+        />
       </div>
 
       {selectedWallIndex !== null && (

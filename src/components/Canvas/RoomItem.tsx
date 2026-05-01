@@ -175,7 +175,7 @@ export const RoomItem: React.FC<RoomItemProps> = ({
             <Line
               key={`wall-color-${seg.index}`}
               points={[seg.p1.x, seg.p1.y, seg.p2.x, seg.p2.y]}
-              stroke={isWallSelected ? "#4f46e5" : (room.wallColors?.[seg.index] || room.defaultWallColor || "#1e293b")}
+              stroke={isWallSelected ? "#4f46e5" : (room.wallColors?.[seg.index] || room.materials?.wallBase?.value || room.defaultWallColor || "#1e293b")}
               strokeWidth={wallThicknessPx * 2 - 2}
               hitStrokeWidth={wallThicknessPx * 2 + 10}
               opacity={wallOpacity}

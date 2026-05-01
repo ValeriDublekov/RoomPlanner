@@ -1,7 +1,7 @@
 import { StateCreator } from 'zustand';
 import { AppState } from '../../store';
 import { InteriorTheme } from '../../types';
-import { INTERIOR_THEMES, applyThemeToFurniture } from '../../lib/themes';
+import { INTERIOR_THEMES, applyThemeToFurniture, applyThemeToRoom } from '../../lib/themes';
 
 export interface ThemeSlice {
   activeThemeId: string | null;
@@ -15,7 +15,7 @@ export const createThemeSlice: StateCreator<AppState, [], [], ThemeSlice> = (set
   setActiveTheme: (themeId) => set({ activeThemeId: themeId }),
   
   applyThemeToScene: () => {
-    const { activeThemeId, furniture, saveHistory } = get();
+    const { activeThemeId, furniture, rooms, saveHistory } = get();
     if (!activeThemeId) return;
 
     const theme = INTERIOR_THEMES.find(t => t.id === activeThemeId);
@@ -24,7 +24,11 @@ export const createThemeSlice: StateCreator<AppState, [], [], ThemeSlice> = (set
     saveHistory();
 
     const updatedFurniture = furniture.map(item => applyThemeToFurniture(item, theme));
+    const updatedRooms = rooms.map(room => applyThemeToRoom(room, theme));
     
-    set({ furniture: updatedFurniture });
+    set({ 
+      furniture: updatedFurniture,
+      rooms: updatedRooms
+    });
   }
 });

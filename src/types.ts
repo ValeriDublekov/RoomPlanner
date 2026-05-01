@@ -11,6 +11,10 @@ export interface RoomObject {
   floorColor?: string;
   wallColors?: string[]; // Array of colors for each segment
   defaultWallColor?: string;
+  materials?: {
+    wallBase?: MaterialSlot;
+    floorBase?: MaterialSlot;
+  };
 }
 
 export type FurnitureType = 'bed' | 'desk' | 'wardrobe' | 'dresser' | 'chair' | 'shelf' | 'electronics' | 'table' | 'sofa' | 'armchair' | 'nightstand' | 'toilet' | 'bathtub' | 'light' | 'picture' | 'generic';
