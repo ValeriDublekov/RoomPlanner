@@ -15,6 +15,26 @@ export interface RoomObject {
 
 export type FurnitureType = 'bed' | 'desk' | 'wardrobe' | 'dresser' | 'chair' | 'shelf' | 'electronics' | 'table' | 'sofa' | 'armchair' | 'nightstand' | 'toilet' | 'bathtub' | 'light' | 'picture' | 'generic';
 
+export interface MaterialSlot {
+  source: 'theme' | 'custom';
+  value: string;
+}
+
+export interface ObjectMaterials {
+  woodBase?: MaterialSlot;
+  woodFront?: MaterialSlot;
+  textileMain?: MaterialSlot;
+  textileAccent?: MaterialSlot;
+}
+
+export interface InteriorTheme {
+  id: string;
+  name: string;
+  wallPalette: string[]; // [main, secondary, accent]
+  woodPalette: string[]; // [base, front]
+  textilePalette: string[]; // [bed/sheets, sofa/rug, accent]
+}
+
 export interface FurnitureObject {
   id: string;
   type: 'box' | 'polygon' | 'circle' | 'group';
@@ -28,8 +48,9 @@ export interface FurnitureObject {
   elevation?: number; // in px, height from floor
   rotation: number;
   points?: Vector2d[];
-  color?: string;
-  secondaryColor?: string;
+  color?: string; // Legacy: fallback color
+  secondaryColor?: string; // Legacy: fallback secondary
+  materials?: ObjectMaterials;
   imageUrl?: string; // For pictures/posters
   svgPath?: string;
   catalogId?: string;

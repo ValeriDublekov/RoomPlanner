@@ -1,10 +1,11 @@
 import React, { useMemo } from 'react';
 import * as THREE from 'three';
 import { useTexture, Edges } from '@react-three/drei';
-import { RoomObject, WallAttachment, BeamObject } from '../../types';
-import { FLOOR_TEXTURES } from '../../constants';
+import { RoomObject, WallAttachment, BeamObject, InteriorTheme } from '../../types';
+import { FLOOR_TEXTURES, WOOD_GRAIN } from '../../constants';
 import { getOutwardNormal } from '../../lib/geometry';
 import { useStore } from '../../store';
+import { INTERIOR_THEMES } from '../../lib/themes';
 
 export const Beam3D: React.FC<{ 
   beam: BeamObject, 
@@ -157,6 +158,12 @@ export const WallSegments: React.FC<{
   wallHeight: number,
   attachments: WallAttachment[] 
 }> = ({ room, pixelsPerCm, wallThickness, wallHeight, attachments }) => {
+  const activeThemeId = useStore(state => state.activeThemeId);
+  const activeTheme = React.useMemo(() => {
+    if (!activeThemeId) return null;
+    return INTERIOR_THEMES.find(t => t.id === activeThemeId);
+  }, [activeThemeId]);
+
   const segments = useMemo(() => {
     const segs: { 
       type: 'wall' | 'glass' | 'frame' | 'curtain', 
@@ -185,7 +192,13 @@ export const WallSegments: React.FC<{
         .filter(a => a.roomId === room.id && a.wallSegmentIndex === i)
         .sort((a, b) => a.positionAlongWall - b.positionAlongWall);
 
-      const segmentColor = room.wallColors?.[i] || room.defaultWallColor || "#f0f0f0";
+      let segmentColor = room.wallColors?.[i] || room.defaultWallColor || "#f0f0f0";
+      
+      // Override default wall color with theme if active
+      if (activeTheme && (!room.wallColors?.[i] || room.wallColors?.[i] === room.defaultWallColor)) {
+        segmentColor = activeTheme.wallPalette[0];
+      }
+
       const normal = getOutwardNormal(room.points, i);
       const offsetX = (normal.x * wallThickness) / 2;
       const offsetZ = (normal.y * wallThickness) / 2;

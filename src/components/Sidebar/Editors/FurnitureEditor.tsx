@@ -1,8 +1,9 @@
 import React from 'react';
 import { X, RotateCcw, RotateCw, ArrowUpToLine, ChevronUp, ChevronDown, ArrowDownToLine } from 'lucide-react';
-import { FurnitureObject } from '../../../types';
+import { FurnitureObject, MaterialSlot, ObjectMaterials } from '../../../types';
 import { WOOD_COLORS } from '../../../constants';
 import { cn } from '../../../lib/utils';
+import { Palette, Link, Link2Off } from 'lucide-react';
 
 interface FurnitureEditorProps {
   selectedFurniture: FurnitureObject;
@@ -16,6 +17,72 @@ interface FurnitureEditorProps {
   sendBackward?: (id: string) => void;
 }
 
+const MaterialPicker: React.FC<{
+  label: string;
+  slot: MaterialSlot | undefined;
+  onChange: (updates: Partial<MaterialSlot>) => void;
+}> = ({ label, slot, onChange }) => {
+  if (!slot) return null;
+
+  return (
+    <div className="space-y-2 p-3 bg-slate-50 rounded-2xl border border-slate-200 shadow-sm transition-all hover:bg-white hover:shadow-md">
+      <div className="flex items-center justify-between">
+        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">{label}</label>
+        <button
+          onClick={() => onChange({ source: slot.source === 'theme' ? 'custom' : 'theme' })}
+          className={cn(
+            "flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-tight transition-all",
+            slot.source === 'theme' 
+              ? "bg-indigo-50 text-indigo-600 border border-indigo-100" 
+              : "bg-amber-50 text-amber-600 border border-amber-100"
+          )}
+        >
+          {slot.source === 'theme' ? (
+            <><Link size={10} /> Following Theme</>
+          ) : (
+            <><Link2Off size={10} /> Detached</>
+          )}
+        </button>
+      </div>
+
+      <div className="flex gap-2 flex-wrap">
+        {WOOD_COLORS.map(wood => (
+          <button
+            key={wood.id}
+            onClick={() => onChange({ value: wood.color, source: 'custom' })}
+            className={cn(
+              "w-6 h-6 rounded-full border-2 transition-all flex items-center justify-center overflow-hidden",
+              slot.value === wood.color ? "border-indigo-500 scale-110 shadow-sm" : "border-transparent hover:scale-105"
+            )}
+            title={wood.name}
+            style={{ backgroundColor: wood.color }}
+          >
+            <div className="w-full h-full opacity-20 bg-[radial-gradient(circle,transparent_20%,#000_20%,#000_40%,transparent_40%,transparent_60%,#000_60%,#000_80%,transparent_80%)] bg-[length:4px_4px]" />
+          </button>
+        ))}
+        <div className="w-px h-6 bg-slate-200 mx-1" />
+        {['#f8fafc', '#f1f5f9', '#e2e8f0', '#cbd5e1', '#94a3b8', '#64748b', '#475569', '#334155'].map(color => (
+          <button
+            key={color}
+            onClick={() => onChange({ value: color, source: 'custom' })}
+            className={cn(
+              "w-6 h-6 rounded-full border-2 transition-all",
+              slot.value === color ? "border-indigo-500 scale-110 shadow-sm" : "border-transparent hover:scale-105"
+            )}
+            style={{ backgroundColor: color }}
+          />
+        ))}
+        <input 
+          type="color" 
+          value={slot.value} 
+          onChange={(e) => onChange({ value: e.target.value, source: 'custom' })}
+          className="w-6 h-6 rounded-full border-none p-0 overflow-hidden cursor-pointer hover:scale-105 transition-transform"
+        />
+      </div>
+    </div>
+  );
+};
+
 export const FurnitureEditor: React.FC<FurnitureEditorProps> = ({
   selectedFurniture,
   pixelsPerCm,
@@ -27,9 +94,25 @@ export const FurnitureEditor: React.FC<FurnitureEditorProps> = ({
   bringForward,
   sendBackward,
 }) => {
+  const materials = selectedFurniture.materials || {};
+  
+  const updateMaterialSlot = (slotName: keyof ObjectMaterials, updates: Partial<MaterialSlot>) => {
+    saveHistory();
+    const currentSlot = materials[slotName] || { source: 'theme', value: '#F8FAFC' };
+    updateFurniture(selectedFurniture.id, {
+      materials: {
+        ...materials,
+        [slotName]: { ...currentSlot, ...updates }
+      }
+    });
+  };
+
   return (
     <>
-      <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">Object Properties</div>
+      <div className="flex items-center gap-2 mb-2">
+        <Palette className="text-indigo-500" size={16} />
+        <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">Object Properties</div>
+      </div>
       
       <div className="space-y-1.5">
         <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Name</label>
@@ -198,42 +281,55 @@ export const FurnitureEditor: React.FC<FurnitureEditorProps> = ({
         </div>
       )}
 
-      <div className="space-y-1.5">
-        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Main Color / Material</label>
-        <div className="flex gap-2 flex-wrap">
-          {WOOD_COLORS.map(wood => (
-            <button
-              key={wood.id}
-              onClick={() => updateFurniture(selectedFurniture.id, { color: wood.color })}
-              className={cn(
-                "w-6 h-6 rounded-full border-2 transition-all flex items-center justify-center overflow-hidden",
-                selectedFurniture.color === wood.color ? "border-indigo-500 scale-110" : "border-transparent"
-              )}
-              title={wood.name}
-              style={{ backgroundColor: wood.color }}
-            >
-              <div className="w-full h-full opacity-20 bg-[radial-gradient(circle,transparent_20%,#000_20%,#000_40%,transparent_40%,transparent_60%,#000_60%,#000_80%,transparent_80%)] bg-[length:4px_4px]" />
-            </button>
-          ))}
-          <div className="w-px h-6 bg-slate-200 mx-1" />
-          {['#f8fafc', '#f1f5f9', '#e2e8f0', '#cbd5e1', '#94a3b8', '#64748b', '#475569', '#334155'].map(color => (
-            <button
-              key={color}
-              onClick={() => updateFurniture(selectedFurniture.id, { color })}
-              className={cn(
-                "w-6 h-6 rounded-full border-2 transition-all",
-                selectedFurniture.color === color ? "border-indigo-500 scale-110" : "border-transparent"
-              )}
-              style={{ backgroundColor: color }}
-            />
-          ))}
-          <input 
-            type="color" 
-            value={selectedFurniture.color || '#f8fafc'} 
-            onChange={(e) => updateFurniture(selectedFurniture.id, { color: e.target.value })}
-            className="w-6 h-6 rounded-full border-none p-0 overflow-hidden cursor-pointer"
+      <div className="space-y-4 pt-2">
+        {materials.woodBase && (
+          <MaterialPicker 
+            label="Body / Base Material" 
+            slot={materials.woodBase} 
+            onChange={(u) => updateMaterialSlot('woodBase', u)} 
           />
-        </div>
+        )}
+        {materials.woodFront && (
+          <MaterialPicker 
+            label="Front / Door Material" 
+            slot={materials.woodFront} 
+            onChange={(u) => updateMaterialSlot('woodFront', u)} 
+          />
+        )}
+        {materials.textileMain && (
+          <MaterialPicker 
+            label="Main Textile" 
+            slot={materials.textileMain} 
+            onChange={(u) => updateMaterialSlot('textileMain', u)} 
+          />
+        )}
+        {materials.textileAccent && (
+          <MaterialPicker 
+            label="Accent Textile" 
+            slot={materials.textileAccent} 
+            onChange={(u) => updateMaterialSlot('textileAccent', u)} 
+          />
+        )}
+        
+        {/* Fallback if no semantic materials yet (shouldn't happen with migration) */}
+        {!materials.woodBase && !materials.textileMain && (
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Main Color</label>
+            <div className="flex gap-2 flex-wrap">
+              {['#f8fafc', '#f1f5f9', '#e2e8f0', '#cbd5e1', '#94a3b8', '#64748b', '#475569', '#334155'].map(color => (
+                <button
+                  key={color}
+                  onClick={() => updateFurniture(selectedFurniture.id, { color })}
+                  className={cn(
+                    "w-6 h-6 rounded-full border-2 transition-all",
+                    selectedFurniture.color === color ? "border-indigo-500 scale-110" : "border-transparent"
+                  )}
+                  style={{ backgroundColor: color }}
+                />
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {(selectedFurniture.furnitureType === 'wardrobe' || selectedFurniture.furnitureType === 'dresser' || selectedFurniture.furnitureType === 'bed' || (selectedFurniture.furnitureType === 'shelf' && selectedFurniture.hasDoors)) && (
@@ -265,7 +361,6 @@ export const FurnitureEditor: React.FC<FurnitureEditorProps> = ({
                   />
                 </div>
               </div>
-              <p className="text-[8px] text-slate-400 mt-1 italic ml-1">Leave empty for automatic layout</p>
             </div>
           )}
 
@@ -362,76 +457,10 @@ export const FurnitureEditor: React.FC<FurnitureEditorProps> = ({
                       className="w-full bg-white border border-indigo-200 rounded-lg px-3 py-1.5 text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-sm"
                     />
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-[9px] font-bold text-slate-400 uppercase tracking-tight ml-1">Tilt Ang. (°)</label>
-                    <input
-                      type="number"
-                      value={selectedFurniture.headboardTilt || 15}
-                      onChange={(e) => {
-                        const t = parseInt(e.target.value) || 0;
-                        const mDepth = selectedFurniture.mattressDepth || Math.round((selectedFurniture.height / pixelsPerCm) - 15);
-                        const tiltRad = (t * Math.PI) / 180;
-                        const hbProj = Math.sin(tiltRad) * (selectedFurniture.headboardHeight || 60) + 8;
-                        const newDepth = (mDepth + hbProj + 3) * pixelsPerCm;
-                        
-                        updateFurniture(selectedFurniture.id, { 
-                          headboardTilt: t,
-                          height: newDepth
-                        });
-                      }}
-                      className="w-full bg-white border border-indigo-200 rounded-lg px-3 py-1.5 text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-sm"
-                    />
-                  </div>
                 </div>
               )}
             </div>
           )}
-
-          <div className="space-y-1.5 p-3 bg-slate-50 rounded-xl border border-slate-200">
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">
-              {selectedFurniture.furnitureType === 'bed' ? 'Mattress / Pillows Color' : 'Doors / Drawers Color'}
-            </label>
-            <div className="flex gap-2 flex-wrap">
-              {WOOD_COLORS.map(wood => (
-                <button
-                  key={wood.id}
-                  onClick={() => updateFurniture(selectedFurniture.id, { secondaryColor: wood.color })}
-                  className={cn(
-                    "w-6 h-6 rounded-full border-2 transition-all flex items-center justify-center overflow-hidden",
-                    selectedFurniture.secondaryColor === wood.color ? "border-indigo-500 scale-110" : "border-transparent"
-                  )}
-                  title={wood.name}
-                  style={{ backgroundColor: wood.color }}
-                >
-                  <div className="w-full h-full opacity-20 bg-[radial-gradient(circle,transparent_20%,#000_20%,#000_40%,transparent_40%,transparent_60%,#000_60%,#000_80%,transparent_80%)] bg-[length:4px_4px]" />
-                </button>
-              ))}
-              <div className="w-px h-6 bg-slate-200 mx-1" />
-              {['#f8fafc', '#f1f5f9', '#e2e8f0', '#cbd5e1', '#94a3b8', '#64748b', '#475569', '#334155'].map(color => (
-                <button
-                  key={color}
-                  onClick={() => updateFurniture(selectedFurniture.id, { secondaryColor: color })}
-                  className={cn(
-                    "w-6 h-6 rounded-full border-2 transition-all",
-                    selectedFurniture.secondaryColor === color ? "border-indigo-500 scale-110" : "border-transparent"
-                  )}
-                  style={{ backgroundColor: color }}
-                />
-              ))}
-              <input 
-                type="color" 
-                value={selectedFurniture.secondaryColor || selectedFurniture.color || '#f8fafc'} 
-                onChange={(e) => updateFurniture(selectedFurniture.id, { secondaryColor: e.target.value })}
-                className="w-6 h-6 rounded-full border-none p-0 overflow-hidden cursor-pointer"
-              />
-              <button
-                onClick={() => updateFurniture(selectedFurniture.id, { secondaryColor: undefined })}
-                className="text-[9px] text-slate-400 hover:text-indigo-500 font-bold uppercase tracking-tighter ml-auto"
-              >
-                Same as body
-              </button>
-            </div>
-          </div>
         </div>
       )}
 

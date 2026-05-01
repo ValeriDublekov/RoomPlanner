@@ -33,6 +33,7 @@ export const PERSISTED_KEYS = [
   'backgroundRotation',
   'backgroundOpacity',
   'beams',
+  'activeThemeId',
 ] as const;
 
 export type PersistedState = Pick<AppState, typeof PERSISTED_KEYS[number]> & {

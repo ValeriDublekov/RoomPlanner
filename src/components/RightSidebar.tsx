@@ -1,7 +1,8 @@
 import React from 'react';
 import { useStore } from '@/src/store';
 import { PropertyEditor, SceneExplorer } from '@/src/components/Sidebar';
-import { PanelLeftClose, Settings2, ListTree } from 'lucide-react';
+import { ThemeManager } from '@/src/components/Sidebar/ThemeManager';
+import { PanelLeftClose, Settings2, ListTree, Sparkles } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 export const RightSidebar: React.FC = () => {
@@ -34,7 +35,7 @@ export const RightSidebar: React.FC = () => {
   const pixelsPerCm = useStore(state => state.pixelsPerCm);
   const deleteSelected = useStore(state => state.deleteSelected);
 
-  const [activeTab, setActiveTab] = React.useState<'explorer' | 'properties'>('explorer');
+  const [activeTab, setActiveTab] = React.useState<'explorer' | 'properties' | 'themes'>('explorer');
 
   const selectedFurniture = furniture.find(f => f.id === selectedId);
   const selectedRoom = rooms.find(r => r.id === selectedRoomId);
@@ -91,17 +92,26 @@ export const RightSidebar: React.FC = () => {
     >
       {/* Tabs Header */}
       <div className="flex border-b border-slate-100 bg-white">
-        <TabButton id="explorer" icon={ListTree} label="Scene Explorer" />
+        <TabButton id="explorer" icon={ListTree} label="Explorer" />
         <TabButton id="properties" icon={Settings2} label="Properties" />
+        <TabButton id="themes" icon={Sparkles} label="Themes" />
       </div>
 
       <div className="flex-1 overflow-hidden relative">
         {/* Explorer Content */}
         <div className={cn(
           "absolute inset-0 transition-all duration-300 ease-in-out transform",
-          activeTab === 'explorer' ? "translate-x-0 opacity-100 z-10" : "-translate-x-full opacity-0 z-0 pointer-events-none"
+          activeTab === 'explorer' ? "translate-x-0 opacity-100 z-10" : (activeTab === 'properties' ? "-translate-x-full opacity-0 z-0 pointer-events-none" : "-translate-x-full opacity-0 z-0 pointer-events-none")
         )}>
           <SceneExplorer />
+        </div>
+
+        {/* Themes Content */}
+        <div className={cn(
+          "absolute inset-0 transition-all duration-300 ease-in-out transform",
+          activeTab === 'themes' ? "translate-x-0 opacity-100 z-10" : (activeTab === 'properties' ? "translate-x-full opacity-0 z-0 pointer-events-none" : "translate-x-full opacity-0 z-0 pointer-events-none")
+        )}>
+          <ThemeManager />
         </div>
 
         {/* Properties Content */}

@@ -2,6 +2,8 @@ import { StateCreator } from 'zustand';
 import { AppState } from '../../store';
 import { FurnitureObject } from '../../types';
 import { rotatePoint, scalePoints } from '../../lib/geometry';
+import { migrateFurnitureMaterials } from '../../lib/materials';
+import { INTERIOR_THEMES, applyThemeToFurniture } from '../../lib/themes';
 
 export interface FurnitureSlice {
   furniture: FurnitureObject[];
@@ -33,8 +35,18 @@ export const createFurnitureSlice: StateCreator<AppState, [], [], FurnitureSlice
 
   addFurniture: (item) => set((state) => {
     const historyEntry = { rooms: state.rooms, furniture: state.furniture, dimensions: state.dimensions, wallAttachments: state.wallAttachments };
+    let newItem = migrateFurnitureMaterials({ ...item, id: Math.random().toString(36).substr(2, 9) } as FurnitureObject);
+    
+    // Apply active theme if one exists
+    if (state.activeThemeId) {
+      const theme = INTERIOR_THEMES.find(t => t.id === state.activeThemeId);
+      if (theme) {
+        newItem = applyThemeToFurniture(newItem, theme);
+      }
+    }
+
     return {
-      furniture: [...state.furniture, { ...item, id: Math.random().toString(36).substr(2, 9) }],
+      furniture: [...state.furniture, newItem],
       history: [...state.history, historyEntry].slice(-50)
     };
   }),

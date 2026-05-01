@@ -12,7 +12,13 @@ interface ModelProps {
   secondaryColor?: string;
   hasDoors?: boolean;
   imageUrl?: string;
+  materials?: import('../../types').ObjectMaterials;
+  furnitureType?: string;
 }
+
+const getSlotColor = (materials: import('../../types').ObjectMaterials | undefined, slot: keyof import('../../types').ObjectMaterials, fallback: string) => {
+  return materials?.[slot]?.value || fallback;
+};
 
 const WoodMaterial: React.FC<{ color: string, opacity?: number, transparent?: boolean }> = ({ color, opacity = 1, transparent = false }) => {
   const edgeMode = useStore(state => state.edgeMode3d);
@@ -60,11 +66,16 @@ export const Bed3D: React.FC<ModelProps & {
   headboardTilt?: number,
   mattressWidth?: number,
   mattressDepth?: number
-}> = ({ width, depth, height, color, secondaryColor, hasHeadboard, headboardHeight = 60, headboardTilt = 15, mattressWidth, mattressDepth }) => {
+}> = ({ width, depth, height, color, secondaryColor, hasHeadboard, headboardHeight = 60, headboardTilt = 15, mattressWidth, mattressDepth, materials }) => {
   const frameHeight = Math.min(height * 0.4, 30);
   const mattressThickness = 20;
   const mattressInset = 2; 
-  const mattressColor = secondaryColor || "#ffffff";
+  
+  const woodBaseColor = getSlotColor(materials, 'woodBase', color);
+  const textileMainColor = getSlotColor(materials, 'textileMain', secondaryColor || "#ffffff");
+  const textileAccentColor = getSlotColor(materials, 'textileAccent', "#ffffff");
+  
+  const mattressColor = textileMainColor;
   const frameThickness = 3;
   
   // Use mattress size if provided, otherwise derive from width/depth
@@ -88,7 +99,7 @@ export const Bed3D: React.FC<ModelProps & {
       {/* Base Frame - sized to fit mattress plus frame thickness */}
       <mesh position={[width / 2, frameHeight / 2, zOffset + mDepth / 2 + frameThickness / 2]} castShadow receiveShadow>
         <boxGeometry args={[mWidth + frameThickness * 2, frameHeight, mDepth + frameThickness]} />
-        <WoodMaterial color={color} />
+        <WoodMaterial color={woodBaseColor} />
       </mesh>
       
       {/* Mattress */}
@@ -103,7 +114,7 @@ export const Bed3D: React.FC<ModelProps & {
           <group rotation={[-tiltRad, 0, 0]}>
             <mesh position={[0, hbHeight / 2, -hbThickness / 2]} castShadow receiveShadow>
               <boxGeometry args={[mWidth + frameThickness * 2, hbHeight, hbThickness]} />
-              <WoodMaterial color={color} />
+              <WoodMaterial color={woodBaseColor} />
               <Edges color="white" threshold={20} />
             </mesh>
           </group>
@@ -114,59 +125,65 @@ export const Bed3D: React.FC<ModelProps & {
       <group position={[width / 2, frameHeight + mattressThickness, zOffset + 20]}>
         <mesh position={[-mWidth * 0.25, 3, 0]} castShadow receiveShadow>
           <boxGeometry args={[mWidth * 0.35, 6, 25]} />
-          <SmartMaterial color={mattressColor} roughness={1} />
+          <SmartMaterial color={textileAccentColor} roughness={1} />
         </mesh>
         <mesh position={[mWidth * 0.25, 3, 0]} castShadow receiveShadow>
           <boxGeometry args={[mWidth * 0.35, 6, 25]} />
-          <SmartMaterial color={mattressColor} roughness={1} />
+          <SmartMaterial color={textileAccentColor} roughness={1} />
         </mesh>
       </group>
     </group>
   );
 };
 
-export const Sofa3D: React.FC<ModelProps> = ({ width, depth, height, color }) => {
+export const Sofa3D: React.FC<ModelProps> = ({ width, depth, height, color, materials }) => {
   const seatHeight = height * 0.5;
   const armWidth = 15;
   const backDepth = 15;
+  
+  const textileMainColor = getSlotColor(materials, 'textileMain', color);
   
   return (
     <group>
       {/* Base/Seat */}
       <mesh position={[width / 2, seatHeight / 2, depth / 2]} castShadow receiveShadow>
         <boxGeometry args={[width, seatHeight, depth]} />
-        <SmartMaterial color={color} roughness={0.9} />
+        <SmartMaterial color={textileMainColor} roughness={0.9} />
       </mesh>
       {/* Backrest */}
       <mesh position={[width / 2, height / 2 + seatHeight / 2, backDepth / 2]} castShadow receiveShadow>
         <boxGeometry args={[width, height - seatHeight, backDepth]} />
-        <SmartMaterial color={color} roughness={0.9} />
+        <SmartMaterial color={textileMainColor} roughness={0.9} />
       </mesh>
       {/* Arms */}
       <mesh position={[armWidth / 2, height * 0.7 / 2, depth / 2]} castShadow receiveShadow>
         <boxGeometry args={[armWidth, height * 0.7, depth]} />
-        <SmartMaterial color={color} roughness={0.9} />
+        <SmartMaterial color={textileMainColor} roughness={0.9} />
       </mesh>
       <mesh position={[width - armWidth / 2, height * 0.7 / 2, depth / 2]} castShadow receiveShadow>
         <boxGeometry args={[armWidth, height * 0.7, depth]} />
-        <SmartMaterial color={color} roughness={0.9} />
+        <SmartMaterial color={textileMainColor} roughness={0.9} />
       </mesh>
     </group>
   );
 };
 
-export const Nightstand3D: React.FC<ModelProps> = ({ width, depth, height, color }) => (
-  <group>
-    <mesh position={[width / 2, height / 2, depth / 2]} castShadow receiveShadow>
-      <boxGeometry args={[width, height, depth]} />
-      <WoodMaterial color={color} />
-    </mesh>
-    <mesh position={[width / 2, height * 0.7, depth + 0.6]} castShadow receiveShadow>
-      <boxGeometry args={[width - 4, 2, 1]} />
-      <SmartMaterial color="#94a3b8" polygonOffset polygonOffsetFactor={-1} polygonOffsetUnits={-1} />
-    </mesh>
-  </group>
-);
+export const Nightstand3D: React.FC<ModelProps> = ({ width, depth, height, color, materials }) => {
+  const woodBaseColor = getSlotColor(materials, 'woodBase', color);
+  
+  return (
+    <group>
+      <mesh position={[width / 2, height / 2, depth / 2]} castShadow receiveShadow>
+        <boxGeometry args={[width, height, depth]} />
+        <WoodMaterial color={woodBaseColor} />
+      </mesh>
+      <mesh position={[width / 2, height * 0.7, depth + 0.6]} castShadow receiveShadow>
+        <boxGeometry args={[width - 4, 2, 1]} />
+        <SmartMaterial color="#94a3b8" polygonOffset polygonOffsetFactor={-1} polygonOffsetUnits={-1} />
+      </mesh>
+    </group>
+  );
+};
 
 export const Toilet3D: React.FC<ModelProps> = ({ width, depth, height, color }) => (
   <group>
@@ -196,16 +213,18 @@ export const Bathtub3D: React.FC<ModelProps> = ({ width, depth, height, color })
   </group>
 );
 
-export const Desk3D: React.FC<ModelProps> = ({ width, depth, height, color }) => {
+export const Desk3D: React.FC<ModelProps> = ({ width, depth, height, color, materials }) => {
   const topThickness = 4; // 4cm
   const legRadius = 2; // 2cm
+  
+  const woodBaseColor = getSlotColor(materials, 'woodBase', color);
   
   return (
     <group>
       {/* Desktop */}
       <mesh position={[width / 2, height - topThickness / 2, depth / 2]} castShadow receiveShadow>
         <boxGeometry args={[width, topThickness, depth]} />
-        <WoodMaterial color={color} />
+        <WoodMaterial color={woodBaseColor} />
       </mesh>
       
       {/* Legs */}
@@ -224,19 +243,21 @@ export const Desk3D: React.FC<ModelProps> = ({ width, depth, height, color }) =>
   );
 };
 
-export const Wardrobe3D: React.FC<ModelProps> = ({ width, depth, height, color, secondaryColor }) => {
+export const Wardrobe3D: React.FC<ModelProps> = ({ width, depth, height, color, secondaryColor, materials }) => {
   const numDoors = width < 100 ? 2 : 3;
   const doorWidth = (width - 2) / numDoors;
   const handleRadius = 1;
   const handleHeight = 15;
-  const doorColor = secondaryColor || color;
+  
+  const woodBaseColor = getSlotColor(materials, 'woodBase', color);
+  const woodFrontColor = getSlotColor(materials, 'woodFront', secondaryColor || woodBaseColor);
   
   return (
     <group>
       {/* Carcass */}
       <mesh position={[width / 2, height / 2, depth / 2]} castShadow receiveShadow>
         <boxGeometry args={[width, height, depth]} />
-        <WoodMaterial color={color} />
+        <WoodMaterial color={woodBaseColor} />
       </mesh>
       
       {/* Doors */}
@@ -255,7 +276,7 @@ export const Wardrobe3D: React.FC<ModelProps> = ({ width, depth, height, color, 
           <group key={i} position={[i * doorWidth + doorWidth / 2 + 1, height / 2, depth + 0.6]}>
             <mesh castShadow receiveShadow>
               <boxGeometry args={[doorWidth - 0.5, height - 2, 1]} />
-              <WoodMaterial color={doorColor} />
+              <WoodMaterial color={woodFrontColor} />
             </mesh>
             
             {/* Handle */}
@@ -270,13 +291,16 @@ export const Wardrobe3D: React.FC<ModelProps> = ({ width, depth, height, color, 
   );
 };
 
-export const Dresser3D: React.FC<ModelProps & { drawerRows?: number, drawerCols?: number }> = ({ width, depth, height, color, secondaryColor, drawerRows, drawerCols }) => {
+export const Dresser3D: React.FC<ModelProps & { drawerRows?: number, drawerCols?: number }> = ({ width, depth, height, color, secondaryColor, drawerRows, drawerCols, materials }) => {
   const finalCols = drawerCols || Math.ceil(width / 80);
   const finalRows = drawerRows || Math.max(1, Math.floor(height / 20));
   
   const colWidth = (width - 4) / finalCols;
   const rowHeight = (height - 4) / finalRows;
-  const drawerColor = secondaryColor || color;
+  
+  const woodBaseColor = getSlotColor(materials, 'woodBase', color);
+  const woodFrontColor = getSlotColor(materials, 'woodFront', secondaryColor || woodBaseColor);
+  
   const thickness = 2;
   
   return (
@@ -284,30 +308,30 @@ export const Dresser3D: React.FC<ModelProps & { drawerRows?: number, drawerCols?
       {/* Carcass Panels */}
       <mesh position={[width / 2, thickness / 2, depth / 2]} castShadow receiveShadow>
         <boxGeometry args={[width, thickness, depth]} />
-        <WoodMaterial color={color} />
+        <WoodMaterial color={woodBaseColor} />
       </mesh>
       <mesh position={[width / 2, height - thickness / 2, depth / 2]} castShadow receiveShadow>
         <boxGeometry args={[width, thickness, depth]} />
-        <WoodMaterial color={color} />
+        <WoodMaterial color={woodBaseColor} />
       </mesh>
       <mesh position={[thickness / 2, height / 2, depth / 2]} castShadow receiveShadow>
         <boxGeometry args={[thickness, height, depth]} />
-        <WoodMaterial color={color} />
+        <WoodMaterial color={woodBaseColor} />
       </mesh>
       <mesh position={[width - thickness / 2, height / 2, depth / 2]} castShadow receiveShadow>
         <boxGeometry args={[thickness, height, depth]} />
-        <WoodMaterial color={color} />
+        <WoodMaterial color={woodBaseColor} />
       </mesh>
       <mesh position={[width / 2, height / 2, 0.5]} castShadow receiveShadow>
         <boxGeometry args={[width - thickness * 2, height - thickness * 2, 1]} />
-        <WoodMaterial color={color} />
+        <WoodMaterial color={woodBaseColor} />
       </mesh>
       
       {/* Internal Dividers for columns if more than 1 */}
       {finalCols > 1 && Array.from({ length: finalCols - 1 }).map((_, i) => (
         <mesh key={`div-${i}`} position={[(i + 1) * colWidth + 2, height / 2, depth / 2]} castShadow receiveShadow>
           <boxGeometry args={[thickness, height - thickness * 2, depth - thickness]} />
-          <WoodMaterial color={color} />
+          <WoodMaterial color={woodBaseColor} />
         </mesh>
       ))}
 
@@ -317,7 +341,7 @@ export const Dresser3D: React.FC<ModelProps & { drawerRows?: number, drawerCols?
           <group key={`${col}-${row}`} position={[col * colWidth + colWidth / 2 + 2, row * rowHeight + rowHeight / 2 + 2, depth + 0.3]}>
             <mesh castShadow receiveShadow>
               <boxGeometry args={[colWidth - 1, rowHeight - 2, 0.8]} />
-              <WoodMaterial color={drawerColor} />
+              <WoodMaterial color={woodFrontColor} />
             </mesh>
             {/* Handle */}
             <mesh position={[0, 0, 0.8]} castShadow receiveShadow>
@@ -331,17 +355,23 @@ export const Dresser3D: React.FC<ModelProps & { drawerRows?: number, drawerCols?
   );
 };
 
-export const Chair3D: React.FC<ModelProps> = ({ width, depth, height, color }) => {
+export const Chair3D: React.FC<ModelProps> = ({ width, depth, height, color, materials, furnitureType }) => {
   const seatHeight = 45;
   const legRadius = 2;
   const backrestHeight = height - seatHeight;
   
+  const textileMainColor = getSlotColor(materials, 'textileMain', color);
+  const textileAccentColor = getSlotColor(materials, 'textileAccent', color);
+  
+  // Use textileMain if it's a standard chair, but we can also use accent for decorative ones
+  const chairColor = (furnitureType === 'armchair') ? textileMainColor : textileAccentColor;
+
   return (
     <group>
       {/* Seat */}
       <mesh position={[width / 2, seatHeight, depth / 2]} castShadow receiveShadow>
         <boxGeometry args={[width, 5, depth]} />
-        <SmartMaterial color={color} roughness={0.6} />
+        <SmartMaterial color={chairColor} roughness={0.6} />
       </mesh>
       
       {/* Legs */}
@@ -360,13 +390,13 @@ export const Chair3D: React.FC<ModelProps> = ({ width, depth, height, color }) =
       {/* Backrest */}
       <mesh position={[width / 2, seatHeight + backrestHeight / 2, 2.5]} castShadow receiveShadow>
         <boxGeometry args={[width, backrestHeight, 5]} />
-        <SmartMaterial color={color} roughness={0.6} />
+        <SmartMaterial color={chairColor} roughness={0.6} />
       </mesh>
     </group>
   );
 };
 
-export const Shelf3D: React.FC<ModelProps> = ({ width, depth, height, color, secondaryColor, hasDoors }) => {
+export const Shelf3D: React.FC<ModelProps> = ({ width, depth, height, color, secondaryColor, hasDoors, materials }) => {
   const isWallShelf = height < 100;
   const numShelves = isWallShelf ? 0 : (height > 100 ? 5 : 3);
   const shelfSpacing = isWallShelf ? 0 : (height - 4) / numShelves;
@@ -375,7 +405,10 @@ export const Shelf3D: React.FC<ModelProps> = ({ width, depth, height, color, sec
   const dividerSpacing = width / (numVerticalDividers + 1);
   const numSections = numVerticalDividers + 1;
   const sectionWidth = width / numSections;
-  const doorColor = secondaryColor || color;
+  
+  const woodBaseColor = getSlotColor(materials, 'woodBase', color);
+  const woodFrontColor = getSlotColor(materials, 'woodFront', secondaryColor || woodBaseColor);
+  
   const thickness = 2;
 
   return (
@@ -383,35 +416,35 @@ export const Shelf3D: React.FC<ModelProps> = ({ width, depth, height, color, sec
       {/* Sides */}
       <mesh position={[thickness / 2, height / 2, depth / 2]} castShadow receiveShadow>
         <boxGeometry args={[thickness, height, depth]} />
-        <WoodMaterial color={color} />
+        <WoodMaterial color={woodBaseColor} />
       </mesh>
       <mesh position={[width - thickness / 2, height / 2, depth / 2]} castShadow receiveShadow>
         <boxGeometry args={[thickness, height, depth]} />
-        <WoodMaterial color={color} />
+        <WoodMaterial color={woodBaseColor} />
       </mesh>
       
       {/* Top & Bottom */}
       <mesh position={[width / 2, thickness / 2, depth / 2]} castShadow receiveShadow>
         <boxGeometry args={[width, thickness, depth]} />
-        <WoodMaterial color={color} />
+        <WoodMaterial color={woodBaseColor} />
       </mesh>
       <mesh position={[width / 2, height - thickness / 2, depth / 2]} castShadow receiveShadow>
         <boxGeometry args={[width, thickness, depth]} />
-        <WoodMaterial color={color} />
+        <WoodMaterial color={woodBaseColor} />
       </mesh>
       
       {/* Horizontal Shelves */}
       {!isWallShelf && Array.from({ length: numShelves - 1 }).map((_, i) => (
         <mesh key={i} position={[width / 2, (i + 1) * shelfSpacing + thickness, depth / 2]} castShadow receiveShadow>
           <boxGeometry args={[width - thickness * 2, thickness, depth - 1]} />
-          <WoodMaterial color={color} />
+          <WoodMaterial color={woodBaseColor} />
         </mesh>
       ))}
 
       {/* Back Panel */}
       <mesh position={[width / 2, height / 2, 0.5]} castShadow receiveShadow>
         <boxGeometry args={[width - thickness * 2, height - thickness * 2, 1]} />
-        <WoodMaterial color={color} opacity={0.5} transparent />
+        <WoodMaterial color={woodBaseColor} opacity={0.5} transparent />
       </mesh>
 
       {/* Doors */}
@@ -431,7 +464,7 @@ export const Shelf3D: React.FC<ModelProps> = ({ width, depth, height, color, sec
               <group key={i} position={[xPos, 0, 0]}>
                 <mesh position={[0, 0, 0.6]} castShadow receiveShadow>
                   <boxGeometry args={[sectionWidth - 0.5, height - thickness, 1]} />
-                  <WoodMaterial color={doorColor} />
+                  <WoodMaterial color={woodFrontColor} />
                 </mesh>
                 {/* Handle */}
                 <mesh position={[handleX, 0, 1.2]} castShadow receiveShadow>
@@ -517,9 +550,11 @@ export const Electronics3D: React.FC<ModelProps & { hideStand?: boolean }> = ({ 
   );
 };
 
-export const Table3D: React.FC<ModelProps & { isRound?: boolean }> = ({ width, depth, height, color, isRound }) => {
+export const Table3D: React.FC<ModelProps & { isRound?: boolean }> = ({ width, depth, height, color, isRound, materials }) => {
   const topThickness = 4;
   const legRadius = 3;
+  
+  const woodBaseColor = getSlotColor(materials, 'woodBase', color);
   
   return (
     <group>
@@ -530,7 +565,7 @@ export const Table3D: React.FC<ModelProps & { isRound?: boolean }> = ({ width, d
         ) : (
           <boxGeometry args={[width, topThickness, depth]} />
         )}
-        <WoodMaterial color={color} />
+        <WoodMaterial color={woodBaseColor} />
       </mesh>
       
       {/* Legs */}
@@ -595,9 +630,12 @@ export const Light3D: React.FC<ModelProps> = ({ width, depth, height, color }) =
   );
 };
 
-export const GenericFurniture3D: React.FC<ModelProps> = ({ width, depth, height, color }) => (
-  <mesh position={[width / 2, height / 2, depth / 2]} castShadow receiveShadow>
-    <boxGeometry args={[width, height, depth]} />
-    <SmartMaterial color={color} />
-  </mesh>
-);
+export const GenericFurniture3D: React.FC<ModelProps> = ({ width, depth, height, color, materials }) => {
+  const woodBaseColor = getSlotColor(materials, 'woodBase', color);
+  return (
+    <mesh position={[width / 2, height / 2, depth / 2]} castShadow receiveShadow>
+      <boxGeometry args={[width, height, depth]} />
+      <SmartMaterial color={woodBaseColor} />
+    </mesh>
+  );
+};

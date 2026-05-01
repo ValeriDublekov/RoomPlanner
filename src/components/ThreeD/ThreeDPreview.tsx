@@ -72,7 +72,9 @@ const Furniture = ({ item, pixelsPerCm, isChild = false, parentWidth = 0, parent
       depth, 
       height, 
       color: item.color || "#f8fafc",
-      secondaryColor: item.secondaryColor
+      secondaryColor: item.secondaryColor,
+      materials: item.materials,
+      furnitureType: item.furnitureType
     };
     
     switch (item.furnitureType) {

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Rect, Line as KonvaLine, Ellipse, Path, Group, Text } from 'react-konva';
 import Konva from 'konva';
-import { FurnitureObject } from '../../types';
+import { FurnitureObject, MaterialSlot } from '../../types';
 
 interface FurnitureRendererProps {
   shape: FurnitureObject;
@@ -11,6 +11,10 @@ interface FurnitureRendererProps {
   pixelsPerCm: number;
 }
 
+const getSlotColor = (slot: MaterialSlot | undefined, fallback: string) => {
+  return slot?.value || fallback;
+};
+
 export const FurnitureRenderer: React.FC<FurnitureRendererProps> = ({
   shape,
   isSelected,
@@ -19,6 +23,13 @@ export const FurnitureRenderer: React.FC<FurnitureRendererProps> = ({
   pixelsPerCm,
 }) => {
   const isGroup = shape.type === 'group';
+  const m = shape.materials || {};
+
+  // Base colors for various types
+  const woodBaseColor = getSlotColor(m.woodBase, shape.color || "#f8fafc");
+  const woodFrontColor = getSlotColor(m.woodFront, shape.secondaryColor || woodBaseColor);
+  const textileMainColor = getSlotColor(m.textileMain, shape.secondaryColor || "#f8fafc");
+  const textileAccentColor = getSlotColor(m.textileAccent, "#ffffff");
 
   if (isGroup) {
     return (
@@ -56,21 +67,21 @@ export const FurnitureRenderer: React.FC<FurnitureRendererProps> = ({
     );
   }
 
+  // Determine main "visible" color for the basic Rect
+  let mainFill = woodBaseColor;
+  if (shape.furnitureType === 'bed') mainFill = textileMainColor;
+  if (isColliding) mainFill = "rgba(239, 68, 68, 0.1)";
+  if (shape.svgPath) mainFill = "rgba(0,0,0,0.001)";
+
   return (
     <>
       <Rect
         width={shape.width}
         height={shape.height}
-        fill={isColliding ? "rgba(239, 68, 68, 0.1)" : (
-          shape.svgPath ? "rgba(0,0,0,0.001)" : (
-            (shape.furnitureType === 'bed' || shape.furnitureType === 'wardrobe' || shape.furnitureType === 'dresser') 
-              ? (shape.secondaryColor || "#f8fafc") 
-              : (shape.color || "#f8fafc")
-          )
-        )}
+        fill={mainFill}
         stroke={isColliding ? "#ef4444" : (isSelected ? "#4f46e5" : (
           (shape.furnitureType === 'bed' || shape.furnitureType === 'wardrobe' || shape.furnitureType === 'dresser')
-            ? (shape.color || "#cbd5e1")
+            ? woodBaseColor
             : "#cbd5e1"
         ))}
         strokeWidth={(shape.furnitureType === 'bed' || shape.furnitureType === 'wardrobe' || shape.furnitureType === 'dresser') ? 4 / scale : 2 / scale}
@@ -89,8 +100,12 @@ export const FurnitureRenderer: React.FC<FurnitureRendererProps> = ({
         const sY = shape.height / (pathRect.height || 100);
         
         const isTwoColor = shape.furnitureType === 'bed' || shape.furnitureType === 'wardrobe' || shape.furnitureType === 'dresser';
-        const fillColor = isTwoColor ? (shape.secondaryColor || "#f8fafc") : (shape.color || "#f8fafc");
-        const strokeColor = isTwoColor ? (shape.color || "#64748b") : (isSelected ? "#4f46e5" : "#64748b");
+        
+        let fillColor = woodBaseColor;
+        if (shape.furnitureType === 'bed') fillColor = textileMainColor;
+        else if (isTwoColor) fillColor = woodFrontColor;
+
+        const strokeColor = isTwoColor ? woodBaseColor : (isSelected ? "#4f46e5" : "#64748b");
 
         return (
           <Path
@@ -127,7 +142,7 @@ export const FurnitureRenderer: React.FC<FurnitureRendererProps> = ({
                 <Rect
                   width={shape.width}
                   height={hbProjection * pixelsPerCm}
-                  fill={shape.color || "#cbd5e1"}
+                  fill={woodBaseColor}
                   opacity={0.3}
                 />
                 {/* Main thick part */}
@@ -135,7 +150,7 @@ export const FurnitureRenderer: React.FC<FurnitureRendererProps> = ({
                   y={hbProjection * pixelsPerCm}
                   width={shape.width}
                   height={hbThickness * pixelsPerCm}
-                  fill={shape.color || "#cbd5e1"}
+                  fill={woodBaseColor}
                 />
               </>
             )}
@@ -146,7 +161,7 @@ export const FurnitureRenderer: React.FC<FurnitureRendererProps> = ({
               y={hbTotalDepth + mattressInset}
               width={shape.width - mattressInset * 2}
               height={shape.height - hbTotalDepth - mattressInset * 2 - (3 * pixelsPerCm)} // minus footboard
-              fill={shape.secondaryColor || "#f8fafc"}
+              fill={textileMainColor}
               stroke="#cbd5e1"
               strokeWidth={1 / scale}
               cornerRadius={2 / scale}
@@ -158,7 +173,7 @@ export const FurnitureRenderer: React.FC<FurnitureRendererProps> = ({
                 x={shape.width * 0.15}
                 width={shape.width * 0.3}
                 height={shape.height * 0.1}
-                fill="white"
+                fill={textileAccentColor}
                 stroke="#e2e8f0"
                 strokeWidth={1 / scale}
                 cornerRadius={2 / scale}
@@ -167,7 +182,7 @@ export const FurnitureRenderer: React.FC<FurnitureRendererProps> = ({
                 x={shape.width * 0.55}
                 width={shape.width * 0.3}
                 height={shape.height * 0.1}
-                fill="white"
+                fill={textileAccentColor}
                 stroke="#e2e8f0"
                 strokeWidth={1 / scale}
                 cornerRadius={2 / scale}

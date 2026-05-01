@@ -1,8 +1,9 @@
 import { StateCreator } from 'zustand';
 import { AppState } from '../../store';
 import { PERSISTED_KEYS, PersistedState } from '../constants';
-import { HistoryEntry, Vector2d } from '../../types';
+import { HistoryEntry, Vector2d, FurnitureObject } from '../../types';
 import { rotatePoint } from '../../lib/geometry';
+import { migrateFurnitureMaterials } from '../../lib/materials';
 import { doc, setDoc, addDoc, collection, serverTimestamp, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../../firebase';
 
@@ -128,10 +129,13 @@ export const createProjectSlice: StateCreator<AppState, [], [], ProjectSlice> = 
       });
     };
 
-    let furniture = projectData.furniture || [];
+    let furniture: any[] = projectData.furniture || [];
     if (currentVersion < 2) {
       furniture = migrateFurniture(furniture);
     }
+    
+    // Always apply semantic materials migration to ensure consistency
+    furniture = furniture.map(migrateFurnitureMaterials);
 
     // Ensure all attachments have default curtain colors if missing
     const wallAttachments = (projectData.wallAttachments || []).map((a: any) => ({
