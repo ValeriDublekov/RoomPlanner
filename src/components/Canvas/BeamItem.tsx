@@ -55,8 +55,8 @@ export const BeamItem: React.FC<BeamItemProps> = ({
 
   const dragBoundFunc = (pos: Vector2d) => {
     if (!isSelected || mode !== 'select' || !groupRef.current) return pos;
-    const node = groupRef.current;
-    const parent = node.getParent();
+    const node = groupRef.current as Konva.Group;
+    const parent = node.getParent() as Konva.Container;
     if (!parent) return pos;
 
     // Get the absolute position of where the beam should be sitting (its anchor P1)
@@ -78,10 +78,10 @@ export const BeamItem: React.FC<BeamItemProps> = ({
   const handleDragMove = (e: Konva.KonvaEventObject<DragEvent>) => {
     if (!isSelected) return;
     
-    const node = e.target;
+    const node = e.target as Konva.Group;
     if (node !== groupRef.current) return;
     
-    const parent = node.getParent();
+    const parent = node.getParent() as Konva.Container;
     if (!parent) return;
 
     // Convert current node position (which is being constrained by dragBoundFunc)
@@ -124,10 +124,10 @@ export const BeamItem: React.FC<BeamItemProps> = ({
   };
 
   const handleDragEnd = (e: Konva.KonvaEventObject<DragEvent>) => {
-    const node = e.target;
+    const node = e.target as Konva.Group;
     if (node !== groupRef.current) return;
 
-    const parent = node.getParent();
+    const parent = node.getParent() as Konva.Container;
     if (!parent) return;
 
     // Final world position from absolute position

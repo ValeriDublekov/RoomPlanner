@@ -1,6 +1,8 @@
 import React from 'react';
 import { useStore } from '@/src/store';
-import { PropertyEditor } from '@/src/components/Sidebar';
+import { PropertyEditor, SceneExplorer } from '@/src/components/Sidebar';
+import { PanelLeftClose, Settings2, ListTree } from 'lucide-react';
+import { cn } from '../lib/utils';
 
 export const RightSidebar: React.FC = () => {
   const sidebarRef = React.useRef<HTMLDivElement>(null);
@@ -32,24 +34,25 @@ export const RightSidebar: React.FC = () => {
   const pixelsPerCm = useStore(state => state.pixelsPerCm);
   const deleteSelected = useStore(state => state.deleteSelected);
 
+  const [activeTab, setActiveTab] = React.useState<'explorer' | 'properties'>('explorer');
+
   const selectedFurniture = furniture.find(f => f.id === selectedId);
   const selectedRoom = rooms.find(r => r.id === selectedRoomId);
   const selectedDimension = dimensions.find(d => d.id === selectedDimensionId);
   const selectedAttachment = wallAttachments.find(a => a.id === selectedAttachmentId);
   const selectedBeam = beams.find(b => b.id === selectedBeamId);
 
-  if (selectedBeamId && !selectedBeam) {
-    console.warn('selectedBeamId exists but beam not found in beams array:', selectedBeamId);
-  }
+  const isObjectSelected = !!(selectedFurniture || selectedRoom || selectedDimension || selectedAttachment || selectedBeam);
 
-  const isVisible = !!(selectedFurniture || selectedRoom || selectedDimension || selectedAttachment || selectedBeam);
-
-  if (selectedBeamId) {
-    console.log('RightSidebar: Beam selected:', selectedBeamId, 'found:', !!selectedBeam);
-  }
+  // Automatically switch to properties when something is selected
+  React.useEffect(() => {
+    if (isObjectSelected) {
+      setActiveTab('properties');
+    }
+  }, [isObjectSelected]);
 
   React.useEffect(() => {
-    if (isVisible && sidebarRef.current) {
+    if (sidebarRef.current) {
       const resizeObserver = new ResizeObserver((entries) => {
         for (const entry of entries) {
           setSidebarWidth(entry.contentRect.width);
@@ -57,61 +60,114 @@ export const RightSidebar: React.FC = () => {
       });
       resizeObserver.observe(sidebarRef.current);
       return () => resizeObserver.disconnect();
-    } else {
-      setSidebarWidth(0);
     }
-  }, [isVisible, setSidebarWidth]);
+  }, [setSidebarWidth]);
 
-  if (!isVisible) {
-    return null;
-  }
+  const TabButton = ({ id, icon: Icon, label }: { id: typeof activeTab, icon: any, label: string }) => (
+    <button
+      onClick={() => setActiveTab(id)}
+      className={cn(
+        "flex-1 flex items-center justify-center gap-2 py-3 px-2 text-[10px] font-bold uppercase tracking-wider transition-all border-b-2",
+        activeTab === id 
+          ? "text-indigo-600 border-indigo-600 bg-indigo-50/30" 
+          : "text-slate-400 border-transparent hover:text-slate-600 hover:bg-slate-50"
+      )}
+    >
+      <Icon size={14} />
+      <span className="hidden sm:inline">{label}</span>
+      {id === 'properties' && isObjectSelected && (
+        <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
+      )}
+    </button>
+  );
 
   return (
     <aside 
       ref={sidebarRef}
-      className="w-80 lg:w-[350px] xl:w-[400px] flex-shrink-0 bg-white border-l border-slate-200 flex flex-col h-full shadow-2xl lg:shadow-sm z-30 overflow-hidden absolute lg:relative right-0 top-0 bottom-0 max-w-[calc(100vw-4rem)]"
+      className={cn(
+        "w-80 lg:w-[320px] xl:w-[360px] flex-shrink-0 bg-white border-l border-slate-200 flex flex-col h-full shadow-2xl lg:shadow-none z-30 overflow-hidden absolute lg:relative right-0 top-0 bottom-0 transition-transform duration-300 ease-in-out",
+        // Mobile visibility could be toggled here if needed
+      )}
     >
-      <div className="h-14 border-b border-slate-100 flex items-center justify-between px-6 bg-slate-50/50">
-        <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Properties</h2>
-        <button 
-          className="lg:hidden p-2 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-200"
-          onClick={() => {
-            useStore.getState().setSelectedId(null);
-            useStore.getState().setSelectedRoomId(null);
-            useStore.getState().setSelectedDimensionId(null);
-            useStore.getState().setSelectedAttachmentId(null);
-            useStore.getState().setSelectedBeamId(null);
-            useStore.getState().setSelectedIds([]);
-          }}
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-        </button>
+      {/* Tabs Header */}
+      <div className="flex border-b border-slate-100 bg-white">
+        <TabButton id="explorer" icon={ListTree} label="Scene Explorer" />
+        <TabButton id="properties" icon={Settings2} label="Properties" />
       </div>
-      <div className="flex-1 overflow-y-auto">
-        <PropertyEditor
-          selectedFurniture={selectedFurniture}
-          selectedRoom={selectedRoom}
-          selectedWallIndex={selectedWallIndex}
-          selectedDimension={selectedDimension}
-          selectedAttachment={selectedAttachment}
-          selectedBeam={selectedBeam}
-          pixelsPerCm={pixelsPerCm}
-          updateFurniture={updateFurniture}
-          updateRoom={updateRoom}
-          deleteFurniture={deleteSelected}
-          deleteRoom={deleteRoom}
-          deleteDimension={deleteDimension}
-          updateAttachment={updateWallAttachment}
-          deleteAttachment={deleteWallAttachment}
-          updateBeam={updateBeam}
-          deleteBeam={deleteBeam}
-          saveHistory={saveHistory}
-          bringToFront={bringToFront}
-          sendToBack={sendToBack}
-          bringForward={bringForward}
-          sendBackward={sendBackward}
-        />
+
+      <div className="flex-1 overflow-hidden relative">
+        {/* Explorer Content */}
+        <div className={cn(
+          "absolute inset-0 transition-all duration-300 ease-in-out transform",
+          activeTab === 'explorer' ? "translate-x-0 opacity-100 z-10" : "-translate-x-full opacity-0 z-0 pointer-events-none"
+        )}>
+          <SceneExplorer />
+        </div>
+
+        {/* Properties Content */}
+        <div className={cn(
+          "absolute inset-0 transition-all duration-300 ease-in-out transform overflow-y-auto custom-scrollbar",
+          activeTab === 'properties' ? "translate-x-0 opacity-100 z-10" : "translate-x-full opacity-0 z-0 pointer-events-none"
+        )}>
+          {isObjectSelected ? (
+            <PropertyEditor
+              selectedFurniture={selectedFurniture}
+              selectedRoom={selectedRoom}
+              selectedWallIndex={selectedWallIndex}
+              selectedDimension={selectedDimension}
+              selectedAttachment={selectedAttachment}
+              selectedBeam={selectedBeam}
+              pixelsPerCm={pixelsPerCm}
+              updateFurniture={updateFurniture}
+              updateRoom={updateRoom}
+              deleteFurniture={deleteSelected}
+              deleteRoom={deleteRoom}
+              deleteDimension={deleteDimension}
+              updateAttachment={updateWallAttachment}
+              deleteAttachment={deleteWallAttachment}
+              updateBeam={updateBeam}
+              deleteBeam={deleteBeam}
+              saveHistory={saveHistory}
+              bringToFront={bringToFront}
+              sendToBack={sendToBack}
+              bringForward={bringForward}
+              sendBackward={sendBackward}
+            />
+          ) : (
+            <div className="flex flex-col items-center justify-center h-full p-8 text-center bg-slate-50/30">
+              <div className="w-16 h-16 bg-white rounded-2xl shadow-sm flex items-center justify-center mb-4 text-slate-200">
+                <Settings2 size={32} />
+              </div>
+              <h3 className="text-sm font-bold text-slate-700 uppercase tracking-tight">No Object Selected</h3>
+              <p className="text-xs text-slate-400 mt-2 max-w-[200px]">
+                Select an element from the plan or the list to edit its properties.
+              </p>
+              <button 
+                onClick={() => setActiveTab('explorer')}
+                className="mt-6 px-4 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-bold text-slate-600 uppercase tracking-wider hover:bg-slate-50 transition-all shadow-sm"
+              >
+                Go to Scene Explorer
+              </button>
+            </div>
+          )}
+        </div>
       </div>
+      
+      {/* Mobile Close Button (Optional if we have a toggle) */}
+      <button 
+        className="lg:hidden absolute bottom-4 right-4 w-12 h-12 bg-slate-900 text-white rounded-full shadow-xl flex items-center justify-center z-40"
+        onClick={() => {
+          useStore.getState().setSelectedId(null);
+          useStore.getState().setSelectedRoomId(null);
+          useStore.getState().setSelectedDimensionId(null);
+          useStore.getState().setSelectedAttachmentId(null);
+          useStore.getState().setSelectedBeamId(null);
+          useStore.getState().setSelectedIds([]);
+          setSidebarWidth(0);
+        }}
+      >
+        <PanelLeftClose size={20} />
+      </button>
     </aside>
   );
 };

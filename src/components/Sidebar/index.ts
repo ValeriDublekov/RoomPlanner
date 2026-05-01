@@ -4,3 +4,4 @@ export * from './FileActions';
 export * from './PropertyEditor';
 export * from './SaveModal';
 export * from './ToolButton';
+export * from './SceneExplorer';
