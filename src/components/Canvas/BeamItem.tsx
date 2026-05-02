@@ -4,6 +4,7 @@ import Konva from 'konva';
 import { BeamObject, AppMode, Vector2d } from '@/src/types';
 import { useStore } from '@/src/store';
 import { getDistance, getDistanceToSegment } from '@/src/lib/geometry';
+import { INTERIOR_THEMES } from '@/src/lib/themes';
 
 interface BeamItemProps {
   beam: BeamObject;
@@ -25,6 +26,30 @@ export const BeamItem: React.FC<BeamItemProps> = ({
   const rooms = useStore((state) => state.rooms);
   const updateBeam = useStore((state) => state.updateBeam);
   const snapToObjects = useStore((state) => state.snapToObjects);
+  const activeThemeId = useStore((state) => state.activeThemeId);
+  
+  const resolvedColor = React.useMemo(() => {
+    if (beam.colorType === 'manual') return beam.manualColor || beam.color || '#e2e8f0';
+    
+    const activeTheme = INTERIOR_THEMES.find(t => t.id === activeThemeId);
+    
+    if (beam.colorType === 'ceiling') {
+      return '#f8fafc';
+    }
+    
+    if (beam.colorType === 'wall') {
+      const roomLink = beam.p1Attachment?.roomId || beam.p2Attachment?.roomId;
+      const room = rooms.find(r => r.id === roomLink);
+      
+      if (room) {
+        return room.materials?.wallBase?.value || room.defaultWallColor || activeTheme?.wallColors.base || '#f0f0f0';
+      }
+      
+      return activeTheme?.wallColors.base || '#94a3b8';
+    }
+    
+    return beam.color || '#e2e8f0';
+  }, [beam, activeThemeId, rooms]);
   
   const [dragDistances, setDragDistances] = useState<{ p1: Vector2d, p2: Vector2d, dist: number }[]>([]);
   const groupRef = useRef<Konva.Group>(null);
@@ -229,7 +254,7 @@ export const BeamItem: React.FC<BeamItemProps> = ({
       >
         <Line
           points={[relP1.x, relP1.y, relP2.x, relP2.y]}
-          stroke={isSelected ? "#4f46e5" : beam.color}
+          stroke={isSelected ? "#4f46e5" : resolvedColor}
           strokeWidth={thicknessPx}
           hitStrokeWidth={thicknessPx + 20}
           opacity={0.8}

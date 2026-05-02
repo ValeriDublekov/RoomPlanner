@@ -20,6 +20,32 @@ export const Beam3D: React.FC<{
   const midZ = (beam.p1.y + beam.p2.y) / (2 * pixelsPerCm);
   const y = (beam.elevation + beam.height / 2);
 
+  const activeThemeId = useStore(state => state.activeThemeId);
+  const rooms = useStore(state => state.rooms);
+  
+  const resolvedColor = useMemo(() => {
+    if (beam.colorType === 'manual') return beam.manualColor || beam.color || '#e2e8f0';
+    
+    const activeTheme = INTERIOR_THEMES.find(t => t.id === activeThemeId);
+    
+    if (beam.colorType === 'ceiling') {
+      return '#f8fafc'; // Default ceiling color, could be linked to theme if needed
+    }
+    
+    if (beam.colorType === 'wall') {
+      const roomLink = beam.p1Attachment?.roomId || beam.p2Attachment?.roomId;
+      const room = rooms.find(r => r.id === roomLink);
+      
+      if (room) {
+        return room.materials?.wallBase?.value || room.defaultWallColor || activeTheme?.wallColors.base || '#f0f0f0';
+      }
+      
+      return activeTheme?.wallColors.base || '#f1f5f9';
+    }
+    
+    return beam.color || '#e2e8f0';
+  }, [beam, activeThemeId, rooms]);
+
   return (
     <mesh 
       position={[midX, y, midZ]} 
@@ -28,7 +54,7 @@ export const Beam3D: React.FC<{
       receiveShadow
     >
       <boxGeometry args={[length, beam.height, beam.width]} />
-      <SmartMaterial color={beam.color || '#e2e8f0'} roughness={1} />
+      <SmartMaterial color={resolvedColor} roughness={1} />
     </mesh>
   );
 };
