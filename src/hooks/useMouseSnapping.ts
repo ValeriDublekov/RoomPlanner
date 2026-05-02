@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { useStore } from '../store';
 import { getSnappedPosition, getOrthoPoint, getSnappedFurniturePosition } from '../lib/geometry';
+import { Vector2d } from '../types';
 
 export const useMouseSnapping = (mousePos: { x: number, y: number }, isCtrlPressed: boolean, isAltPressed: boolean) => {
     const {
@@ -23,8 +24,9 @@ export const useMouseSnapping = (mousePos: { x: number, y: number }, isCtrlPress
     pendingFurniture
   } = useStore();
 
-  const getSnappedMousePos = useCallback((forceIgnoreGrid = false) => {
+  const getSnappedMousePos = useCallback((forceIgnoreGrid = false): Vector2d & { suggestedRotation?: number } => {
     let pos = { ...mousePos };
+    let suggestedRotation: number | undefined = undefined;
 
     if (isAltPressed) return pos;
 
@@ -32,11 +34,11 @@ export const useMouseSnapping = (mousePos: { x: number, y: number }, isCtrlPress
     const snapThreshold = 10 / scale;
     const shouldSnapToImage = snapToImage && activeLayer === 'room';
     
-    let snapped = { ...pos };
+    let snapped: Vector2d & { suggestedRotation?: number } = { ...pos };
     if (snapToObjects) {
       if (mode === 'place-furniture' && pendingFurniture) {
         // Advanced box-to-box/box-to-wall snapping for placement
-        snapped = getSnappedFurniturePosition(
+        const snappedRes = getSnappedFurniturePosition(
           pos,
           pendingFurniture.width,
           pendingFurniture.height,
@@ -45,6 +47,8 @@ export const useMouseSnapping = (mousePos: { x: number, y: number }, isCtrlPress
           furniture,
           15 / scale // Slightly higher threshold for box snapping
         );
+        snapped = snappedRes;
+        suggestedRotation = snappedRes.suggestedRotation;
       } else {
         // Standard point/edge snapping for cursor
         const lastPoint = (mode === 'draw-room' || mode === 'draw-furniture' || mode === 'draw-beam') && roomPoints.length > 0
@@ -105,7 +109,7 @@ export const useMouseSnapping = (mousePos: { x: number, y: number }, isCtrlPress
       }
     }
 
-    return pos;
+    return { ...pos, suggestedRotation };
   }, [mousePos, isCtrlPressed, orthoMode, snapToGrid, snapToObjects, mode, roomPoints, measurePoints, rooms, furniture, pendingFurniture, scale, pixelsPerCm, snapToImage, edgeMap, backgroundPosition, backgroundScale, backgroundRotation]);
 
   return { getSnappedMousePos };

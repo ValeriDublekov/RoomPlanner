@@ -60,12 +60,17 @@ export const useFurnitureInteraction = (
     node.x(currentX);
     node.y(currentY);
 
+    if (snappedPos.suggestedRotation !== undefined) {
+      node.rotation(snappedPos.suggestedRotation);
+    }
+
+    const currentRotation = node.rotation();
     const finalPivot = { x: currentX, y: currentY };
     const finalSides = [
-      rotatePoint({ x: currentX, y: currentY - h / 2 }, finalPivot, rotation),
-      rotatePoint({ x: currentX, y: currentY + h / 2 }, finalPivot, rotation),
-      rotatePoint({ x: currentX - w / 2, y: currentY }, finalPivot, rotation),
-      rotatePoint({ x: currentX + w / 2, y: currentY }, finalPivot, rotation),
+      rotatePoint({ x: currentX, y: currentY - h / 2 }, finalPivot, currentRotation),
+      rotatePoint({ x: currentX, y: currentY + h / 2 }, finalPivot, currentRotation),
+      rotatePoint({ x: currentX - w / 2, y: currentY }, finalPivot, currentRotation),
+      rotatePoint({ x: currentX + w / 2, y: currentY }, finalPivot, currentRotation),
     ];
 
     const newDistances: { p1: Vector2d, p2: Vector2d, dist: number }[] = [];

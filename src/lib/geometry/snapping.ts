@@ -158,24 +158,27 @@ export const getSnappedFurniturePosition = (
   furniture: { id: string, x: number; y: number; width: number; height: number; rotation: number }[],
   threshold: number,
   ignoredId?: string
-): Vector2d => {
+): Vector2d & { suggestedRotation?: number } => {
   const currentPos = { ...centerPos };
   const snappedTargetIds = new Set<string>();
+  let resultRotation = rotation;
+  let hasAutoRotated = false;
 
   for (let pass = 0; pass < 2; pass++) {
     let bestSnap = null;
     let minSnapDist = Infinity;
     
     const sides = [
-      rotatePoint({ x: 0, y: -height / 2 }, { x: 0, y: 0 }, rotation),
-      rotatePoint({ x: 0, y: height / 2 }, { x: 0, y: 0 }, rotation),
-      rotatePoint({ x: -width / 2, y: 0 }, { x: 0, y: 0 }, rotation),
-      rotatePoint({ x: width / 2, y: 0 }, { x: 0, y: 0 }, rotation),
+      rotatePoint({ x: 0, y: -height / 2 }, { x: 0, y: 0 }, resultRotation), // 0: Top
+      rotatePoint({ x: 0, y: height / 2 }, { x: 0, y: 0 }, resultRotation),  // 1: Bottom (Front)
+      rotatePoint({ x: -width / 2, y: 0 }, { x: 0, y: 0 }, resultRotation), // 2: Left
+      rotatePoint({ x: width / 2, y: 0 }, { x: 0, y: 0 }, resultRotation),  // 3: Right
     ];
 
     const worldSides = sides.map(s => ({ x: s.x + currentPos.x, y: s.y + currentPos.y }));
 
-    for (const side of worldSides) {
+    for (let sideIndex = 0; sideIndex < worldSides.length; sideIndex++) {
+      const side = worldSides[sideIndex];
       for (const room of rooms) {
         for (let i = 0; i < room.points.length; i++) {
           const wallId = `wall-${room.id}-${i}`;
@@ -190,7 +193,9 @@ export const getSnappedFurniturePosition = (
             bestSnap = {
               offsetX: result.point.x - side.x,
               offsetY: result.point.y - side.y,
-              targetId: wallId
+              targetId: wallId,
+              sideIndex: sideIndex,
+              isWall: true
             };
           }
         }
@@ -212,7 +217,9 @@ export const getSnappedFurniturePosition = (
             bestSnap = {
               offsetX: result.point.x - side.x,
               offsetY: result.point.y - side.y,
-              targetId: targetId
+              targetId: targetId,
+              sideIndex: sideIndex,
+              isWall: false
             };
           }
         }
@@ -223,10 +230,20 @@ export const getSnappedFurniturePosition = (
       currentPos.x += bestSnap.offsetX;
       currentPos.y += bestSnap.offsetY;
       snappedTargetIds.add(bestSnap.targetId);
+
+      // Auto-rotate logic: if the front (index 1) snaps to a wall, flip 180 degrees
+      if (bestSnap.sideIndex === 1 && bestSnap.isWall && !hasAutoRotated) {
+        resultRotation = (resultRotation + 180) % 360;
+        hasAutoRotated = true;
+        // After rotation, we might want to re-snap in the next pass with the new rotation
+      }
     } else {
       break;
     }
   }
 
-  return currentPos;
+  return {
+    ...currentPos,
+    suggestedRotation: hasAutoRotated ? resultRotation : undefined
+  };
 };

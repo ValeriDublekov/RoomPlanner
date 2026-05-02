@@ -9,6 +9,7 @@ export const PlaceFurnitureTool: ToolHandler = {
         ...pending,
         x: relPos.x - pending.width / 2,
         y: relPos.y - pending.height / 2,
+        rotation: relPos.suggestedRotation ?? pending.rotation,
       });
       state.setPendingFurniture(null);
       state.setMode('select');

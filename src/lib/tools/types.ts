@@ -3,7 +3,7 @@ import { AppState } from '../../store';
 
 export interface ToolContext {
   state: AppState;
-  getSnappedMousePos: (isInputRef?: boolean) => { x: number; y: number };
+  getSnappedMousePos: (isInputRef?: boolean) => { x: number; y: number; suggestedRotation?: number };
   mousePos: { x: number; y: number };
   stage: Konva.Stage;
   scale: number;

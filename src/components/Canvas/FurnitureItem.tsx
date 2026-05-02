@@ -135,6 +135,7 @@ export const FurnitureItem: React.FC<FurnitureItemProps> = ({
             onChange({
               x: e.target.x() - shape.width / 2,
               y: e.target.y() - shape.height / 2,
+              rotation: e.target.rotation(),
             });
           }
         }}

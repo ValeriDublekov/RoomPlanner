@@ -7,7 +7,7 @@ import { AppMode } from '../../../types';
 
 interface InteractionLayerProps {
   mode: AppMode;
-  snappedMouse: { x: number; y: number };
+  snappedMouse: { x: number; y: number, suggestedRotation?: number };
   mousePos: { x: number; y: number };
   scale: number;
 }
@@ -46,7 +46,7 @@ export const InteractionLayer: React.FC<InteractionLayerProps> = ({
         <Group
           x={snappedMouse.x}
           y={snappedMouse.y}
-          rotation={pendingFurniture!.rotation}
+          rotation={snappedMouse.suggestedRotation ?? pendingFurniture!.rotation}
           offsetX={pendingFurniture!.width / 2}
           offsetY={pendingFurniture!.height / 2}
           opacity={0.6}
