@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, RotateCcw, RotateCw, ArrowUpToLine, ChevronUp, ChevronDown, ArrowDownToLine } from 'lucide-react';
+import { X, RotateCcw, RotateCw, ArrowUpToLine, ChevronUp, ChevronDown, ArrowDownToLine, ClipboardCopy } from 'lucide-react';
 import { FurnitureObject, MaterialSlot, ObjectMaterials, InteriorTheme } from '../../../types';
 import { WOOD_COLORS } from '../../../constants';
 import { cn } from '../../../lib/utils';
@@ -202,6 +202,16 @@ const MaterialPicker: React.FC<{
   );
 };
 
+const PRESET_ARTWORKS = [
+  { id: 'minimal-1', name: 'Abstract Geometric', url: 'https://picsum.photos/seed/minimal-1/400/300' },
+  { id: 'minimal-2', name: 'Modern Lines', url: 'https://picsum.photos/seed/minimal-2/400/300' },
+  { id: 'minimal-3', name: 'Monochrome Landscape', url: 'https://picsum.photos/seed/minimal-3/400/300' },
+  { id: 'minimal-4', name: 'Circular Forms', url: 'https://picsum.photos/seed/minimal-4/400/300' },
+  { id: 'minimal-5', name: 'Vertical Stripes', url: 'https://picsum.photos/seed/minimal-5/400/300' },
+  { id: 'minimal-6', name: 'Soft Gradient', url: 'https://picsum.photos/seed/minimal-6/400/300' },
+  { id: 'minimal-7', name: 'Minimal Dot', url: 'https://picsum.photos/seed/minimal-7/400/300' },
+];
+
 export const FurnitureEditor: React.FC<FurnitureEditorProps> = ({
   selectedFurniture,
   pixelsPerCm,
@@ -217,6 +227,9 @@ export const FurnitureEditor: React.FC<FurnitureEditorProps> = ({
   const activeThemeId = useStore(state => state.activeThemeId);
   const activeTheme = INTERIOR_THEMES.find(t => t.id === activeThemeId);
   
+  const pasteImageTargetId = useStore(state => state.pasteImageTargetId);
+  const setPasteImageTargetId = useStore(state => state.setPasteImageTargetId);
+
   const updateMaterialSlot = (slotName: keyof ObjectMaterials, updates: Partial<MaterialSlot>) => {
     saveHistory();
     const currentSlot = materials[slotName] || { source: 'theme', value: '#F8FAFC' };
@@ -250,20 +263,30 @@ export const FurnitureEditor: React.FC<FurnitureEditorProps> = ({
         <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Furniture Type</label>
         <select
           value={selectedFurniture.furnitureType || 'generic'}
-          onFocus={saveHistory}
-          onChange={(e) => {
-            const newType = e.target.value as any;
-            const currentMaterials = selectedFurniture.materials || {};
-            const newDefaults = getDefaultMaterialsForType(newType);
-            const updates: Partial<FurnitureObject> = { 
-              furnitureType: newType,
-              materials: { ...newDefaults, ...currentMaterials }
-            };
-            if (newType === 'air-conditioner') {
-              updates.color = '#ffffff';
-            }
-            updateFurniture(selectedFurniture.id, updates);
-          }}
+            onFocus={saveHistory}
+            onChange={(e) => {
+              const newType = e.target.value as any;
+              const currentMaterials = selectedFurniture.materials || {};
+              const newDefaults = getDefaultMaterialsForType(newType);
+              const updates: Partial<FurnitureObject> = { 
+                furnitureType: newType,
+                materials: { ...newDefaults, ...currentMaterials }
+              };
+              
+              if (newType === 'air-conditioner') {
+                updates.color = '#ffffff';
+              }
+              
+              if (newType === 'picture') {
+                // Better defaults for wall-mounted picture
+                updates.height = 2 * pixelsPerCm; // Depth (Y on canvas)
+                updates.height3d = 60 * pixelsPerCm; // Vertical height (Z)
+                updates.elevation = 120 * pixelsPerCm; // Wall position
+                updates.color = '#1e293b'; // Frame color
+              }
+              
+              updateFurniture(selectedFurniture.id, updates);
+            }}
           className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all appearance-none"
         >
           <option value="generic">Generic Box</option>
@@ -342,34 +365,53 @@ export const FurnitureEditor: React.FC<FurnitureEditorProps> = ({
         <div className="space-y-3 pt-2">
           {selectedFurniture.furnitureType === 'picture' && (
             <div className="space-y-2.5 p-3 bg-slate-50 rounded-2xl border border-slate-200">
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Select Artwork</label>
+              <div className="flex items-center justify-between ml-1">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Select Artwork</label>
+                <button
+                  onClick={() => setPasteImageTargetId(pasteImageTargetId === selectedFurniture.id ? null : selectedFurniture.id)}
+                  className={cn(
+                    "flex items-center gap-1.5 px-2 py-1 rounded-lg text-[9px] font-bold uppercase transition-all shadow-sm border",
+                    pasteImageTargetId === selectedFurniture.id 
+                      ? "bg-amber-100 text-amber-700 border-amber-200 animate-pulse" 
+                      : "bg-white text-slate-500 border-slate-200 hover:border-indigo-300 hover:text-indigo-600"
+                  )}
+                >
+                  <ClipboardCopy size={10} />
+                  {pasteImageTargetId === selectedFurniture.id ? "Waiting for Paste..." : "Paste Image Mode"}
+                </button>
+              </div>
               <div className="grid grid-cols-4 gap-2">
-                {[
-                  { id: 'minimal-1', name: 'Abstract Geometric', url: 'https://picsum.photos/seed/minimal-1/400/300' },
-                  { id: 'minimal-2', name: 'Modern Lines', url: 'https://picsum.photos/seed/minimal-2/400/300' },
-                  { id: 'minimal-3', name: 'Monochrome Landscape', url: 'https://picsum.photos/seed/minimal-3/400/300' },
-                  { id: 'minimal-4', name: 'Circular Forms', url: 'https://picsum.photos/seed/minimal-4/400/300' },
-                  { id: 'minimal-5', name: 'Vertical Stripes', url: 'https://picsum.photos/seed/minimal-5/400/300' },
-                  { id: 'minimal-6', name: 'Soft Gradient', url: 'https://picsum.photos/seed/minimal-6/400/300' },
-                  { id: 'minimal-7', name: 'Minimal Dot', url: 'https://picsum.photos/seed/minimal-7/400/300' },
-                ].map((art) => (
-                  <button
-                    key={art.id}
-                    onClick={() => updateFurniture(selectedFurniture.id, { imageUrl: art.url })}
-                    className={cn(
-                      "aspect-[4/3] rounded-lg border-2 transition-all bg-white flex items-center justify-center overflow-hidden group",
-                      selectedFurniture.imageUrl === art.url ? "border-indigo-500 scale-105 shadow-md" : "border-transparent hover:border-slate-300"
-                    )}
-                    title={art.name}
-                  >
-                    <img 
-                      src={art.url} 
-                      alt={art.name} 
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                      referrerPolicy="no-referrer"
-                    />
-                  </button>
-                ))}
+                {(() => {
+                  const artworks = [...PRESET_ARTWORKS];
+                  const currentUrl = selectedFurniture.imageUrl;
+                  if (currentUrl && !PRESET_ARTWORKS.some(a => a.url === currentUrl)) {
+                    artworks.unshift({ id: 'active-custom', name: 'Applied Artwork', url: currentUrl });
+                  }
+                  
+                  return artworks.map((art) => (
+                    <button
+                      key={art.id}
+                      onClick={() => updateFurniture(selectedFurniture.id, { imageUrl: art.url })}
+                      className={cn(
+                        "aspect-[4/3] rounded-lg border-2 transition-all bg-white flex items-center justify-center overflow-hidden group relative",
+                        selectedFurniture.imageUrl === art.url ? "border-indigo-500 scale-105 shadow-md" : "border-transparent hover:border-slate-300"
+                      )}
+                      title={art.name}
+                    >
+                      <img 
+                        src={art.url} 
+                        alt={art.name} 
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                        referrerPolicy="no-referrer"
+                      />
+                      {art.id === 'active-custom' && (
+                        <div className="absolute top-0 right-0 bg-indigo-500 text-white p-0.5 rounded-bl-md shadow-sm">
+                          <ClipboardCopy size={8} />
+                        </div>
+                      )}
+                    </button>
+                  ));
+                })()}
               </div>
               <div className="pt-1.5">
                 <label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest ml-1">Custom Image URL</label>

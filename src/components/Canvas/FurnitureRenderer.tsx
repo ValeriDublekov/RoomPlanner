@@ -1,6 +1,7 @@
 import React from 'react';
-import { Rect, Line as KonvaLine, Ellipse, Path, Group, Text } from 'react-konva';
+import { Rect, Line as KonvaLine, Ellipse, Path, Group, Text, Image as KonvaImage } from 'react-konva';
 import Konva from 'konva';
+import useImage from 'use-image';
 import { FurnitureObject, MaterialSlot } from '../../types';
 
 interface FurnitureRendererProps {
@@ -24,6 +25,7 @@ export const FurnitureRenderer: React.FC<FurnitureRendererProps> = ({
 }) => {
   const isGroup = shape.type === 'group';
   const m = shape.materials || {};
+  const [image] = useImage(shape.imageUrl || '');
 
   // Base colors for various types
   const woodBaseColor = getSlotColor(m.woodBase, shape.color || "#f8fafc");
@@ -73,6 +75,31 @@ export const FurnitureRenderer: React.FC<FurnitureRendererProps> = ({
   if (shape.furnitureType === 'rug') mainFill = textileMainColor;
   if (isColliding) mainFill = "rgba(239, 68, 68, 0.1)";
   if (shape.svgPath && shape.furnitureType !== 'rug') mainFill = "rgba(0,0,0,0.001)";
+  
+  // Custom picture rendering with imageUrl
+  if (shape.furnitureType === 'picture' && shape.imageUrl && image) {
+    return (
+      <>
+        <Rect
+          width={shape.width}
+          height={shape.height}
+          fill="#000000"
+          stroke={isSelected ? "#4f46e5" : "#1e293b"}
+          strokeWidth={4 / scale}
+          cornerRadius={2 / scale}
+          shadowBlur={isSelected ? 10 / scale : 5 / scale}
+          shadowColor={isSelected ? "#4f46e5" : "#000"}
+          shadowOpacity={0.4}
+        />
+        <KonvaImage
+          image={image}
+          width={shape.width}
+          height={shape.height}
+          listening={true}
+        />
+      </>
+    );
+  }
 
   return (
     <>

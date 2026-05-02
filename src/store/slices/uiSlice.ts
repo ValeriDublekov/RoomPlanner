@@ -20,6 +20,7 @@ export interface UISlice {
   edgeMode3d: boolean;
   isDraggingWall: boolean;
   isDraggingVertex: boolean;
+  pasteImageTargetId: string | null;
   pendingFurniture: Omit<FurnitureObject, 'id'> | null;
   contextMenu: {
     visible: boolean;
@@ -46,6 +47,7 @@ export interface UISlice {
   setEdgeMode3d: (enabled: boolean) => void;
   setIsDraggingWall: (isDragging: boolean) => void;
   setIsDraggingVertex: (isDragging: boolean) => void;
+  setPasteImageTargetId: (id: string | null) => void;
   setPendingFurniture: (furniture: Omit<FurnitureObject, 'id'> | null) => void;
   setContextMenu: (menu: UISlice['contextMenu']) => void;
   threeScene: any | null;
@@ -83,6 +85,7 @@ export const createUISlice: StateCreator<AppState, [], [], UISlice> = (set, get)
   edgeMode3d: false,
   isDraggingWall: false,
   isDraggingVertex: false,
+  pasteImageTargetId: null,
   pendingFurniture: null,
   contextMenu: {
     visible: false,
@@ -140,6 +143,7 @@ export const createUISlice: StateCreator<AppState, [], [], UISlice> = (set, get)
   setEdgeMode3d: (edgeMode3d) => set({ edgeMode3d }),
   setIsDraggingWall: (isDraggingWall) => set({ isDraggingWall }),
   setIsDraggingVertex: (isDraggingVertex) => set({ isDraggingVertex }),
+  setPasteImageTargetId: (pasteImageTargetId) => set({ pasteImageTargetId }),
   setPendingFurniture: (pendingFurniture) => set({ pendingFurniture }),
   setContextMenu: (contextMenu) => set({ contextMenu }),
   threeScene: null,
