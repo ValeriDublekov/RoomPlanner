@@ -1,47 +1,51 @@
 import { useEffect } from 'react';
 import { useStore } from '../store';
+import { isUserTyping } from '../lib/keyboard';
 
-export const useKeyboardShortcuts = (
-  setIsCtrlPressed: (pressed: boolean) => void,
-  handleDimensionSubmit: () => void
-) => {
-  const { 
-    mode, 
-    setMode, 
-    roomPoints, 
-    dimensionInput, 
-    setDimensionInput,
-    selectedId, 
-    setSelectedId,
-    selectedRoomId, 
-    setSelectedRoomId,
-    deleteRoom,
-    selectedDimensionId,
-    setSelectedDimensionId,
-    deleteDimension,
-    undo,
-    groupSelected,
-    ungroupSelected,
-    orthoMode,
-    setOrthoMode,
-    snapToGrid,
-    setSnapToGrid,
-    snapToObjects,
-    setSnapToObjects,
-    moveView,
-    activeLayer
-  } = useStore();
+export const useKeyboardShortcuts = () => {
+  const { setIsCtrlPressed } = useStore();
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+      // Global typing guard
+      if (isUserTyping(e)) {
         return;
       }
+
+      const state = useStore.getState();
+      const { 
+        mode, 
+        setMode, 
+        roomPoints, 
+        dimensionInput, 
+        setDimensionInput,
+        selectedId, 
+        setSelectedId,
+        selectedRoomId, 
+        setSelectedRoomId,
+        selectedDimensionId,
+        setSelectedDimensionId,
+        undo,
+        groupSelected,
+        ungroupSelected,
+        orthoMode,
+        setOrthoMode,
+        snapToGrid,
+        setSnapToGrid,
+        snapToObjects,
+        setSnapToObjects,
+        moveView,
+        activeLayer,
+        show3d,
+        selectedAttachmentId,
+        flipSelectedAttachment,
+        submitDimension
+      } = state;
 
       if (e.key === 'Control') setIsCtrlPressed(true);
       if (e.key === 'Alt') {
         e.preventDefault();
-        useStore.getState().setIsAltPressed(true);
+        state.setIsAltPressed(true);
       }
       
       const panStep = 20;
@@ -49,6 +53,11 @@ export const useKeyboardShortcuts = (
       if (e.key === 'ArrowDown') { moveView(0, -panStep); return; }
       if (e.key === 'ArrowLeft') { moveView(panStep, 0); return; }
       if (e.key === 'ArrowRight') { moveView(-panStep, 0); return; }
+
+      // Special check for 3D mode to avoid WASD conflicts
+      if (show3d && !e.ctrlKey && !e.metaKey) {
+        return;
+      }
 
       if ((mode === 'draw-room' || mode === 'draw-furniture' || mode === 'draw-beam') && roomPoints.length > 0) {
         if (e.key >= '0' && e.key <= '9' || e.key === '.') {
@@ -58,7 +67,7 @@ export const useKeyboardShortcuts = (
           setDimensionInput(dimensionInput.slice(0, -1));
           return;
         } else if (e.key === 'Enter' && dimensionInput) {
-          handleDimensionSubmit();
+          submitDimension();
           return;
         } else if (e.key === 'Escape') {
           if (dimensionInput) {
@@ -72,9 +81,9 @@ export const useKeyboardShortcuts = (
         setSelectedId(null);
         setSelectedRoomId(null);
         setSelectedDimensionId(null);
-        useStore.getState().setSelectedAttachmentId(null);
-        useStore.getState().setSelectedBeamId(null);
-        useStore.getState().setPendingFurniture(null);
+        state.setSelectedAttachmentId(null);
+        state.setSelectedBeamId(null);
+        state.setPendingFurniture(null);
         setMode('select');
         return;
       }
@@ -95,10 +104,14 @@ export const useKeyboardShortcuts = (
             setSelectedDimensionId(null);
             break;
           case 'f': 
-            setMode('draw-furniture'); 
-            setSelectedId(null);
-            setSelectedRoomId(null);
-            setSelectedDimensionId(null);
+            if (activeLayer === 'room' && selectedAttachmentId) {
+              flipSelectedAttachment();
+            } else {
+              setMode('draw-furniture'); 
+              setSelectedId(null);
+              setSelectedRoomId(null);
+              setSelectedDimensionId(null);
+            }
             break;
           case 'c': 
             setMode('calibrate'); 
@@ -137,11 +150,7 @@ export const useKeyboardShortcuts = (
 
       if (e.key === 'Delete' || e.key === 'Backspace') {
         if (!dimensionInput) {
-          if (selectedId) useStore.getState().deleteSelected();
-          if (selectedRoomId) deleteRoom(selectedRoomId);
-          if (selectedDimensionId) deleteDimension(selectedDimensionId);
-          if (useStore.getState().selectedBeamId) useStore.getState().deleteBeam(useStore.getState().selectedBeamId!);
-          if (useStore.getState().selectedAttachmentId) useStore.getState().deleteWallAttachment(useStore.getState().selectedAttachmentId!);
+          state.deleteSelected();
         }
       }
 
@@ -161,9 +170,9 @@ export const useKeyboardShortcuts = (
 
       if (e.ctrlKey || e.metaKey) {
         if (e.key.toLowerCase() === 'c') {
-          useStore.getState().copySelected();
+          state.copySelected();
         } else if (e.key.toLowerCase() === 'v') {
-          useStore.getState().paste();
+          state.paste();
         }
       }
     };
@@ -179,5 +188,5 @@ export const useKeyboardShortcuts = (
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [mode, roomPoints, dimensionInput, selectedId, selectedRoomId, orthoMode, snapToGrid, snapToObjects, activeLayer, setIsCtrlPressed, handleDimensionSubmit, setDimensionInput, setSelectedId, setSelectedRoomId, setMode, setOrthoMode, setSnapToGrid, setSnapToObjects, moveView, deleteRoom, selectedDimensionId, deleteDimension, undo]);
+  }, [setIsCtrlPressed]);
 };

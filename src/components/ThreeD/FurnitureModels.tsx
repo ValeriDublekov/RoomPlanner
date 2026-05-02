@@ -659,6 +659,37 @@ export const Light3D: React.FC<ModelProps> = ({ width, depth, height, color }) =
   );
 };
 
+export const AirConditioner3D: React.FC<ModelProps> = ({ width, depth, height, color }) => {
+  const radius = 2;
+  return (
+    <group>
+      {/* Main Body */}
+      <mesh position={[width / 2, height / 2, depth / 2]} castShadow receiveShadow>
+        <boxGeometry args={[width, height, depth]} />
+        <SmartMaterial color={color} roughness={0.3} />
+      </mesh>
+      
+      {/* Top Grill / Intake */}
+      <mesh position={[width / 2, height - 0.5, depth / 2]} castShadow receiveShadow>
+        <boxGeometry args={[width * 0.8, 0.2, depth * 0.6]} />
+        <SmartMaterial color="#cbd5e1" roughness={0.5} />
+      </mesh>
+
+      {/* Front Flap / Vent */}
+      <mesh position={[width / 2, height * 0.2, depth - 0.2]} castShadow receiveShadow>
+        <boxGeometry args={[width * 0.9, height * 0.1, 0.5]} />
+        <SmartMaterial color="#e2e8f0" roughness={0.3} />
+      </mesh>
+
+      {/* Logo/Detail */}
+      <mesh position={[width * 0.15, height * 0.5, depth + 0.1]} castShadow receiveShadow>
+        <boxGeometry args={[width * 0.05, height * 0.1, 0.1]} />
+        <SmartMaterial color="#94a3b8" roughness={0.1} />
+      </mesh>
+    </group>
+  );
+};
+
 export const GenericFurniture3D: React.FC<ModelProps> = ({ width, depth, height, color, materials }) => {
   const woodBaseColor = getSlotColor(materials, 'woodBase', color);
   return (

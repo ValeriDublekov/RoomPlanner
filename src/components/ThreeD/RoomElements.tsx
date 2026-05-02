@@ -1,6 +1,8 @@
-import React from 'react';
-import { RoomObject, WallAttachment, BeamObject } from '../../types';
-import { FLOOR_TEXTURES } from '../../constants';
+import React, { useMemo } from 'react';
+import * as THREE from 'three';
+import { useTexture, Edges } from '@react-three/drei';
+import { RoomObject, WallAttachment, BeamObject, InteriorTheme } from '../../types';
+import { FLOOR_TEXTURES, WOOD_GRAIN } from '../../constants';
 import { getOutwardNormal } from '../../lib/geometry';
 import { useStore } from '../../store';
 import { INTERIOR_THEMES } from '../../lib/themes';
@@ -399,7 +401,7 @@ export const WallSegments: React.FC<{
   return (
     <group>
       {room.isClosed && <Floor room={room} pixelsPerCm={pixelsPerCm} />}
-      {segments.map((seg, i) => {
+      {segments.map((seg: any, i: number) => {
         if (seg.type === 'curtain') {
           return (
             <group key={i} position={[seg.midX, seg.y, seg.midZ]} rotation={[0, -seg.angle, 0]}>

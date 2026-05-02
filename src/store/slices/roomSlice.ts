@@ -81,6 +81,7 @@ export interface RoomSlice {
   addWallAttachment: (attachment: Omit<WallAttachment, 'id'>) => void;
   updateWallAttachment: (id: string, updates: Partial<WallAttachment>) => void;
   deleteWallAttachment: (id: string) => void;
+  flipSelectedAttachment: () => void;
   addBeam: (beam: BeamObject) => void;
   updateBeam: (id: string, updates: Partial<BeamObject>) => void;
   deleteBeam: (id: string) => void;
@@ -101,7 +102,19 @@ export const createRoomSlice: StateCreator<AppState, [], [], RoomSlice> = (set, 
   wallHeight: 250,
 
   setWallThickness: (wallThickness) => set({ wallThickness }),
-  setWallHeight: (wallHeight) => set({ wallHeight }),
+  setWallHeight: (wallHeight) => set((state) => {
+    // Automatically update air conditioners to stay near the new ceiling height
+    const newFurniture = state.furniture.map(f => {
+      if (f.furnitureType === 'air-conditioner') {
+        const acHeightPx = f.height3d || (30 * state.pixelsPerCm);
+        const wallHeightPx = wallHeight * state.pixelsPerCm;
+        const gapPx = 10 * state.pixelsPerCm;
+        return { ...f, elevation: wallHeightPx - acHeightPx - gapPx };
+      }
+      return f;
+    });
+    return { wallHeight, furniture: newFurniture };
+  }),
   
   addRoomPoint: (point) => set((state) => ({ roomPoints: [...state.roomPoints, point] })),
   
@@ -423,6 +436,28 @@ export const createRoomSlice: StateCreator<AppState, [], [], RoomSlice> = (set, 
     return {
       wallAttachments: state.wallAttachments.filter(a => a.id !== id),
       selectedAttachmentId: null
+    };
+  }),
+  
+  flipSelectedAttachment: () => set((state) => {
+    if (!state.selectedAttachmentId) return state;
+    const attachment = state.wallAttachments.find(a => a.id === state.selectedAttachmentId);
+    if (!attachment || attachment.type !== 'door') return state;
+
+    const updates: Partial<WallAttachment> = {};
+    if (!attachment.flipX && !attachment.flipY) {
+      updates.flipX = true;
+    } else if (attachment.flipX && !attachment.flipY) {
+      updates.flipY = true;
+    } else if (attachment.flipX && attachment.flipY) {
+      updates.flipX = false;
+    } else {
+      updates.flipX = false;
+      updates.flipY = false;
+    }
+
+    return {
+      wallAttachments: state.wallAttachments.map(a => a.id === attachment.id ? { ...a, ...updates } : a)
     };
   }),
   

@@ -1,5 +1,6 @@
 import Drawing from 'dxf-writer';
 import { RoomObject, FurnitureObject, WallAttachment, DimensionObject } from '../types';
+import { downloadBlob } from './download';
 
 export interface DXFRoomData {
   rooms: RoomObject[];
@@ -9,7 +10,10 @@ export interface DXFRoomData {
   pixelsPerCm: number;
 }
 
-export const exportToDXF = (data: DXFRoomData) => {
+/**
+ * Generates a DXF string from project data.
+ */
+export const generateDXF = (data: DXFRoomData): string => {
   const { rooms, furniture, attachments, dimensions, pixelsPerCm } = data;
   const drawing = new Drawing();
   drawing.setUnits('Centimeters');
@@ -275,15 +279,14 @@ export const exportToDXF = (data: DXFRoomData) => {
     );
   });
 
-  const dxfString = drawing.toDxfString();
+  return drawing.toDxfString();
+};
+
+/**
+ * Convenience function to generate and download a DXF file.
+ */
+export const exportToDXF = (data: DXFRoomData) => {
+  const dxfString = generateDXF(data);
   const blob = new Blob([dxfString], { type: 'application/dxf' });
-  const url = URL.createObjectURL(blob);
-  
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = 'plan.dxf';
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+  downloadBlob(blob, 'plan.dxf');
 };

@@ -17,14 +17,13 @@ export const Canvas: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<Konva.Stage>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
-  const [isCtrlPressed, setIsCtrlPressed] = useState(false);
   
   const { 
     scale, position, setPosition, 
     activeLayer, backgroundImage,
     rooms, furniture,
     dimensionInput,
-    gridVisible, isAltPressed,
+    gridVisible, isAltPressed, isCtrlPressed,
     setEdgeMap, fitToScreen, finishRoom,
     selectedId, selectedRoomId, selectedDimensionId, selectedAttachmentId,
     wallAttachments, dimensions: savedDimensions,
@@ -91,7 +90,11 @@ export const Canvas: React.FC = () => {
   const { handleExport, handlePrint, getStageThumbnail, handleExportDXF, handleExportOBJ, handleExportGLB } = useCanvasExport(stageRef);
 
   useClipboardPaste();
-  useKeyboardShortcuts(setIsCtrlPressed, handleDimensionSubmit);
+  useEffect(() => {
+    useStore.getState().setSubmitDimension(handleDimensionSubmit);
+  }, [handleDimensionSubmit]);
+
+  // Keyboard shortcuts are now managed globally in App.tsx
 
   // Auto-fit on initial load
   useEffect(() => {

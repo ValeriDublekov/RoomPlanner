@@ -6,6 +6,7 @@ import { exportToDXF } from '../lib/dxfExport';
 import { exportToOBJ } from '../lib/objExport';
 import { exportToGLB } from '../lib/glbExport';
 import { generateProjectScene } from '../lib/threeSceneGenerator';
+import { downloadURL } from '../lib/download';
 
 export const useCanvasExport = (stageRef: React.RefObject<Konva.Stage | null>) => {
   const handleExport = async () => {
@@ -86,13 +87,9 @@ export const useCanvasExport = (stageRef: React.RefObject<Konva.Stage | null>) =
     useStore.getState().setSelectedDimensionId(selectedDimensionId);
     useStore.getState().setSelectedAttachmentId(selectedAttachmentId);
 
-    const link = document.createElement('a');
     const projectName = useStore.getState().projectName || 'project';
-    link.download = `${projectName.trim().replace(/\s+/g, '-')}.png`;
-    link.href = dataURL;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const filename = `${projectName.trim().replace(/\s+/g, '-')}.png`;
+    downloadURL(dataURL, filename);
   };
 
   const handlePrint = async () => {

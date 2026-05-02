@@ -255,10 +255,14 @@ export const FurnitureEditor: React.FC<FurnitureEditorProps> = ({
             const newType = e.target.value as any;
             const currentMaterials = selectedFurniture.materials || {};
             const newDefaults = getDefaultMaterialsForType(newType);
-            updateFurniture(selectedFurniture.id, { 
+            const updates: Partial<FurnitureObject> = { 
               furnitureType: newType,
-              materials: { ...newDefaults, ...currentMaterials } // Merge: keep existing, add new defaults
-            });
+              materials: { ...newDefaults, ...currentMaterials }
+            };
+            if (newType === 'air-conditioner') {
+              updates.color = '#ffffff';
+            }
+            updateFurniture(selectedFurniture.id, updates);
           }}
           className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all appearance-none"
         >
@@ -278,6 +282,7 @@ export const FurnitureEditor: React.FC<FurnitureEditorProps> = ({
           <option value="bathtub">Bathtub</option>
           <option value="light">Light / Lamp</option>
           <option value="picture">Picture / Wall Art</option>
+          <option value="air-conditioner">Air Conditioner</option>
         </select>
       </div>
 
@@ -474,25 +479,32 @@ export const FurnitureEditor: React.FC<FurnitureEditorProps> = ({
               {!showWoodBase && !showTextileMain && (
                 <div className="space-y-2 p-3 bg-slate-50 rounded-2xl border border-slate-200">
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Main Color</label>
-                  <div className="flex gap-2 flex-wrap items-center">
-                    {['#f8fafc', '#f1f5f9', '#e2e8f0', '#cbd5e1', '#94a3b8', '#64748b', '#475569', '#334155'].map(color => (
-                      <button
-                        key={color}
-                        onClick={() => updateFurniture(selectedFurniture.id, { color })}
-                        className={cn(
-                          "w-6 h-6 rounded-full border-2 transition-all",
-                          selectedFurniture.color === color ? "border-indigo-500 scale-110 shadow-sm" : "border-white"
-                        )}
-                        style={{ backgroundColor: color }}
+                  {type === 'air-conditioner' ? (
+                    <div className="flex items-center gap-2 p-2 bg-white rounded-xl border border-slate-100">
+                      <div className="w-6 h-6 rounded-full border border-slate-200 bg-[#ffffff]" />
+                      <span className="text-[10px] font-bold text-slate-400 uppercase">Fixed: White Only</span>
+                    </div>
+                  ) : (
+                    <div className="flex gap-2 flex-wrap items-center">
+                      {['#f8fafc', '#f1f5f9', '#e2e8f0', '#cbd5e1', '#94a3b8', '#64748b', '#475569', '#334155'].map(color => (
+                        <button
+                          key={color}
+                          onClick={() => updateFurniture(selectedFurniture.id, { color })}
+                          className={cn(
+                            "w-6 h-6 rounded-full border-2 transition-all",
+                            selectedFurniture.color === color ? "border-indigo-500 scale-110 shadow-sm" : "border-white"
+                          )}
+                          style={{ backgroundColor: color }}
+                        />
+                      ))}
+                      <input 
+                        type="color" 
+                        value={selectedFurniture.color || '#f8fafc'} 
+                        onChange={(e) => updateFurniture(selectedFurniture.id, { color: e.target.value })}
+                        className="w-6 h-6 rounded-full border-none p-0 overflow-hidden cursor-pointer hover:scale-110 transition-transform"
                       />
-                    ))}
-                    <input 
-                      type="color" 
-                      value={selectedFurniture.color || '#f8fafc'} 
-                      onChange={(e) => updateFurniture(selectedFurniture.id, { color: e.target.value })}
-                      className="w-6 h-6 rounded-full border-none p-0 overflow-hidden cursor-pointer hover:scale-110 transition-transform"
-                    />
-                  </div>
+                    </div>
+                  )}
                 </div>
               )}
             </>

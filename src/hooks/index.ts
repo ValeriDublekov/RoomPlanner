@@ -5,3 +5,4 @@ export * from './useFurnitureInteraction';
 export * from './useKeyboardShortcuts';
 export * from './useMouseSnapping';
 export * from './useStageContextMenu';
+export * from './useFileOperations';

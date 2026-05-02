@@ -1,7 +1,11 @@
 import * as THREE from 'three';
 import { OBJExporter } from 'three/examples/jsm/exporters/OBJExporter.js';
+import { downloadBlob } from './download';
 
-export const exportToOBJ = (scene: THREE.Object3D) => {
+/**
+ * Generates an OBJ string from a THREE.js scene.
+ */
+export const generateOBJ = (scene: THREE.Object3D): string => {
   // 1. Update Matrices (Ensures global coordinates are correct)
   scene.updateMatrixWorld(true);
 
@@ -32,18 +36,14 @@ export const exportToOBJ = (scene: THREE.Object3D) => {
   });
 
   // 4. Export
-  const result = exporter.parse(exportGroup);
+  return exporter.parse(exportGroup);
+};
 
-  // 5. Download
+/**
+ * Convenience function to generate and download an OBJ file.
+ */
+export const exportToOBJ = (scene: THREE.Object3D) => {
+  const result = generateOBJ(scene);
   const blob = new Blob([result], { type: 'text/plain' });
-  const url = URL.createObjectURL(blob);
-  
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = '3d-model.obj';
-  document.body.appendChild(link);
-  link.click();
-  
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+  downloadBlob(blob, '3d-model.obj');
 };

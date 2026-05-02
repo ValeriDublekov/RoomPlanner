@@ -13,6 +13,7 @@ import { CalibrationModal } from './components/CalibrationModal';
 import { JsonViewerModal } from './components/Dialogs';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { useStore } from '@/src/store';
+import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 
 export default function App() {
   const show3d = useStore(state => state.show3d);
@@ -21,6 +22,9 @@ export default function App() {
   const setCurrentUser = useStore(state => state.setCurrentUser);
   const setIsAuthLoading = useStore(state => state.setIsAuthLoading);
   const tempCalibrationDist = useStore(state => state.tempCalibrationDist);
+
+  // Centralized keyboard shortcuts entry point
+  useKeyboardShortcuts();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {

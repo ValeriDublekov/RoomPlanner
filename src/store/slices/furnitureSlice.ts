@@ -1,7 +1,7 @@
 import { StateCreator } from 'zustand';
 import { AppState } from '../../store';
 import { FurnitureObject } from '../../types';
-import { rotatePoint, scalePoints } from '../../lib/geometry';
+import { rotatePoint, scalePoints, isPointInPolygon } from '../../lib/geometry';
 import { migrateFurnitureMaterials } from '../../lib/materials';
 import { INTERIOR_THEMES, applyThemeToFurniture } from '../../lib/themes';
 
@@ -37,6 +37,21 @@ export const createFurnitureSlice: StateCreator<AppState, [], [], FurnitureSlice
     const historyEntry = { rooms: state.rooms, furniture: state.furniture, dimensions: state.dimensions, wallAttachments: state.wallAttachments };
     let newItem = migrateFurnitureMaterials({ ...item, id: Math.random().toString(36).substr(2, 9) } as FurnitureObject);
     
+    // Auto-elevation for AC based on room height
+    if (newItem.furnitureType === 'air-conditioner') {
+      newItem.color = '#ffffff'; // Enforce white
+      const center = { x: newItem.x + newItem.width / 2, y: newItem.y + newItem.height / 2 };
+      const room = state.rooms.find(r => r.isClosed && isPointInPolygon(center, r.points));
+      if (room) {
+        // Position it just below the ceiling
+        // Everything stored in FurnitureObject must be in pixels
+        const acHeightPx = newItem.height3d || (30 * state.pixelsPerCm);
+        const wallHeightPx = state.wallHeight * state.pixelsPerCm;
+        const gapPx = 10 * state.pixelsPerCm;
+        newItem.elevation = wallHeightPx - acHeightPx - gapPx;
+      }
+    }
+
     // Apply active theme if one exists
     if (state.activeThemeId) {
       const theme = INTERIOR_THEMES.find(t => t.id === state.activeThemeId);
@@ -55,6 +70,30 @@ export const createFurnitureSlice: StateCreator<AppState, [], [], FurnitureSlice
     const newFurniture = state.furniture.map(f => {
       if (f.id !== id) return f;
       const updated = { ...f, ...updates };
+
+      // Auto-elevation for AC based on room height
+      // Only auto-calc if elevation wasn't explicitly provided in this update,
+      // and either the type just became AC or it was moved.
+      if (updated.furnitureType === 'air-conditioner') {
+        updated.color = '#ffffff'; // Enforce white
+        
+        if (updates.elevation === undefined) {
+          const typeChanged = updates.furnitureType === 'air-conditioner' && f.furnitureType !== 'air-conditioner';
+          const positionChanged = updates.x !== undefined || updates.y !== undefined;
+          
+          if (typeChanged || positionChanged) {
+            const center = { x: updated.x + updated.width / 2, y: updated.y + updated.height / 2 };
+            const room = state.rooms.find(r => r.isClosed && isPointInPolygon(center, r.points));
+            if (room) {
+              const acHeightPx = updated.height3d || (30 * state.pixelsPerCm);
+              const wallHeightPx = state.wallHeight * state.pixelsPerCm;
+              const gapPx = 10 * state.pixelsPerCm;
+              updated.elevation = wallHeightPx - acHeightPx - gapPx;
+            }
+          }
+        }
+      }
+
       if (f.type === 'polygon' && f.points && (updates.width !== undefined || updates.height !== undefined)) {
         const scaleX = updates.width !== undefined ? updates.width / f.width : 1;
         const scaleY = updates.height !== undefined ? updates.height / f.height : 1;
@@ -186,32 +225,55 @@ export const createFurnitureSlice: StateCreator<AppState, [], [], FurnitureSlice
   }),
 
   deleteSelected: () => set((state) => {
-    const historyEntry = { rooms: state.rooms, furniture: state.furniture, dimensions: state.dimensions, wallAttachments: state.wallAttachments };
+    state.saveHistory();
+    const historyEntry = { 
+      rooms: state.rooms, 
+      furniture: state.furniture, 
+      dimensions: state.dimensions, 
+      wallAttachments: state.wallAttachments,
+      beams: state.beams
+    };
     
-    if (state.activeLayer === 'furniture') {
-      const idsToDelete = state.selectedIds.length > 0 ? state.selectedIds : (state.selectedId ? [state.selectedId] : []);
-      if (idsToDelete.length > 0) {
-        return {
-          furniture: state.furniture.filter(f => !idsToDelete.includes(f.id)),
-          selectedId: null,
-          selectedIds: [],
-          history: [...state.history, historyEntry].slice(-50)
-        };
-      }
-      
-      if (state.selectedDimensionId) {
-        return {
-          dimensions: state.dimensions.filter(d => d.id !== state.selectedDimensionId),
-          selectedDimensionId: null,
-          history: [...state.history, historyEntry].slice(-50)
-        };
-      }
+    // Generic deletion logic based on active selection
+    if (state.selectedId || state.selectedIds.length > 0) {
+      const idsToDelete = state.selectedIds.length > 0 ? state.selectedIds : [state.selectedId!];
+      return {
+        furniture: state.furniture.filter(f => !idsToDelete.includes(f.id)),
+        selectedId: null,
+        selectedIds: [],
+        history: [...state.history, historyEntry].slice(-50)
+      };
     }
 
-    if (state.activeLayer === 'room' && state.selectedRoomId) {
+    if (state.selectedRoomId) {
       return {
         rooms: state.rooms.filter(r => r.id !== state.selectedRoomId),
+        wallAttachments: state.wallAttachments.filter(a => a.roomId !== state.selectedRoomId),
         selectedRoomId: null,
+        history: [...state.history, historyEntry].slice(-50)
+      };
+    }
+
+    if (state.selectedDimensionId) {
+      return {
+        dimensions: state.dimensions.filter(d => d.id !== state.selectedDimensionId),
+        selectedDimensionId: null,
+        history: [...state.history, historyEntry].slice(-50)
+      };
+    }
+
+    if (state.selectedAttachmentId) {
+      return {
+        wallAttachments: state.wallAttachments.filter(a => a.id !== state.selectedAttachmentId),
+        selectedAttachmentId: null,
+        history: [...state.history, historyEntry].slice(-50)
+      };
+    }
+
+    if (state.selectedBeamId) {
+      return {
+        beams: state.beams.filter(b => b.id !== state.selectedBeamId),
+        selectedBeamId: null,
         history: [...state.history, historyEntry].slice(-50)
       };
     }

@@ -14,6 +14,7 @@ export interface UISlice {
   gridVisible: boolean;
   showAutoDimensions: boolean;
   isAltPressed: boolean;
+  isCtrlPressed: boolean;
   edgeMap: EdgeMap | null;
   show3d: boolean;
   edgeMode3d: boolean;
@@ -39,6 +40,7 @@ export interface UISlice {
   setGridVisible: (visible: boolean) => void;
   setShowAutoDimensions: (visible: boolean) => void;
   setIsAltPressed: (pressed: boolean) => void;
+  setIsCtrlPressed: (pressed: boolean) => void;
   setEdgeMap: (map: EdgeMap | null) => void;
   setShow3d: (show: boolean) => void;
   setEdgeMode3d: (enabled: boolean) => void;
@@ -48,6 +50,8 @@ export interface UISlice {
   setContextMenu: (menu: UISlice['contextMenu']) => void;
   threeScene: any | null;
   setThreeScene: (scene: any | null) => void;
+  submitDimension: () => void;
+  setSubmitDimension: (fn: () => void) => void;
   viewport: { width: number; height: number };
   sidebarWidth: number;
   setSidebarWidth: (width: number) => void;
@@ -73,6 +77,7 @@ export const createUISlice: StateCreator<AppState, [], [], UISlice> = (set, get)
   gridVisible: true,
   showAutoDimensions: false,
   isAltPressed: false,
+  isCtrlPressed: false,
   edgeMap: null,
   show3d: false,
   edgeMode3d: false,
@@ -121,6 +126,7 @@ export const createUISlice: StateCreator<AppState, [], [], UISlice> = (set, get)
   setGridVisible: (gridVisible) => set({ gridVisible }),
   setShowAutoDimensions: (showAutoDimensions) => set({ showAutoDimensions }),
   setIsAltPressed: (isAltPressed) => set({ isAltPressed }),
+  setIsCtrlPressed: (isCtrlPressed) => set({ isCtrlPressed }),
   setEdgeMap: (edgeMap) => set({ edgeMap }),
   setShow3d: (show3d) => set({ show3d }),
   setEdgeMode3d: (edgeMode3d) => set({ edgeMode3d }),
@@ -130,6 +136,17 @@ export const createUISlice: StateCreator<AppState, [], [], UISlice> = (set, get)
   setContextMenu: (contextMenu) => set({ contextMenu }),
   threeScene: null,
   setThreeScene: (threeScene) => set({ threeScene }),
+  submitDimension: () => {
+    const { submitDimension } = get();
+    if (submitDimension && (submitDimension as any)._isSet) {
+      submitDimension();
+    }
+  },
+  setSubmitDimension: (fn) => {
+    const wrappedFn = () => fn();
+    (wrappedFn as any)._isSet = true;
+    set({ submitDimension: wrappedFn });
+  },
   
   moveView: (dx, dy) => set((state) => ({
     position: { x: state.position.x + dx, y: state.position.y + dy }

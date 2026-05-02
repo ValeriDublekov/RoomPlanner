@@ -8,7 +8,7 @@ import { Camera, MousePointer2, Box } from 'lucide-react';
 import { FPVControls, WallSegments, Ceiling, Beam3D, Bed3D, Desk3D, Wardrobe3D, Dresser3D, Chair3D, 
   Shelf3D, Electronics3D, Table3D, GenericFurniture3D,
   Sofa3D, Nightstand3D, Toilet3D, Bathtub3D, Light3D,
-  Picture3D } from './';
+  Picture3D, AirConditioner3D } from './';
 
 const SceneBackground = ({ isExporting }: { isExporting: boolean }) => {
   const { gl } = useThree();
@@ -93,6 +93,7 @@ const Furniture = ({ item, pixelsPerCm, isChild = false, parentWidth = 0, parent
       case 'bathtub': return <Bathtub3D {...props} />;
       case 'light': return <Light3D {...props} />;
       case 'picture': return <Picture3D {...props} imageUrl={item.imageUrl} />;
+      case 'air-conditioner': return <AirConditioner3D {...props} />;
       default: {
         const cid = item.catalogId || '';
         if (cid.includes('sofa')) return <Sofa3D {...props} />;

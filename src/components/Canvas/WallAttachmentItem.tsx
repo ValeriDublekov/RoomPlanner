@@ -31,31 +31,6 @@ export const WallAttachmentItem: React.FC<WallAttachmentItemProps> = ({
     }
   }, [isSelected]);
 
-  // Handle keyboard shortcuts for flipping
-  useEffect(() => {
-    if (!isSelected) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key.toLowerCase() === 'f') {
-        if (attachment.type === 'door') {
-          // Cycle through flip states
-          if (!attachment.flipX && !attachment.flipY) {
-            updateWallAttachment(attachment.id, { flipX: true });
-          } else if (attachment.flipX && !attachment.flipY) {
-            updateWallAttachment(attachment.id, { flipY: true });
-          } else if (attachment.flipX && attachment.flipY) {
-            updateWallAttachment(attachment.id, { flipX: false });
-          } else {
-            updateWallAttachment(attachment.id, { flipX: false, flipY: false });
-          }
-        }
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isSelected, attachment.id, attachment.type, attachment.flipX, attachment.flipY, updateWallAttachment]);
-
   const room = rooms.find(r => r.id === attachment.roomId);
   if (!room) return null;
 
