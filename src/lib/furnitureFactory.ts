@@ -293,6 +293,12 @@ export const createFurnitureModel = (type: string, params: FurnitureParams): THR
       break;
     }
 
+    case 'rug': {
+      const rugH = 0.5;
+      group.add(createBox(width, rugH, depth, color, [0, rugH / 2, 0], 'Rug'));
+      break;
+    }
+
     default: {
       // Fallback to simple box
       group.add(createBox(width, height, depth, color, [0, height / 2, 0], 'MainBody'));

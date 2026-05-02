@@ -690,6 +690,58 @@ export const AirConditioner3D: React.FC<ModelProps> = ({ width, depth, height, c
   );
 };
 
+export const Rug3D: React.FC<ModelProps & { shape?: 'rectangle' | 'circle' }> = ({ width, depth, height, color, secondaryColor, shape = 'rectangle', materials }) => {
+  const textileMainColor = getSlotColor(materials, 'textileMain', color);
+  const textileAccentColor = getSlotColor(materials, 'textileAccent', secondaryColor || "#cbd5e1");
+  
+  // A rug is very thin
+  const rugHeight = 0.5; // 0.5 cm
+  
+  return (
+    <group>
+      {/* Base Layer */}
+      <mesh position={[width / 2, rugHeight / 2, depth / 2]} receiveShadow>
+        {shape === 'circle' ? (
+          <cylinderGeometry args={[width / 2, width / 2, rugHeight, 32]} />
+        ) : (
+          <boxGeometry args={[width, rugHeight, depth]} />
+        )}
+        <SmartMaterial color={textileMainColor} roughness={1} />
+      </mesh>
+      
+      {/* Ring/Border 1 - Pattern (100% of path size) */}
+      <mesh position={[width / 2, rugHeight + 0.02, depth / 2]} receiveShadow>
+        {shape === 'circle' ? (
+          <cylinderGeometry args={[width * 0.5, width * 0.5, 0.05, 32]} />
+        ) : (
+          <boxGeometry args={[width, 0.05, depth]} />
+        )}
+        <SmartMaterial color={textileAccentColor} roughness={1} />
+      </mesh>
+
+      {/* Ring/Border 2 - Base Color Gap (approx 77.7% of path size) */}
+      <mesh position={[width / 2, rugHeight + 0.04, depth / 2]} receiveShadow>
+        {shape === 'circle' ? (
+          <cylinderGeometry args={[width * (35 / 90), width * (35 / 90), 0.05, 32]} />
+        ) : (
+          <boxGeometry args={[width * (70 / 90), 0.05, depth * (70 / 90)]} />
+        )}
+        <SmartMaterial color={textileMainColor} roughness={1} />
+      </mesh>
+
+      {/* Center Pattern - Pattern (approx 55.5% of path size) */}
+      <mesh position={[width / 2, rugHeight + 0.06, depth / 2]} receiveShadow>
+        {shape === 'circle' ? (
+          <cylinderGeometry args={[width * (25 / 90), width * (25 / 90), 0.05, 32]} />
+        ) : (
+          <boxGeometry args={[width * (50 / 90), 0.05, depth * (50 / 90)]} />
+        )}
+        <SmartMaterial color={textileAccentColor} roughness={1} />
+      </mesh>
+    </group>
+  );
+};
+
 export const GenericFurniture3D: React.FC<ModelProps> = ({ width, depth, height, color, materials }) => {
   const woodBaseColor = getSlotColor(materials, 'woodBase', color);
   return (

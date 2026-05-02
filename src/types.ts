@@ -17,7 +17,7 @@ export interface RoomObject {
   };
 }
 
-export type FurnitureType = 'bed' | 'desk' | 'wardrobe' | 'dresser' | 'chair' | 'shelf' | 'electronics' | 'table' | 'sofa' | 'armchair' | 'nightstand' | 'toilet' | 'bathtub' | 'light' | 'picture' | 'air-conditioner' | 'generic';
+export type FurnitureType = 'bed' | 'desk' | 'wardrobe' | 'dresser' | 'chair' | 'shelf' | 'electronics' | 'table' | 'sofa' | 'armchair' | 'nightstand' | 'toilet' | 'bathtub' | 'light' | 'picture' | 'air-conditioner' | 'rug' | 'generic';
 
 export interface MaterialSlot {
   source: 'theme' | 'custom';

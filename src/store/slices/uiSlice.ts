@@ -116,7 +116,15 @@ export const createUISlice: StateCreator<AppState, [], [], UISlice> = (set, get)
       mode: 'select',
       roomPoints: [], 
       measurePoints: [], 
-      dimensionInput: ''
+      dimensionInput: '',
+      // Clear all selections when switching layers
+      selectedId: null,
+      selectedIds: [],
+      selectedRoomId: null,
+      selectedWallIndex: null,
+      selectedAttachmentId: null,
+      selectedBeamId: null,
+      selectedDimensionId: null,
     });
   },
   setOrthoMode: (orthoMode) => set({ orthoMode }),

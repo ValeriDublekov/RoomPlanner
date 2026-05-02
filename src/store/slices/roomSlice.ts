@@ -411,7 +411,15 @@ export const createRoomSlice: StateCreator<AppState, [], [], RoomSlice> = (set, 
     };
   }),
 
-  setSelectedAttachmentId: (selectedAttachmentId) => set({ selectedAttachmentId }),
+  setSelectedAttachmentId: (id) => set({ 
+    selectedAttachmentId: id,
+    selectedId: null,
+    selectedIds: [],
+    selectedRoomId: null,
+    selectedWallIndex: null,
+    selectedBeamId: null,
+    selectedDimensionId: null
+  }),
   
   addWallAttachment: (attachment) => set((state) => {
     state.saveHistory();

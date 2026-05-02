@@ -19,74 +19,112 @@ export const ThemeManager: React.FC = () => {
         <p className="text-[10px] text-slate-500 ml-6">Apply global styles to your entire scene</p>
       </div>
 
-      <div className="p-4 space-y-4 overflow-y-auto">
-        <div className="grid grid-cols-1 gap-3">
-          {INTERIOR_THEMES.map(theme => (
-            <button
-              key={theme.id}
-              onClick={() => {
-                setActiveTheme(theme.id);
-              }}
-              className={cn(
-                "group relative flex flex-col p-4 rounded-2xl border-2 transition-all text-left",
-                activeThemeId === theme.id 
-                  ? "border-indigo-500 bg-indigo-50/30 shadow-md" 
-                  : "border-slate-100 bg-white hover:border-slate-200 hover:shadow-sm"
-              )}
-            >
-              <div className="flex items-center justify-between mb-3">
-                <span className={cn(
-                  "text-xs font-bold uppercase tracking-wide",
-                  activeThemeId === theme.id ? "text-indigo-700" : "text-slate-700"
-                )}>
-                  {theme.name}
-                </span>
-                {activeThemeId === theme.id && (
-                  <div className="bg-indigo-500 text-white p-0.5 rounded-full">
-                    <Check size={10} />
+      <div className="p-4 space-y-3 overflow-y-auto">
+        <div className="grid grid-cols-1 gap-2">
+          {INTERIOR_THEMES.map(theme => {
+            const isSelected = activeThemeId === theme.id;
+            
+            return (
+              <div key={theme.id} className="flex flex-col gap-2">
+                <div
+                  onClick={() => {
+                    setActiveTheme(theme.id);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      setActiveTheme(theme.id);
+                    }
+                  }}
+                  role="button"
+                  tabIndex={0}
+                  className={cn(
+                    "group relative flex flex-col rounded-xl border-2 transition-all text-left overflow-hidden cursor-pointer outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2",
+                    isSelected 
+                      ? "border-indigo-500 bg-indigo-50/20 shadow-md p-4" 
+                      : "border-slate-100 bg-white hover:border-slate-200 hover:shadow-sm p-3"
+                  )}
+                >
+                  <div className={cn(
+                    "flex items-center justify-between",
+                    isSelected ? "mb-3" : "mb-2"
+                  )}>
+                    <span className={cn(
+                      "text-xs font-bold uppercase tracking-wide",
+                      isSelected ? "text-indigo-700" : "text-slate-600"
+                    )}>
+                      {theme.name}
+                    </span>
+                    {isSelected && (
+                      <div className="bg-indigo-500 text-white p-0.5 rounded-full">
+                        <Check size={10} />
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
 
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <div className="text-[9px] font-bold text-slate-400 uppercase w-12 text-right">Walls</div>
-                    <div className="flex gap-1">
-                      {[theme.wallColors.base, theme.wallColors.secondary, theme.wallColors.accent].map((c, i) => (
-                        <div key={i} className="w-5 h-5 rounded-full border border-slate-200" style={{ backgroundColor: c }} />
-                      ))}
+                  {isSelected ? (
+                    /* Detailed View for Selected Theme */
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <div className="text-[9px] font-bold text-slate-400 uppercase w-12 text-right">Walls</div>
+                        <div className="flex gap-1">
+                          {[theme.wallColors.base, theme.wallColors.secondary, theme.wallColors.accent].map((c, i) => (
+                            <div key={i} className="w-5 h-5 rounded-full border border-slate-200" style={{ backgroundColor: c }} title={c} />
+                          ))}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="text-[9px] font-bold text-slate-400 uppercase w-12 text-right">Wood</div>
+                        <div className="flex gap-1">
+                          {[theme.woodColors.base, theme.woodColors.front].map((c, i) => (
+                            <div key={i} className="w-5 h-5 rounded-md border border-slate-200" style={{ backgroundColor: c }} title={c} />
+                          ))}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="text-[9px] font-bold text-slate-400 uppercase w-12 text-right">Textile</div>
+                        <div className="flex gap-1">
+                          {[theme.textileColors.main, theme.textileColors.secondary, theme.textileColors.accent].map((c, i) => (
+                            <div key={i} className="w-5 h-5 rounded-sm border border-slate-200" style={{ backgroundColor: c }} title={c} />
+                          ))}
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          applyThemeToScene();
+                        }}
+                        className="w-full mt-3 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-lg text-[10px] font-bold transition-all shadow-md shadow-indigo-200 active:scale-[0.98]"
+                      >
+                        <Palette size={14} />
+                        APPLY THEME
+                      </button>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="text-[9px] font-bold text-slate-400 uppercase w-12 text-right">Wood</div>
-                    <div className="flex gap-1">
-                      {[theme.woodColors.base, theme.woodColors.front].map((c, i) => (
-                        <div key={i} className="w-5 h-5 rounded-md border border-slate-200" style={{ backgroundColor: c }} />
-                      ))}
+                  ) : (
+                    /* Compact View for Unselected Themes */
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <div className="flex -space-x-1.5 mr-2">
+                        {[
+                          theme.wallColors.base, 
+                          theme.woodColors.base, 
+                          theme.textileColors.main,
+                          theme.wallColors.accent
+                        ].map((c, i) => (
+                          <div 
+                            key={i} 
+                            className="w-4 h-4 rounded-full border-2 border-white shadow-sm" 
+                            style={{ backgroundColor: c, zIndex: 5 - i }} 
+                          />
+                        ))}
+                      </div>
+                      <span className="text-[10px] text-slate-400 font-medium">Quick preview</span>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="text-[9px] font-bold text-slate-400 uppercase w-12 text-right">Textile</div>
-                    <div className="flex gap-1">
-                      {[theme.textileColors.main, theme.textileColors.secondary, theme.textileColors.accent].map((c, i) => (
-                        <div key={i} className="w-5 h-5 rounded-sm border border-slate-200" style={{ backgroundColor: c }} />
-                      ))}
-                    </div>
-                  </div>
+                  )}
                 </div>
-            </button>
-          ))}
+              </div>
+            );
+          })}
         </div>
-
-        {activeThemeId && (
-          <button
-            onClick={applyThemeToScene}
-            className="w-full mt-4 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-3 rounded-xl text-xs font-bold transition-all shadow-lg shadow-indigo-200"
-          >
-            <Palette size={16} />
-            APPLY THEME TO SCENE
-          </button>
-        )}
       </div>
 
       <div className="mt-auto p-4 bg-slate-50 border-t border-slate-100">

@@ -80,7 +80,7 @@ const MaterialPicker: React.FC<{
         if (slotType === 'woodBase') resetValue = activeTheme.woodColors.base;
         if (slotType === 'woodFront') resetValue = activeTheme.woodColors.front;
         if (slotType === 'textileMain') {
-          resetValue = (furnitureType === 'bed') ? activeTheme.textileColors.main : activeTheme.textileColors.secondary;
+          resetValue = (furnitureType === 'bed' || furnitureType === 'rug') ? activeTheme.textileColors.main : activeTheme.textileColors.secondary;
         }
         if (slotType === 'textileAccent') resetValue = activeTheme.textileColors.accent;
       }
@@ -283,6 +283,7 @@ export const FurnitureEditor: React.FC<FurnitureEditorProps> = ({
           <option value="light">Light / Lamp</option>
           <option value="picture">Picture / Wall Art</option>
           <option value="air-conditioner">Air Conditioner</option>
+          <option value="rug">Rug / Carpet</option>
         </select>
       </div>
 
@@ -315,13 +316,13 @@ export const FurnitureEditor: React.FC<FurnitureEditorProps> = ({
           <input
             type="number"
             value={Math.round((selectedFurniture.height3d || 0) / pixelsPerCm)}
-            readOnly={selectedFurniture.furnitureType === 'bed'}
-            title={selectedFurniture.furnitureType === 'bed' ? "Calculated from frame and headboard" : ""}
+            readOnly={selectedFurniture.furnitureType === 'bed' || selectedFurniture.furnitureType === 'rug'}
+            title={selectedFurniture.furnitureType === 'bed' ? "Calculated from frame and headboard" : (selectedFurniture.furnitureType === 'rug' ? "Fixed thickness" : "")}
             onFocus={saveHistory}
             onChange={(e) => updateFurniture(selectedFurniture.id, { height3d: parseFloat(e.target.value) * pixelsPerCm })}
             className={cn(
               "w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-mono outline-none transition-all",
-              selectedFurniture.furnitureType === 'bed' ? "bg-slate-100 text-slate-400 cursor-not-allowed" : "bg-slate-50 focus:ring-2 focus:ring-indigo-500"
+              (selectedFurniture.furnitureType === 'bed' || selectedFurniture.furnitureType === 'rug') ? "bg-slate-100 text-slate-400 cursor-not-allowed" : "bg-slate-50 focus:ring-2 focus:ring-indigo-500"
             )}
           />
         </div>
@@ -426,10 +427,10 @@ export const FurnitureEditor: React.FC<FurnitureEditorProps> = ({
             'wardrobe', 'dresser'
           ].includes(type) || (type === 'shelf' && selectedFurniture.hasDoors);
           const showTextileMain = [
-            'bed', 'sofa', 'armchair', 'chair'
+            'bed', 'sofa', 'armchair', 'chair', 'rug'
           ].includes(type);
           const showTextileAccent = [
-            'bed', 'armchair', 'chair'
+            'bed', 'armchair', 'chair', 'rug'
           ].includes(type);
 
           return (
@@ -456,7 +457,7 @@ export const FurnitureEditor: React.FC<FurnitureEditorProps> = ({
               )}
               {showTextileMain && (
                 <MaterialPicker 
-                  label={type === 'bed' ? "Mattress Material" : "Main Textile"} 
+                  label={type === 'bed' ? "Mattress Material" : (type === 'rug' ? "Rug Color" : "Main Textile")} 
                   slot={materials.textileMain} 
                   slotType="textileMain"
                   activeTheme={activeTheme}
@@ -466,7 +467,7 @@ export const FurnitureEditor: React.FC<FurnitureEditorProps> = ({
               )}
               {showTextileAccent && (
                 <MaterialPicker 
-                  label={type === 'bed' ? "Pillows Material" : "Accent Textile"} 
+                  label={type === 'bed' ? "Pillows Material" : (type === 'rug' ? "Pattern / Border" : "Accent Textile")} 
                   slot={materials.textileAccent} 
                   slotType="textileAccent"
                   activeTheme={activeTheme}

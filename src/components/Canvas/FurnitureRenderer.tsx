@@ -28,8 +28,8 @@ export const FurnitureRenderer: React.FC<FurnitureRendererProps> = ({
   // Base colors for various types
   const woodBaseColor = getSlotColor(m.woodBase, shape.color || "#f8fafc");
   const woodFrontColor = getSlotColor(m.woodFront, shape.secondaryColor || woodBaseColor);
-  const textileMainColor = getSlotColor(m.textileMain, shape.secondaryColor || "#f8fafc");
-  const textileAccentColor = getSlotColor(m.textileAccent, "#ffffff");
+  const textileMainColor = getSlotColor(m.textileMain, shape.color || "#f8fafc");
+  const textileAccentColor = getSlotColor(m.textileAccent, shape.secondaryColor || "#cbd5e1");
 
   if (isGroup) {
     return (
@@ -70,28 +70,46 @@ export const FurnitureRenderer: React.FC<FurnitureRendererProps> = ({
   // Determine main "visible" color for the basic Rect
   let mainFill = woodBaseColor;
   if (shape.furnitureType === 'bed') mainFill = textileMainColor;
+  if (shape.furnitureType === 'rug') mainFill = textileMainColor;
   if (isColliding) mainFill = "rgba(239, 68, 68, 0.1)";
-  if (shape.svgPath) mainFill = "rgba(0,0,0,0.001)";
+  if (shape.svgPath && shape.furnitureType !== 'rug') mainFill = "rgba(0,0,0,0.001)";
 
   return (
     <>
-      <Rect
-        width={shape.width}
-        height={shape.height}
-        fill={mainFill}
-        stroke={isColliding ? "#ef4444" : (isSelected ? "#4f46e5" : (
-          (shape.furnitureType === 'bed' || shape.furnitureType === 'wardrobe' || shape.furnitureType === 'dresser')
-            ? woodBaseColor
-            : "#cbd5e1"
-        ))}
-        strokeWidth={(shape.furnitureType === 'bed' || shape.furnitureType === 'wardrobe' || shape.furnitureType === 'dresser') ? 4 / scale : 2 / scale}
-        cornerRadius={4 / scale}
-        shadowBlur={isSelected ? 10 / scale : 0}
-        shadowColor={isColliding ? "#ef4444" : "#4f46e5"}
-        shadowOpacity={0.2}
-        opacity={shape.svgPath ? 0.2 : 1}
-        listening={true}
-      />
+      {/* Base Shape */}
+      {shape.furnitureType === 'rug' && shape.type === 'circle' ? (
+        <Ellipse
+          x={shape.width / 2}
+          y={shape.height / 2}
+          radiusX={shape.width / 2}
+          radiusY={shape.height / 2}
+          fill={mainFill}
+          stroke={isSelected ? "#4f46e5" : "#cbd5e1"}
+          strokeWidth={1 / scale}
+          shadowBlur={isSelected ? 10 / scale : 0}
+          shadowColor="#4f46e5"
+          shadowOpacity={0.2}
+          listening={true}
+        />
+      ) : (
+        <Rect
+          width={shape.width}
+          height={shape.height}
+          fill={mainFill}
+          stroke={isColliding ? "#ef4444" : (isSelected ? "#4f46e5" : (
+            (shape.furnitureType === 'bed' || shape.furnitureType === 'wardrobe' || shape.furnitureType === 'dresser')
+              ? woodBaseColor
+              : "#cbd5e1"
+          ))}
+          strokeWidth={(shape.furnitureType === 'bed' || shape.furnitureType === 'wardrobe' || shape.furnitureType === 'dresser') ? 4 / scale : 2 / scale}
+          cornerRadius={4 / scale}
+          shadowBlur={isSelected ? 10 / scale : 0}
+          shadowColor={isColliding ? "#ef4444" : "#4f46e5"}
+          shadowOpacity={0.2}
+          opacity={(shape.svgPath && shape.furnitureType !== 'rug') ? 0.2 : 1}
+          listening={true}
+        />
+      )}
 
       {shape.svgPath && (() => {
         const tempPath = new Konva.Path({ data: shape.svgPath });
@@ -100,26 +118,56 @@ export const FurnitureRenderer: React.FC<FurnitureRendererProps> = ({
         const sY = shape.height / (pathRect.height || 100);
         
         const isTwoColor = shape.furnitureType === 'bed' || shape.furnitureType === 'wardrobe' || shape.furnitureType === 'dresser';
+        const isRug = shape.furnitureType === 'rug';
         
         let fillColor = woodBaseColor;
         if (shape.furnitureType === 'bed') fillColor = textileMainColor;
+        else if (isRug) fillColor = textileAccentColor;
         else if (isTwoColor) fillColor = woodFrontColor;
 
-        const strokeColor = isTwoColor ? woodBaseColor : (isSelected ? "#4f46e5" : "#64748b");
+        const strokeColor = isRug ? textileAccentColor : (isTwoColor ? woodBaseColor : (isSelected ? "#4f46e5" : "#64748b"));
 
         return (
           <Path
             data={shape.svgPath}
             fill={isColliding ? "rgba(239, 68, 68, 0.2)" : fillColor}
             stroke={isColliding ? "#ef4444" : strokeColor}
-            strokeWidth={(isTwoColor ? 2 : 1.5) / (scale * sX)}
+            strokeWidth={(isTwoColor ? 2 : (isRug ? 0.5 : 1.5)) / (scale * sX)}
             scaleX={sX}
             scaleY={sY}
             x={-pathRect.x * sX}
             y={-pathRect.y * sY}
+            opacity={isRug ? 0.9 : 1}
+            fillRule="evenodd"
           />
         );
       })()}
+
+      {/* Rug Detail (fallback for basic shapes if no svgPath) */}
+      {shape.furnitureType === 'rug' && !shape.svgPath && (
+        <Group listening={false}>
+          {shape.type === 'circle' ? (
+            <Ellipse
+              x={shape.width / 2}
+              y={shape.height / 2}
+              radiusX={shape.width * 0.4}
+              radiusY={shape.height * 0.4}
+              fill={textileAccentColor}
+              opacity={0.3}
+            />
+          ) : (
+            <Rect
+              x={shape.width * 0.1}
+              y={shape.height * 0.1}
+              width={shape.width * 0.8}
+              height={shape.height * 0.8}
+              fill={textileAccentColor}
+              opacity={0.3}
+              cornerRadius={2 / scale}
+            />
+          )}
+        </Group>
+      )}
 
       {/* Bed Detail */}
       {!shape.svgPath && shape.furnitureType === 'bed' && (() => {
@@ -192,13 +240,13 @@ export const FurnitureRenderer: React.FC<FurnitureRendererProps> = ({
         );
       })()}
 
-      {!shape.svgPath && shape.type === 'circle' && (
+      {!shape.svgPath && shape.type === 'circle' && shape.furnitureType !== 'rug' && (
         <Ellipse
           x={shape.width / 2}
           y={shape.height / 2}
           radiusX={shape.width / 2}
           radiusY={shape.height / 2}
-          fill={isColliding ? "rgba(239, 68, 68, 0.1)" : (shape.color || "#f8fafc")}
+          fill={isColliding ? "rgba(239, 68, 68, 0.1)" : mainFill}
           stroke={isColliding ? "#ef4444" : (isSelected ? "#4f46e5" : "#cbd5e1")}
           strokeWidth={2 / scale}
           shadowBlur={isSelected ? 10 / scale : 0}
@@ -211,7 +259,7 @@ export const FurnitureRenderer: React.FC<FurnitureRendererProps> = ({
         <KonvaLine
           points={shape.points?.flatMap((p) => [p.x, p.y]) || []}
           closed={true}
-          fill={isColliding ? "rgba(239, 68, 68, 0.1)" : (shape.color || "#f8fafc")}
+          fill={isColliding ? "rgba(239, 68, 68, 0.1)" : mainFill}
           stroke={isColliding ? "#ef4444" : (isSelected ? "#4f46e5" : "#cbd5e1")}
           strokeWidth={2 / scale}
           shadowBlur={isSelected ? 10 / scale : 0}

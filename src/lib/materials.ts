@@ -3,44 +3,44 @@ import { FurnitureObject, FurnitureType, ObjectMaterials } from '../types';
 /**
  * Returns default semantic materials based on furniture type
  */
-export const getDefaultMaterialsForType = (type: FurnitureType | undefined, primaryColor?: string): ObjectMaterials => {
-  const value = primaryColor || '#f1f5f9';
-  const defaultSlot = { source: 'theme' as const, value };
-  const customSlot = { source: 'custom' as const, value };
-
-  // If a specific color was provided, we assume it's a 'custom' detachment from theme
-  const slot = primaryColor ? customSlot : defaultSlot;
+export const getDefaultMaterialsForType = (type: FurnitureType | undefined, primaryColor?: string, secondaryColor?: string): ObjectMaterials => {
+  const pValue = primaryColor || '#f1f5f9';
+  const sValue = secondaryColor || pValue;
+  
+  const pSlot = primaryColor ? { source: 'custom' as const, value: pValue } : { source: 'theme' as const, value: pValue };
+  const sSlot = secondaryColor ? { source: 'custom' as const, value: sValue } : { source: 'theme' as const, value: (pValue === sValue ? '#cbd5e1' : sValue) };
 
   switch (type) {
     case 'wardrobe':
     case 'dresser':
     case 'shelf':
       return {
-        woodBase: slot,
-        woodFront: slot,
+        woodBase: pSlot,
+        woodFront: sSlot,
       };
     case 'bed':
       return {
-        woodBase: slot,
-        textileMain: slot,
-        textileAccent: slot,
+        woodBase: pSlot,
+        textileMain: sSlot,
+        textileAccent: { source: 'theme' as const, value: '#ffffff' },
       };
     case 'sofa':
     case 'armchair':
     case 'chair':
+    case 'rug':
       return {
-        textileMain: slot,
-        textileAccent: slot,
+        textileMain: pSlot,
+        textileAccent: sSlot,
       };
     case 'table':
     case 'desk':
     case 'nightstand':
       return {
-        woodBase: slot,
+        woodBase: pSlot,
       };
     default:
       return {
-        woodBase: slot,
+        woodBase: pSlot,
       };
   }
 };
@@ -63,9 +63,8 @@ export const migrateFurnitureMaterials = (item: FurnitureObject): FurnitureObjec
   }
 
   // Use legacy color as base for custom materials
-  const legacyColor = item.color;
   return {
     ...item,
-    materials: getDefaultMaterialsForType(item.furnitureType, legacyColor),
+    materials: getDefaultMaterialsForType(item.furnitureType, item.color, item.secondaryColor),
   };
 };

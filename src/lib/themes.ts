@@ -22,7 +22,7 @@ export const applyThemeToMaterials = (
   }
 
   if (newMaterials.textileMain) {
-    if (furnitureType === 'bed') {
+    if (furnitureType === 'bed' || furnitureType === 'rug') {
       newMaterials.textileMain = { source: 'theme', value: theme.textileColors.main };
     } else {
       newMaterials.textileMain = { source: 'theme', value: theme.textileColors.secondary };
