@@ -264,10 +264,60 @@ export const WallSegments: React.FC<{
       const offsetX = (normal.x * wallThickness) / 2;
       const offsetZ = (normal.y * wallThickness) / 2;
 
-      if (segmentAttachments.length === 0) {
+      const isRailing = room.wallTypes?.[i] === 'railing';
+      const railingStyle = room.railingStyles?.[i] || 'metal-bars';
+      const effectiveWallHeight = isRailing ? 100 : wallHeight;
+
+      if (segmentAttachments.length === 0 || isRailing) {
         const midX = (p1.x + p2.x) / (2 * pixelsPerCm) + offsetX;
         const midZ = (p1.y + p2.y) / (2 * pixelsPerCm) + offsetZ;
-        segs.push({ type: 'wall', length: totalLength, angle, midX, midZ, height: wallHeight, y: wallHeight / 2, color: segmentColor });
+        
+        if (isRailing) {
+          if (railingStyle === 'glass') {
+            // Glass panel with small frame at bottom
+            segs.push({ type: 'wall', length: totalLength, angle, midX, midZ, height: 10, y: 5, color: segmentColor, depth: wallThickness });
+            segs.push({ type: 'glass', length: totalLength, angle, midX, midZ, height: 90, y: 55, color: '#93c5fd', depth: 4 });
+            segs.push({ type: 'frame', length: totalLength, angle, midX, midZ, height: 4, y: 100, color: '#cbd5e1', depth: 6 });
+          } else if (railingStyle === 'metal-bars') {
+            // Top and bottom rails
+            segs.push({ type: 'frame', length: totalLength, angle, midX, midZ, height: 4, y: 2, color: '#334155', depth: 4 });
+            segs.push({ type: 'frame', length: totalLength, angle, midX, midZ, height: 4, y: 98, color: '#334155', depth: 6 });
+            
+            // Vertical bars
+            const barSpacing = 15; // cm
+            const barCount = Math.floor(totalLength / barSpacing);
+            const actualSpacing = totalLength / (barCount + 1);
+            
+            for (let j = 1; j <= barCount; j++) {
+              const posAlong = j * actualSpacing;
+              const barX = (p1.x / pixelsPerCm) + Math.cos(angle) * posAlong + offsetX;
+              const barZ = (p1.y / pixelsPerCm) + Math.sin(angle) * posAlong + offsetZ;
+              segs.push({ type: 'frame', length: 2, angle, midX: barX, midZ: barZ, height: 92, y: 50, color: '#475569', depth: 2 });
+            }
+          } else if (railingStyle === 'wooden-slats') {
+            // Top and bottom rails
+            segs.push({ type: 'wall', length: totalLength, angle, midX, midZ, height: 4, y: 2, color: '#451a03', depth: 6 });
+            segs.push({ type: 'wall', length: totalLength, angle, midX, midZ, height: 6, y: 97, color: '#451a03', depth: 8 });
+
+            const slatWidth = 8;
+            const slatSpacing = 15;
+            const slatCount = Math.floor(totalLength / slatSpacing);
+            const actualSpacing = totalLength / (slatCount + 1);
+
+            for (let j = 1; j <= slatCount; j++) {
+              const posAlong = j * actualSpacing;
+              const slatX = (p1.x / pixelsPerCm) + Math.cos(angle) * posAlong + offsetX;
+              const slatZ = (p1.y / pixelsPerCm) + Math.sin(angle) * posAlong + offsetZ;
+              segs.push({ type: 'wall', length: slatWidth, angle, midX: slatX, midZ: slatZ, height: 90, y: 50, color: '#78350f', depth: 4 });
+            }
+          } else {
+            // Concrete / Parapet
+            segs.push({ type: 'wall', length: totalLength, angle, midX, midZ, height: 100, y: 50, color: segmentColor, depth: wallThickness });
+            segs.push({ type: 'wall', length: totalLength + 0.2, angle, midX, midZ, height: 4, y: 102, color: '#cbd5e1', depth: wallThickness + 4 });
+          }
+        } else {
+          segs.push({ type: 'wall', length: totalLength, angle, midX, midZ, height: wallHeight, y: wallHeight / 2, color: segmentColor });
+        }
       } else {
         let currentPos = 0;
         segmentAttachments.forEach(att => {

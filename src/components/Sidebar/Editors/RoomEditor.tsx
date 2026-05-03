@@ -297,42 +297,109 @@ export const RoomEditor: React.FC<RoomEditorProps> = ({
       </div>
 
       {selectedWallIndex !== null && (
-        <div className="space-y-1.5 p-3 bg-indigo-50/50 rounded-xl border border-indigo-100">
-          <label className="text-xs font-bold text-indigo-600 uppercase tracking-wider">Wall #{selectedWallIndex + 1} Color</label>
-          <div className="flex gap-2 flex-wrap">
-            {['#f8fafc', '#f1f5f9', '#e2e8f0', '#cbd5e1', '#94a3b8', '#64748b', '#475569', '#334155'].map(color => (
+        <div className="space-y-4 p-3 bg-indigo-50/50 rounded-xl border border-indigo-100">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-bold text-indigo-600 uppercase tracking-wider">Wall #{selectedWallIndex + 1} Properties</label>
+            <div className="flex bg-indigo-100 p-0.5 rounded-lg">
               <button
-                key={color}
                 onClick={() => {
+                  const newTypes = [...(selectedRoom.wallTypes || [])];
+                  while (newTypes.length < selectedRoom.points.length) newTypes.push('wall');
+                  newTypes[selectedWallIndex] = 'wall';
+                  updateRoom(selectedRoom.id, { wallTypes: newTypes });
+                }}
+                className={cn(
+                  "px-2 py-1 rounded-md text-[9px] font-bold uppercase transition-all",
+                  (selectedRoom.wallTypes?.[selectedWallIndex] || 'wall') === 'wall' ? "bg-white text-indigo-600 shadow-sm" : "text-indigo-400 hover:text-indigo-600"
+                )}
+              >
+                Wall
+              </button>
+              <button
+                onClick={() => {
+                  const newTypes = [...(selectedRoom.wallTypes || [])];
+                  while (newTypes.length < selectedRoom.points.length) newTypes.push('wall');
+                  newTypes[selectedWallIndex] = 'railing';
+                  updateRoom(selectedRoom.id, { wallTypes: newTypes });
+                }}
+                className={cn(
+                  "px-2 py-1 rounded-md text-[9px] font-bold uppercase transition-all",
+                  selectedRoom.wallTypes?.[selectedWallIndex] === 'railing' ? "bg-white text-indigo-600 shadow-sm" : "text-indigo-400 hover:text-indigo-600"
+                )}
+              >
+                Railing
+              </button>
+            </div>
+          </div>
+
+          {selectedRoom.wallTypes?.[selectedWallIndex] === 'railing' && (
+            <div className="space-y-2 pt-1 border-t border-indigo-100">
+              <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">Railing Design</span>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { id: 'metal-bars', name: 'Metal Bars' },
+                  { id: 'glass', name: 'Glass Panel' },
+                  { id: 'wooden-slats', name: 'Wood Slats' },
+                  { id: 'concrete', name: 'Parapet' }
+                ].map(style => (
+                  <button
+                    key={style.id}
+                    onClick={() => {
+                      const newStyles = [...(selectedRoom.railingStyles || [])];
+                      while (newStyles.length < selectedRoom.points.length) newStyles.push('metal-bars');
+                      newStyles[selectedWallIndex] = style.id as any;
+                      updateRoom(selectedRoom.id, { railingStyles: newStyles });
+                    }}
+                    className={cn(
+                      "px-2 py-1.5 rounded-lg text-[9px] font-bold uppercase transition-all border text-center",
+                      (selectedRoom.railingStyles?.[selectedWallIndex] || 'metal-bars') === style.id
+                        ? "bg-indigo-600 text-white border-indigo-600 shadow-sm"
+                        : "bg-white text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+                    )}
+                  >
+                    {style.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">Color Override</label>
+            <div className="flex gap-2 flex-wrap">
+              {['#f8fafc', '#f1f5f9', '#e2e8f0', '#cbd5e1', '#94a3b8', '#64748b', '#475569', '#334155'].map(color => (
+                <button
+                  key={color}
+                  onClick={() => {
+                    const newColors = [...(selectedRoom.wallColors || [])];
+                    while (newColors.length < selectedRoom.points.length) {
+                      newColors.push('');
+                    }
+                    newColors[selectedWallIndex] = color;
+                    updateRoom(selectedRoom.id, { wallColors: newColors });
+                  }}
+                  className={cn(
+                    "w-5 h-5 rounded-full border-2 transition-all",
+                    (selectedRoom.wallColors?.[selectedWallIndex] || selectedRoom.defaultWallColor || '#f8fafc') === color ? "border-indigo-500 scale-110" : "border-transparent"
+                  )}
+                  style={{ backgroundColor: color }}
+                />
+              ))}
+              <input 
+                type="color" 
+                value={selectedRoom.wallColors?.[selectedWallIndex] || selectedRoom.defaultWallColor || '#f8fafc'} 
+                onChange={(e) => {
                   const newColors = [...(selectedRoom.wallColors || [])];
                   while (newColors.length < selectedRoom.points.length) {
                     newColors.push('');
                   }
-                  newColors[selectedWallIndex] = color;
+                  newColors[selectedWallIndex] = e.target.value;
                   updateRoom(selectedRoom.id, { wallColors: newColors });
                 }}
-                className={cn(
-                  "w-6 h-6 rounded-full border-2 transition-all",
-                  (selectedRoom.wallColors?.[selectedWallIndex] || selectedRoom.defaultWallColor || '#f8fafc') === color ? "border-indigo-500 scale-110" : "border-transparent"
-                )}
-                style={{ backgroundColor: color }}
+                className="w-5 h-5 rounded-full border-none p-0 overflow-hidden cursor-pointer"
               />
-            ))}
-            <input 
-              type="color" 
-              value={selectedRoom.wallColors?.[selectedWallIndex] || selectedRoom.defaultWallColor || '#f8fafc'} 
-              onChange={(e) => {
-                const newColors = [...(selectedRoom.wallColors || [])];
-                while (newColors.length < selectedRoom.points.length) {
-                  newColors.push('');
-                }
-                newColors[selectedWallIndex] = e.target.value;
-                updateRoom(selectedRoom.id, { wallColors: newColors });
-              }}
-              className="w-6 h-6 rounded-full border-none p-0 overflow-hidden cursor-pointer"
-            />
+            </div>
           </div>
-          <p className="text-[9px] text-indigo-400 italic">This overrides the default room wall color.</p>
         </div>
       )}
 

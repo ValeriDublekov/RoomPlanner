@@ -3,6 +3,8 @@ export interface Vector2d {
   y: number;
 }
 
+export type RailingStyle = 'glass' | 'metal-bars' | 'wooden-slats' | 'concrete';
+
 export interface RoomObject {
   id: string;
   points: Vector2d[];
@@ -10,6 +12,8 @@ export interface RoomObject {
   floorTexture?: string;
   floorColor?: string;
   wallColors?: string[]; // Array of colors for each segment
+  wallTypes?: ('wall' | 'railing')[]; // Array of types for each segment
+  railingStyles?: RailingStyle[]; // Array of railing styles for each segment
   defaultWallColor?: string;
   materials?: {
     wallBase?: MaterialSlot;

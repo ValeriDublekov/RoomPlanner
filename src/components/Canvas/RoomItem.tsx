@@ -171,12 +171,14 @@ export const RoomItem: React.FC<RoomItemProps> = ({
         {/* Individual Wall Coloring */}
         {wallSegments.map((seg) => {
           const isWallSelected = isSelected && selectedWallIndex === seg.index;
+          const isRailing = room.wallTypes?.[seg.index] === 'railing';
+          
           return (
             <Line
               key={`wall-color-${seg.index}`}
               points={[seg.p1.x, seg.p1.y, seg.p2.x, seg.p2.y]}
               stroke={isWallSelected ? "#4f46e5" : (room.wallColors?.[seg.index] || room.materials?.wallBase?.value || room.defaultWallColor || "#1e293b")}
-              strokeWidth={wallThicknessPx * 2 - 2}
+              strokeWidth={isRailing ? wallThicknessPx : wallThicknessPx * 2 - 2}
               hitStrokeWidth={wallThicknessPx * 2 + 10}
               opacity={wallOpacity}
               lineCap="butt"

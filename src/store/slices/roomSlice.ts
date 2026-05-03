@@ -171,6 +171,8 @@ export const createRoomSlice: StateCreator<AppState, [], [], RoomSlice> = (set, 
       id: Math.random().toString(36).substr(2, 9),
       points: uniquePoints,
       isClosed: true,
+      wallTypes: uniquePoints.map(() => 'wall'),
+      railingStyles: uniquePoints.map(() => 'metal-bars'),
       materials: {
         wallBase: { 
           source: 'theme', 
@@ -200,6 +202,8 @@ export const createRoomSlice: StateCreator<AppState, [], [], RoomSlice> = (set, 
       id: Math.random().toString(36).substr(2, 9),
       points: [...state.roomPoints],
       isClosed: false,
+      wallTypes: state.roomPoints.map(() => 'wall'),
+      railingStyles: state.roomPoints.map(() => 'metal-bars'),
       materials: {
         wallBase: { 
           source: 'theme', 
@@ -261,7 +265,29 @@ export const createRoomSlice: StateCreator<AppState, [], [], RoomSlice> = (set, 
       if (r.id !== roomId) return r;
       const newPoints = [...r.points];
       newPoints.splice(segmentIndex + 1, 0, pos);
-      return { ...r, points: newPoints };
+      
+      const newWallColors = [...(r.wallColors || [])];
+      if (newWallColors.length > segmentIndex) {
+        newWallColors.splice(segmentIndex + 1, 0, newWallColors[segmentIndex] || '');
+      }
+      
+      const newWallTypes = [...(r.wallTypes || [])];
+      if (newWallTypes.length > segmentIndex) {
+        newWallTypes.splice(segmentIndex + 1, 0, newWallTypes[segmentIndex] || 'wall');
+      }
+
+      const newRailingStyles = [...(r.railingStyles || [])];
+      if (newRailingStyles.length > segmentIndex) {
+        newRailingStyles.splice(segmentIndex + 1, 0, newRailingStyles[segmentIndex] || 'metal-bars');
+      }
+
+      return { 
+        ...r, 
+        points: newPoints,
+        wallColors: newWallColors,
+        wallTypes: newWallTypes,
+        railingStyles: newRailingStyles
+      };
     });
 
     const newAttachments = state.wallAttachments.map(a => {
@@ -338,7 +364,29 @@ export const createRoomSlice: StateCreator<AppState, [], [], RoomSlice> = (set, 
       if (r.id !== roomId) return r;
       const newPoints = [...r.points];
       newPoints.splice(pointIndex, 1);
-      return { ...r, points: newPoints };
+      
+      const newWallColors = [...(r.wallColors || [])];
+      if (newWallColors.length > pointIndex) {
+        newWallColors.splice(pointIndex, 1);
+      }
+      
+      const newWallTypes = [...(r.wallTypes || [])];
+      if (newWallTypes.length > pointIndex) {
+        newWallTypes.splice(pointIndex, 1);
+      }
+
+      const newRailingStyles = [...(r.railingStyles || [])];
+      if (newRailingStyles.length > pointIndex) {
+        newRailingStyles.splice(pointIndex, 1);
+      }
+
+      return { 
+        ...r, 
+        points: newPoints,
+        wallColors: newWallColors,
+        wallTypes: newWallTypes,
+        railingStyles: newRailingStyles
+      };
     });
 
     const newAttachments = state.wallAttachments.filter(a => {
