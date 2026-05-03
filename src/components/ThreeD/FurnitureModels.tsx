@@ -1,7 +1,6 @@
 import React from 'react';
 import { useTexture, Edges } from '@react-three/drei';
 import * as THREE from 'three';
-import { useFrame } from '@react-three/fiber';
 import { WOOD_GRAIN } from '../../constants';
 import { useStore } from '../../store';
 
@@ -907,28 +906,8 @@ export const Rug3D: React.FC<ModelProps & { shape?: 'rectangle' | 'circle' }> = 
 };
 
 export const WallPanel3D: React.FC<ModelProps & { panelStyle?: 'slats' | 'trellis' | 'green' | 'stone' | 'plain' }> = ({ width, depth, height, color, panelStyle = 'slats' }) => {
-  const groupRef = React.useRef<THREE.Group>(null);
   const edgeMode = useStore(state => state.edgeMode3d);
   
-  // Create 4 clipping planes and update them to world space to clip the trellis bars
-  const clippingPlanes = React.useMemo(() => [
-    new THREE.Plane(),
-    new THREE.Plane(),
-    new THREE.Plane(),
-    new THREE.Plane()
-  ], []);
-
-  useFrame(() => {
-    if (groupRef.current && panelStyle === 'trellis') {
-      const matrix = groupRef.current.matrixWorld;
-      // Define planes in local space and transform to world space
-      clippingPlanes[0].set(new THREE.Vector3(1, 0, 0), 0).applyMatrix4(matrix);
-      clippingPlanes[1].set(new THREE.Vector3(-1, 0, 0), width).applyMatrix4(matrix);
-      clippingPlanes[2].set(new THREE.Vector3(0, 1, 0), 0).applyMatrix4(matrix);
-      clippingPlanes[3].set(new THREE.Vector3(0, -1, 0), height).applyMatrix4(matrix);
-    }
-  });
-
   if (panelStyle === 'plain') {
     return (
       <mesh position={[width / 2, height / 2, depth / 2]} castShadow receiveShadow>
@@ -970,11 +949,53 @@ export const WallPanel3D: React.FC<ModelProps & { panelStyle?: 'slats' | 'trelli
   if (panelStyle === 'trellis') {
     const barThinkness = 1.5;
     const spacing = 15;
-    const num = Math.ceil((width + height) / spacing) + 4;
-    const barLength = Math.sqrt(width * width + height * height) * 1.5;
+    
+    // Helper to calculate segment for y = x + k or y = -x + k
+    // We use a range of k that covers the whole panel
+    const getSegments = (isPositive: boolean) => {
+      const segs: { pos: [number, number, number], length: number, angle: number }[] = [];
+      const step = spacing * Math.SQRT2; // Adjust step for diagonal spacing
+      const kMin = isPositive ? -width : 0;
+      const kMax = isPositive ? height : width + height;
+
+      for (let k = kMin - step; k <= kMax + step; k += step) {
+        const points: THREE.Vector2[] = [];
+        if (isPositive) {
+          // y = x + k
+          const y0 = k; if (y0 >= 0 && y0 <= height) points.push(new THREE.Vector2(0, y0));
+          const yW = width + k; if (yW >= 0 && yW <= height) points.push(new THREE.Vector2(width, yW));
+          const x0 = -k; if (x0 >= 0 && x0 <= width) points.push(new THREE.Vector2(x0, 0));
+          const xH = height - k; if (xH >= 0 && xH <= width) points.push(new THREE.Vector2(xH, height));
+        } else {
+          // y = -x + k
+          const y0 = k; if (y0 >= 0 && y0 <= height) points.push(new THREE.Vector2(0, y0));
+          const yW = -width + k; if (yW >= 0 && yW <= height) points.push(new THREE.Vector2(width, yW));
+          const x0 = k; if (x0 >= 0 && x0 <= width) points.push(new THREE.Vector2(x0, 0));
+          const xH = k - height; if (xH >= 0 && xH <= width) points.push(new THREE.Vector2(xH, height));
+        }
+
+        // Filter unique points
+        const unique = points.filter((p, index, self) => 
+          index === self.findIndex((t) => t.distanceTo(p) < 0.1)
+        );
+
+        if (unique.length >= 2) {
+          const p1 = unique[0];
+          const p2 = unique[1];
+          const center = p1.clone().add(p2).multiplyScalar(0.5);
+          const length = p1.distanceTo(p2);
+          const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x);
+          segs.push({ pos: [center.x, center.y, 0], length, angle });
+        }
+      }
+      return segs;
+    };
+
+    const segments1 = getSegments(true);
+    const segments2 = getSegments(false);
 
     return (
-      <group ref={groupRef}>
+      <group>
         {/* Invisible back panel for raycasting */}
         <mesh position={[width / 2, height / 2, depth * 0.05]}>
           <boxGeometry args={[width, height, depth * 0.1]} />
@@ -999,42 +1020,20 @@ export const WallPanel3D: React.FC<ModelProps & { panelStyle?: 'slats' | 'trelli
           <SmartMaterial color={color} />
         </mesh>
 
-        {/* Diagonal Bars 1 */}
-        <group position={[width/2, height/2, 0]}>
-          {Array.from({ length: num }).map((_, i) => {
-            const offset = (i - num / 2) * spacing;
-            return (
-              <mesh 
-                key={`d1-${i}`} 
-                position={[0, 0, depth * 0.3]} 
-                rotation={[0, 0, Math.PI / 4]}
-              >
-                <mesh position={[0, offset, 0]} castShadow>
-                   <boxGeometry args={[barLength, barThinkness, depth * 0.2]} />
-                   <SmartMaterial color={color} clippingPlanes={clippingPlanes} />
-                </mesh>
-              </mesh>
-            );
-          })}
-        </group>
-        {/* Diagonal Bars 2 */}
-        <group position={[width/2, height/2, 0]}>
-          {Array.from({ length: num }).map((_, i) => {
-            const offset = (i - num / 2) * spacing;
-            return (
-              <mesh 
-                key={`d2-${i}`} 
-                position={[0, 0, depth * 0.6]} 
-                rotation={[0, 0, -Math.PI / 4]}
-              >
-                 <mesh position={[0, offset, 0]} castShadow>
-                   <boxGeometry args={[barLength, barThinkness, depth * 0.2]} />
-                   <SmartMaterial color={color} clippingPlanes={clippingPlanes} />
-                </mesh>
-              </mesh>
-            );
-          })}
-        </group>
+        {/* Diagonal Bars Layer 1 */}
+        {segments1.map((s, i) => (
+          <mesh key={`s1-${i}`} position={[s.pos[0], s.pos[1], depth * 0.3]} rotation={[0, 0, s.angle]} castShadow>
+            <boxGeometry args={[s.length, barThinkness, depth * 0.2]} />
+            <SmartMaterial color={color} />
+          </mesh>
+        ))}
+        {/* Diagonal Bars Layer 2 */}
+        {segments2.map((s, i) => (
+          <mesh key={`s2-${i}`} position={[s.pos[0], s.pos[1], depth * 0.6]} rotation={[0, 0, s.angle]} castShadow>
+            <boxGeometry args={[s.length, barThinkness, depth * 0.2]} />
+            <SmartMaterial color={color} />
+          </mesh>
+        ))}
       </group>
     );
   }
