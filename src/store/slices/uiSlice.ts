@@ -64,6 +64,8 @@ export interface UISlice {
   ensureVisible: (targetBounds: { minX: number, minY: number, maxX: number, maxY: number }, viewWidth?: number, viewHeight?: number) => void;
   showJsonViewer: boolean;
   toggleJsonViewer: (show: boolean) => void;
+  isCatalogOpen: boolean;
+  setIsCatalogOpen: (open: boolean) => void;
   resetApp: () => void;
 }
 
@@ -97,9 +99,11 @@ export const createUISlice: StateCreator<AppState, [], [], UISlice> = (set, get)
   viewport: { width: 0, height: 0 },
   sidebarWidth: 0,
   showJsonViewer: false,
+  isCatalogOpen: false,
   setViewport: (viewport) => set({ viewport }),
   setSidebarWidth: (sidebarWidth) => set({ sidebarWidth }),
   toggleJsonViewer: (showJsonViewer) => set({ showJsonViewer }),
+  setIsCatalogOpen: (isCatalogOpen) => set({ isCatalogOpen }),
 
   setScale: (scale) => set({ scale }),
   setPosition: (position) => set({ position }),

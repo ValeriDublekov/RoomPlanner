@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { MousePointer2, Pencil, Square, Ruler, DoorOpen, Layout, Circle, BookPlus, LogIn, LogOut, User as UserIcon, Cloud, Download, Upload } from 'lucide-react';
 import { useStore } from '@/src/store';
-import { ToolButton, FileActions, CatalogModal } from './Sidebar';
+import { ToolButton, FileActions } from './Sidebar';
 import { loginWithGoogle, logout } from '@/src/firebase';
 
 const tools = [
@@ -37,8 +37,7 @@ export const Sidebar: React.FC = () => {
   const setSelectedBeamId = useStore(state => state.setSelectedBeamId);
   const currentUser = useStore(state => state.currentUser);
   const isAuthLoading = useStore(state => state.isAuthLoading);
-
-  const [isCatalogOpen, setIsCatalogOpen] = useState(false);
+  const setIsCatalogOpen = useStore(state => state.setIsCatalogOpen);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -53,7 +52,6 @@ export const Sidebar: React.FC = () => {
 
   return (
     <aside className="w-64 bg-white border-r border-slate-200 flex flex-col h-full shadow-sm z-10">
-      <CatalogModal isOpen={isCatalogOpen} onClose={() => setIsCatalogOpen(false)} />
       
       <nav className="flex-1 overflow-y-auto px-4 py-6 space-y-8">
         <div>

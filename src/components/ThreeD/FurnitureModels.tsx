@@ -977,7 +977,7 @@ export const WallPanel3D: React.FC<ModelProps & { panelStyle?: 'slats' | 'trelli
         </mesh>
 
         {/* Diagonal Bars 1 */}
-        <group clipShadows>
+        <group>
           {Array.from({ length: numX + numY }).map((_, i) => {
             const offset = (i - numY) * spacing;
             return (
@@ -1029,11 +1029,15 @@ export const WallPanel3D: React.FC<ModelProps & { panelStyle?: 'slats' | 'trelli
           <mesh 
             key={i} 
             position={[
-              Math.random() * width, 
-              Math.random() * height, 
-              depth + Math.random() * 2
+              ((i * 13) % 100) / 100 * width, 
+              ((i * 17) % 100) / 100 * height, 
+              depth + ((i * 7) % 100) / 100 * 2
             ]} 
-            rotation={[Math.random(), Math.random(), Math.random()]}
+            rotation={[
+              ((i * 3) % 100) / 100 * Math.PI, 
+              ((i * 5) % 100) / 100 * Math.PI, 
+              ((i * 11) % 100) / 100 * Math.PI
+            ]}
           >
             <boxGeometry args={[5, 5, 0.5]} />
             <meshStandardMaterial color={i % 2 === 0 ? "#166534" : "#15803d"} roughness={0.8} />

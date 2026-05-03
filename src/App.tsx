@@ -6,7 +6,7 @@
 import { useEffect } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from './firebase';
-import { Sidebar, ThreeDPreview } from './components';
+import { Sidebar, ThreeDPreview, CatalogModal } from './components';
 import { RightSidebar } from './components/RightSidebar';
 import { Canvas } from './components/Canvas';
 import { CalibrationModal } from './components/CalibrationModal';
@@ -22,6 +22,8 @@ export default function App() {
   const setCurrentUser = useStore(state => state.setCurrentUser);
   const setIsAuthLoading = useStore(state => state.setIsAuthLoading);
   const tempCalibrationDist = useStore(state => state.tempCalibrationDist);
+  const isCatalogOpen = useStore(state => state.isCatalogOpen);
+  const setIsCatalogOpen = useStore(state => state.setIsCatalogOpen);
 
   // Centralized keyboard shortcuts entry point
   useKeyboardShortcuts();
@@ -38,6 +40,7 @@ export default function App() {
     <div className="flex h-screen w-full bg-slate-100 overflow-hidden font-sans antialiased text-slate-900">
       {tempCalibrationDist !== null && <CalibrationModal />}
       <JsonViewerModal isOpen={showJsonViewer} onClose={() => toggleJsonViewer(false)} />
+      <CatalogModal isOpen={isCatalogOpen} onClose={() => setIsCatalogOpen(false)} />
       {show3d && (
         <ErrorBoundary>
           <ThreeDPreview />
