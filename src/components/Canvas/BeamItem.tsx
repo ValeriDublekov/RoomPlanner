@@ -229,6 +229,10 @@ export const BeamItem: React.FC<BeamItemProps> = ({
         dragBoundFunc={dragBoundFunc}
         onDragMove={handleDragMove}
         onDragEnd={handleDragEnd}
+        onMouseDown={(e) => {
+          if (mode !== 'select') return;
+          e.cancelBubble = true;
+        }}
         onClick={(e) => {
           console.log('Beam onClick triggered. id:', beam.id, 'mode:', mode, 'activeLayer:', activeLayer);
           // Only select beams when in select mode

@@ -126,7 +126,7 @@ export const RoomItem: React.FC<RoomItemProps> = ({
         onSelect();
         setSelectedWallIndex(null);
       }} 
-      listening={!isLocked}
+      listening={true}
     >
       {/* 1. Walls Background (The dark structure) */}
       <Group
@@ -183,6 +183,10 @@ export const RoomItem: React.FC<RoomItemProps> = ({
               opacity={wallOpacity}
               lineCap="butt"
               listening={true}
+              onMouseDown={(e) => {
+                if (mode !== 'select' || activeLayer !== 'room') return;
+                e.cancelBubble = true;
+              }}
               onClick={(e) => {
                 console.log('Wall clicked:', seg.index, 'activeLayer:', activeLayer, 'mode:', mode);
                 if (mode !== 'select' || activeLayer !== 'room') return;
@@ -225,6 +229,10 @@ export const RoomItem: React.FC<RoomItemProps> = ({
             fillPriority={textureImage ? "pattern" : "color"}
             lineJoin="miter"
             opacity={floorOpacity}
+            onMouseDown={(e) => {
+              if (mode !== 'select' || activeLayer !== 'room') return;
+              e.cancelBubble = true;
+            }}
             onClick={(e) => {
               console.log('Room Floor clicked:', room.id, 'mode:', mode);
               if (mode !== 'select' || activeLayer !== 'room') return;

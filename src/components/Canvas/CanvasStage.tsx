@@ -62,7 +62,9 @@ export const CanvasStage: React.FC<CanvasStageProps> = ({
         x={position.x}
         y={position.y}
         onWheel={onWheel}
-        onMouseDown={onMouseDown}
+        onMouseDown={(e) => {
+          onMouseDown(e);
+        }}
         onMouseUp={onMouseUp}
         onDragMove={onDragMove}
         onDragEnd={onDragEnd}
@@ -74,12 +76,21 @@ export const CanvasStage: React.FC<CanvasStageProps> = ({
         name="stage"
         dragBoundFunc={(pos) => {
           const stage = stageRef.current;
-          if (stage) {
+          if (stage && mode === 'select') {
             const pointer = stage.getPointerPosition();
             if (pointer) {
               const intersection = stage.getIntersection(pointer);
-              if (intersection && intersection.getStage() && intersection.name() !== 'stage' && !intersection.hasName('grid-line')) {
-                return { x: stage.x(), y: stage.y() };
+              if (intersection) {
+                const name = intersection.name();
+                const className = intersection.className;
+                
+                // Block panning if we hit ANYTHING that isn't background or stage itself
+                const isBg = name === 'stage' || name === 'grid-layer' || name === 'background-image' || intersection.hasName('grid-line');
+                
+                if (!isBg || name === 'transformer' || className.includes('Transformer')) {
+                  console.log(`[Stage DragBound] Blocking pan. Hit: ${name} (${className})`);
+                  return { x: stage.x(), y: stage.y() };
+                }
               }
             }
           }

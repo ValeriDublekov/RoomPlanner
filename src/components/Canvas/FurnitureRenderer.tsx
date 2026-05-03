@@ -63,7 +63,7 @@ export const FurnitureRenderer: React.FC<FurnitureRendererProps> = ({
           stroke={isSelected ? "#4f46e5" : "transparent"}
           strokeWidth={1 / scale}
           dash={[5 / scale, 5 / scale]}
-          listening={true}
+          listening={false}
         />
       </Group>
     );
@@ -73,13 +73,15 @@ export const FurnitureRenderer: React.FC<FurnitureRendererProps> = ({
   let mainFill = woodBaseColor;
   if (shape.furnitureType === 'bed') mainFill = textileMainColor;
   if (shape.furnitureType === 'rug') mainFill = textileMainColor;
-  if (isColliding) mainFill = "rgba(239, 68, 68, 0.1)";
-  if (shape.svgPath && shape.furnitureType !== 'rug') mainFill = "rgba(0,0,0,0.001)";
+  if (isColliding) mainFill = "rgba(239, 68, 68, 0.2)";
+  if (shape.svgPath && shape.furnitureType !== 'rug') {
+    mainFill = isSelected ? "rgba(79, 70, 229, 0.15)" : "rgba(0,0,0,0.02)";
+  }
   
   // Custom picture rendering with imageUrl
   if (shape.furnitureType === 'picture' && shape.imageUrl && image) {
     return (
-      <>
+      <Group>
         <Rect
           width={shape.width}
           height={shape.height}
@@ -95,16 +97,35 @@ export const FurnitureRenderer: React.FC<FurnitureRendererProps> = ({
           image={image}
           width={shape.width}
           height={shape.height}
-          listening={true}
+          listening={false}
         />
-      </>
+      </Group>
     );
   }
 
   return (
     <>
-      {/* Base Shape */}
-      {shape.furnitureType === 'rug' && shape.type === 'circle' ? (
+      {/* Base Rect for VISUAL feedback - hit detection is covered by parent drag-background */}
+      <Rect
+        width={shape.width}
+        height={shape.height}
+        fill={mainFill}
+        stroke={isColliding ? "#ef4444" : (isSelected ? "#4f46e5" : (
+          (shape.furnitureType === 'bed' || shape.furnitureType === 'wardrobe' || shape.furnitureType === 'dresser')
+            ? woodBaseColor
+            : "#cbd5e1"
+        ))}
+        strokeWidth={(shape.furnitureType === 'bed' || shape.furnitureType === 'wardrobe' || shape.furnitureType === 'dresser') ? 4 / scale : 2 / scale}
+        cornerRadius={shape.type === 'circle' ? shape.width / 2 : 4 / scale}
+        shadowBlur={isSelected ? 10 / scale : 0}
+        shadowColor={isColliding ? "#ef4444" : "#4f46e5"}
+        shadowOpacity={0.2}
+        opacity={(shape.svgPath && shape.furnitureType !== 'rug') ? (isSelected ? 0.9 : 0.5) : (shape.furnitureType === 'rug' ? 0.7 : 1)}
+        listening={false} // Disable individual hit detection for this base so parent catches all
+      />
+
+      {/* Special rendering for round rugs */}
+      {shape.furnitureType === 'rug' && shape.type === 'circle' && (
         <Ellipse
           x={shape.width / 2}
           y={shape.height / 2}
@@ -113,28 +134,7 @@ export const FurnitureRenderer: React.FC<FurnitureRendererProps> = ({
           fill={mainFill}
           stroke={isSelected ? "#4f46e5" : "#cbd5e1"}
           strokeWidth={1 / scale}
-          shadowBlur={isSelected ? 10 / scale : 0}
-          shadowColor="#4f46e5"
-          shadowOpacity={0.2}
-          listening={true}
-        />
-      ) : (
-        <Rect
-          width={shape.width}
-          height={shape.height}
-          fill={mainFill}
-          stroke={isColliding ? "#ef4444" : (isSelected ? "#4f46e5" : (
-            (shape.furnitureType === 'bed' || shape.furnitureType === 'wardrobe' || shape.furnitureType === 'dresser')
-              ? woodBaseColor
-              : "#cbd5e1"
-          ))}
-          strokeWidth={(shape.furnitureType === 'bed' || shape.furnitureType === 'wardrobe' || shape.furnitureType === 'dresser') ? 4 / scale : 2 / scale}
-          cornerRadius={4 / scale}
-          shadowBlur={isSelected ? 10 / scale : 0}
-          shadowColor={isColliding ? "#ef4444" : "#4f46e5"}
-          shadowOpacity={0.2}
-          opacity={(shape.svgPath && shape.furnitureType !== 'rug') ? 0.2 : 1}
-          listening={true}
+          listening={false}
         />
       )}
 
@@ -169,6 +169,7 @@ export const FurnitureRenderer: React.FC<FurnitureRendererProps> = ({
                       points={[-h, offset - h, w + h, offset + w]}
                       stroke={shape.category === 'Terrace' ? "#92400e" : "#64748b"}
                       strokeWidth={barWidth}
+                      listening={false}
                     />
                   );
                 })}
@@ -181,6 +182,7 @@ export const FurnitureRenderer: React.FC<FurnitureRendererProps> = ({
                       points={[-h, offset + h, w + h, offset - w]}
                       stroke={shape.category === 'Terrace' ? "#92400e" : "#64748b"}
                       strokeWidth={barWidth}
+                      listening={false}
                     />
                   );
                 })}
@@ -203,6 +205,7 @@ export const FurnitureRenderer: React.FC<FurnitureRendererProps> = ({
                     fill={woodFrontColor}
                     stroke={woodBaseColor}
                     strokeWidth={0.5 / scale}
+                    listening={false}
                   />
                 ))}
               </Group>
@@ -217,6 +220,7 @@ export const FurnitureRenderer: React.FC<FurnitureRendererProps> = ({
                 fill="#166534"
                 opacity={0.8}
                 cornerRadius={2 / scale}
+                listening={false}
               />
             );
           }
@@ -229,6 +233,7 @@ export const FurnitureRenderer: React.FC<FurnitureRendererProps> = ({
                 fill="#475569"
                 opacity={0.8}
                 cornerRadius={2 / scale}
+                listening={false}
               />
             );
           }
@@ -260,6 +265,7 @@ export const FurnitureRenderer: React.FC<FurnitureRendererProps> = ({
             y={-pathRect.y * sY}
             opacity={isRug ? 0.9 : 1}
             fillRule="evenodd"
+            listening={false}
           />
         );
       })()}
@@ -303,7 +309,7 @@ export const FurnitureRenderer: React.FC<FurnitureRendererProps> = ({
         const mattressInset = 2 * pixelsPerCm;
 
         return (
-          <Group>
+          <Group listening={false}>
             {/* Headboard Area (at the top) */}
             {shape.hasHeadboard && (
               <>
@@ -313,6 +319,7 @@ export const FurnitureRenderer: React.FC<FurnitureRendererProps> = ({
                   height={hbProjection * pixelsPerCm}
                   fill={woodBaseColor}
                   opacity={0.3}
+                  listening={false}
                 />
                 {/* Main thick part */}
                 <Rect
@@ -320,6 +327,7 @@ export const FurnitureRenderer: React.FC<FurnitureRendererProps> = ({
                   width={shape.width}
                   height={hbThickness * pixelsPerCm}
                   fill={woodBaseColor}
+                  listening={false}
                 />
               </>
             )}
@@ -334,10 +342,11 @@ export const FurnitureRenderer: React.FC<FurnitureRendererProps> = ({
               stroke="#cbd5e1"
               strokeWidth={1 / scale}
               cornerRadius={2 / scale}
+              listening={false}
             />
 
             {/* Pillows */}
-            <Group y={hbTotalDepth + 5 * pixelsPerCm}>
+            <Group y={hbTotalDepth + 5 * pixelsPerCm} listening={false}>
               <Rect
                 x={shape.width * 0.15}
                 width={shape.width * 0.3}
@@ -373,6 +382,7 @@ export const FurnitureRenderer: React.FC<FurnitureRendererProps> = ({
           shadowBlur={isSelected ? 10 / scale : 0}
           shadowColor={isColliding ? "#ef4444" : "#4f46e5"}
           shadowOpacity={0.2}
+          listening={false}
         />
       )}
 
@@ -386,6 +396,7 @@ export const FurnitureRenderer: React.FC<FurnitureRendererProps> = ({
           shadowBlur={isSelected ? 10 / scale : 0}
           shadowColor={isColliding ? "#ef4444" : "#4f46e5"}
           shadowOpacity={0.2}
+          listening={false}
         />
       )}
 
@@ -408,7 +419,7 @@ export const FurnitureRenderer: React.FC<FurnitureRendererProps> = ({
         const approxHeight = (lines.length * fontSize * 1.2 + padding * 2);
 
         return (
-          <Group x={shape.width / 2} y={shape.height / 2} rotation={textRotation}>
+          <Group x={shape.width / 2} y={shape.height / 2} rotation={textRotation} listening={false}>
             <Rect
               x={-approxWidth / 2}
               y={-approxHeight / 2}
@@ -449,7 +460,7 @@ export const FurnitureRenderer: React.FC<FurnitureRendererProps> = ({
 
       {/* Face Indicator */}
       {(shape.furnitureType === 'wardrobe' || shape.furnitureType === 'dresser' || shape.furnitureType === 'desk' || shape.furnitureType === 'bed') && (
-        <Group>
+        <Group listening={false}>
           <KonvaLine
             points={[5 / scale, shape.height - 2 / scale, shape.width - 5 / scale, shape.height - 2 / scale]}
             stroke="#4f46e5"
@@ -469,7 +480,7 @@ export const FurnitureRenderer: React.FC<FurnitureRendererProps> = ({
 
       {/* Shelf Dividers */}
       {shape.furnitureType === 'shelf' && !shape.svgPath && (
-        <Group>
+        <Group listening={false}>
           {(() => {
             const widthCm = shape.width / pixelsPerCm;
             const numDividers = Math.floor(widthCm / 30);

@@ -243,6 +243,10 @@ export const WallAttachmentItem: React.FC<WallAttachmentItemProps> = ({
         x={x}
         y={y}
         rotation={angle}
+        onMouseDown={(e) => {
+          if (mode !== 'select') return;
+          e.cancelBubble = true;
+        }}
         onClick={(e) => {
           if (e.evt.button !== 0 || activeLayer !== 'room') return;
           e.cancelBubble = true;
@@ -353,6 +357,9 @@ export const WallAttachmentItem: React.FC<WallAttachmentItemProps> = ({
       {isSelected && (
         <Transformer
           ref={trRef}
+          name="transformer"
+          onMouseDown={(e) => e.cancelBubble = true}
+          onClick={(e) => e.cancelBubble = true}
           enabledAnchors={['middle-left', 'middle-right']}
           rotateEnabled={false}
           resizeEnabled={true}

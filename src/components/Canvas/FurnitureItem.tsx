@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Group, Transformer, Line as KonvaLine, Text, Ellipse } from 'react-konva';
+import { Group, Transformer, Line as KonvaLine, Text, Ellipse, Rect } from 'react-konva';
 import Konva from 'konva';
 import { FurnitureObject, RoomObject } from '@/src/types';
 import { useStore } from '@/src/store';
@@ -81,12 +81,13 @@ export const FurnitureItem: React.FC<FurnitureItemProps> = ({
   return (
     <React.Fragment>
       {dragDistances.map((d, i) => (
-        <Group key={i}>
+        <Group key={i} listening={false}>
           <KonvaLine
             points={[d.p1.x, d.p1.y, d.p2.x, d.p2.y]}
             stroke="#6366f1"
             strokeWidth={1 / scale}
             dash={[4 / scale, 4 / scale]}
+            listening={false}
           />
           <Text
             text={`${(d.dist / pixelsPerCm).toFixed(1)} cm`}
@@ -96,6 +97,7 @@ export const FurnitureItem: React.FC<FurnitureItemProps> = ({
             fill="#4f46e5"
             fontStyle="bold"
             align="center"
+            listening={false}
           />
         </Group>
       ))}
@@ -110,10 +112,24 @@ export const FurnitureItem: React.FC<FurnitureItemProps> = ({
         offsetY={shape.height / 2}
         rotation={shape.rotation}
         draggable={!isLocked && mode === 'select'}
+        onMouseDown={(e) => {
+          if (mode !== 'select') return;
+          e.cancelBubble = true; 
+          
+          if (isLocked) return;
+          
+          // Select immediately on mouse down for responsiveness
+          if (e.evt && e.evt.button === 0 && !isSelected) {
+            onSelect(e.evt.ctrlKey || e.evt.metaKey);
+          }
+        }}
         onClick={(e) => {
-          if (e.evt.button !== 0 || mode !== 'select') return;
+          if (!e.evt || e.evt.button !== 0 || mode !== 'select') return;
           e.cancelBubble = true;
-          onSelect(e.evt.ctrlKey || e.evt.metaKey);
+          console.log(`[FurnitureItem Click] ID=${shape.id} isSelected=${isSelected}`);
+          if (!isSelected) {
+            onSelect(e.evt.ctrlKey || e.evt.metaKey);
+          }
         }}
         onTap={(e) => {
           if (mode !== 'select') return;
@@ -121,27 +137,38 @@ export const FurnitureItem: React.FC<FurnitureItemProps> = ({
           onSelect(e.evt.ctrlKey || e.evt.metaKey);
         }}
         onDragStart={(e) => {
-          if (e.evt.button !== 0 || mode !== 'select') return;
-          if (e.target === shapeRef.current) {
-            onSelect(e.evt.ctrlKey || e.evt.metaKey);
-            onStartChange();
+          if (e.evt && (e.evt as any).button !== 0) {
+            e.cancelBubble = true;
+            return;
           }
+          if (mode !== 'select') return;
+          
+          console.log(`[FurnitureItem DragStart] ID=${shape.id} wasSelected=${isSelected}`);
+          
+          // Ensure it's selected when starting drag
+          if (!isSelected) {
+             onSelect((e.evt as any)?.ctrlKey || (e.evt as any)?.metaKey);
+          }
+          
+          onStartChange();
         }}
-        onDragMove={handleDragMove}
+        onDragMove={(e) => {
+          console.log(`[FurnitureItem DragMove] ID=${shape.id} pos=(${e.target.x().toFixed(1)}, ${e.target.y().toFixed(1)})`);
+          handleDragMove(e);
+        }}
         onDragEnd={(e) => {
-          if (e.target === shapeRef.current) {
-            setDragDistances([]);
-            setIsColliding(false);
-            onChange({
-              x: e.target.x() - shape.width / 2,
-              y: e.target.y() - shape.height / 2,
-              rotation: e.target.rotation(),
-            });
-          }
+          console.log(`[FurnitureItem DragEnd] ID=${shape.id}`);
+          setDragDistances([]);
+          setIsColliding(false);
+          onChange({
+            x: e.target.x() - shape.width / 2,
+            y: e.target.y() - shape.height / 2,
+            rotation: e.target.rotation(),
+          });
         }}
         onTransformStart={onStartChange}
         onTransformEnd={handleTransformEnd}
-        listening={!isLocked}
+        listening={true}
       >
         <FurnitureRenderer
           shape={shape}
@@ -151,9 +178,23 @@ export const FurnitureItem: React.FC<FurnitureItemProps> = ({
           pixelsPerCm={pixelsPerCm}
         />
 
+        {/* Robust transparent background for hit detection across the entire bounding box */}
+        <Rect
+          name="drag-background"
+          x={0}
+          y={0}
+          width={shape.width}
+          height={shape.height}
+          // REMOVED OFFSETX/Y: It should cover [0, width] and [0, height] 
+          // because the Group's offsetX/Y already handles centering the group itself.
+          // FurnitureRenderer also draws from (0,0).
+          fill="rgba(255,255,255,0.005)" 
+          listening={true}
+        />
+
         {/* Quick Rotation Buttons */}
         {isSelected && !isGroup && (
-          <Group y={-30 / scale} x={shape.width / 2 - 25 / scale}>
+          <Group y={-35 / scale} x={shape.width / 2 - 25 / scale}>
             <Group 
               onClick={(e) => {
                 e.cancelBubble = true;
@@ -167,25 +208,25 @@ export const FurnitureItem: React.FC<FurnitureItemProps> = ({
               }}
             >
               <Ellipse
-                radiusX={10 / scale}
-                radiusY={10 / scale}
+                radiusX={12 / scale}
+                radiusY={12 / scale}
                 fill="white"
                 stroke="#4f46e5"
-                strokeWidth={1 / scale}
+                strokeWidth={1.5 / scale}
                 shadowBlur={5 / scale}
                 shadowOpacity={0.1}
               />
               <Text
                 text="↺"
-                fontSize={14 / scale}
+                fontSize={16 / scale}
                 fill="#4f46e5"
-                x={-6 / scale}
-                y={-8 / scale}
+                x={-7 / scale}
+                y={-9 / scale}
                 fontStyle="bold"
               />
             </Group>
             <Group 
-              x={30 / scale}
+              x={35 / scale}
               onClick={(e) => {
                 e.cancelBubble = true;
                 onStartChange();
@@ -198,29 +239,43 @@ export const FurnitureItem: React.FC<FurnitureItemProps> = ({
               }}
             >
               <Ellipse
-                radiusX={10 / scale}
-                radiusY={10 / scale}
+                radiusX={12 / scale}
+                radiusY={12 / scale}
                 fill="white"
                 stroke="#4f46e5"
-                strokeWidth={1 / scale}
+                strokeWidth={1.5 / scale}
                 shadowBlur={5 / scale}
                 shadowOpacity={0.1}
               />
               <Text
                 text="↻"
-                fontSize={14 / scale}
+                fontSize={16 / scale}
                 fill="#4f46e5"
-                x={-6 / scale}
-                y={-8 / scale}
+                x={-7 / scale}
+                y={-9 / scale}
                 fontStyle="bold"
               />
             </Group>
           </Group>
         )}
+
+        {/* Robust transparent background for hit detection across the entire bounding box */}
+        <Rect
+          name="drag-background"
+          x={0}
+          y={isSelected ? -50 / scale : 0}
+          width={shape.width}
+          height={isSelected ? shape.height + 50 / scale : shape.height}
+          fill="rgba(255,255,255,0.005)" 
+          listening={true}
+        />
       </Group>
       {isSelected && (
         <Transformer
           ref={trRef}
+          name="transformer"
+          onMouseDown={(e) => e.cancelBubble = true}
+          onClick={(e) => e.cancelBubble = true}
           rotateEnabled={true}
           enabledAnchors={[
             'top-left', 'top-center', 'top-right',

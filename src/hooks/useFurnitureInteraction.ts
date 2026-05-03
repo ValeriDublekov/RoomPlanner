@@ -35,6 +35,7 @@ export const useFurnitureInteraction = (
     const { snapToObjects, isAltPressed } = useStore.getState();
     
     if (!snapToObjects || isAltPressed) {
+      console.log(`[useFurnitureInteraction] No snapping. pos=(${x.toFixed(1)}, ${y.toFixed(1)})`);
       node.x(x);
       node.y(y);
       setDragDistances([]);
@@ -56,6 +57,10 @@ export const useFurnitureInteraction = (
 
     const currentX = snappedPos.x;
     const currentY = snappedPos.y;
+
+    if (currentX !== x || currentY !== y) {
+      console.log(`[useFurnitureInteraction] Snapped from (${x.toFixed(1)}, ${y.toFixed(1)}) to (${currentX.toFixed(1)}, ${currentY.toFixed(1)})`);
+    }
 
     node.x(currentX);
     node.y(currentY);

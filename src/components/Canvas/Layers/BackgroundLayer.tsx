@@ -56,6 +56,9 @@ export const BackgroundLayer: React.FC<BackgroundLayerProps> = ({
           {activeLayer === 'blueprint' && (
             <Transformer
               ref={bgTrRef}
+              name="transformer"
+              onMouseDown={(e) => e.cancelBubble = true}
+              onClick={(e) => e.cancelBubble = true}
               rotateEnabled={true}
               enabledAnchors={['top-left', 'top-right', 'bottom-left', 'bottom-right']}
               boundBoxFunc={(oldBox, newBox) => {
