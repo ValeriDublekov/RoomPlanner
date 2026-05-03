@@ -462,9 +462,10 @@ export const FurnitureEditor: React.FC<FurnitureEditorProps> = ({
         {/* Helper to check if a slot should be visible for this furniture type */}
         {(() => {
           const type = selectedFurniture.furnitureType || 'generic';
+          const isWallPanel = selectedFurniture.catalogId === 'terrace-wall-panel';
           const showWoodBase = [
             'generic', 'bed', 'desk', 'wardrobe', 'dresser', 'shelf', 'table', 'nightstand', 'electronics'
-          ].includes(type);
+          ].includes(type) || isWallPanel;
           const showWoodFront = [
             'wardrobe', 'dresser'
           ].includes(type) || (type === 'shelf' && selectedFurniture.hasDoors);
@@ -555,8 +556,26 @@ export const FurnitureEditor: React.FC<FurnitureEditorProps> = ({
         })()}
       </div>
 
-      {(selectedFurniture.furnitureType === 'wardrobe' || selectedFurniture.furnitureType === 'dresser' || selectedFurniture.furnitureType === 'bed' || (selectedFurniture.furnitureType === 'shelf' && selectedFurniture.hasDoors)) && (
+      {(selectedFurniture.furnitureType === 'wardrobe' || selectedFurniture.furnitureType === 'dresser' || selectedFurniture.furnitureType === 'bed' || (selectedFurniture.furnitureType === 'shelf' && selectedFurniture.hasDoors) || selectedFurniture.catalogId === 'terrace-wall-panel') && (
         <div className="space-y-3">
+          {selectedFurniture.catalogId === 'terrace-wall-panel' && (
+            <div className="space-y-1.5 p-3 bg-indigo-50/50 rounded-xl border border-indigo-100 mb-2">
+              <label className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest ml-1">Panel Style</label>
+              <select
+                value={selectedFurniture.panelStyle || 'slats'}
+                onFocus={saveHistory}
+                onChange={(e) => updateFurniture(selectedFurniture.id, { panelStyle: e.target.value as any })}
+                className="w-full bg-white border border-indigo-200 rounded-lg px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-sm"
+              >
+                <option value="slats">Wooden Slats</option>
+                <option value="trellis">Trellis / Grid</option>
+                <option value="green">Living Wall (Green)</option>
+                <option value="stone">Stone Panel</option>
+                <option value="plain">Minimalist Panel</option>
+              </select>
+            </div>
+          )}
+
           {selectedFurniture.furnitureType === 'dresser' && (
             <div className="space-y-1.5 p-3 bg-indigo-50/50 rounded-xl border border-indigo-100 mb-2">
               <label className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest ml-1">Drawers Configuration</label>

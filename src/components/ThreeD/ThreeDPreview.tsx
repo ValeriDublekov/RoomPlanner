@@ -5,10 +5,10 @@ import * as THREE from 'three';
 import { useStore } from '@/src/store';
 import { FurnitureObject } from '@/src/types';
 import { Camera, MousePointer2, Box } from 'lucide-react';
-import { FPVControls, WallSegments, Ceiling, Beam3D, Bed3D, Desk3D, Wardrobe3D, Dresser3D, Chair3D, 
-  Shelf3D, Electronics3D, Table3D, GenericFurniture3D,
+import { FPVControls, WallSegments, Ceiling, Beam3D, Bed3D, Desk3D, Wardrobe3D, Dresser3D, Chair3D, FoldingChair3D,
+  Shelf3D, Electronics3D, Table3D, GenericFurniture3D, Plant3D,
   Sofa3D, Nightstand3D, Toilet3D, Bathtub3D, Light3D,
-  Picture3D, AirConditioner3D, Rug3D } from './';
+  Picture3D, AirConditioner3D, Rug3D, WallPanel3D } from './';
 
 const SceneBackground = ({ isExporting }: { isExporting: boolean }) => {
   const { gl } = useThree();
@@ -77,12 +77,16 @@ const Furniture = ({ item, pixelsPerCm, isChild = false, parentWidth = 0, parent
       furnitureType: item.furnitureType
     };
     
+    const cid = item.catalogId || '';
+    
     switch (item.furnitureType) {
       case 'bed': return <Bed3D {...props} hasHeadboard={item.hasHeadboard} headboardHeight={item.headboardHeight} headboardTilt={item.headboardTilt} mattressWidth={item.mattressWidth} mattressDepth={item.mattressDepth} />;
       case 'desk': return <Desk3D {...props} />;
       case 'wardrobe': return <Wardrobe3D {...props} />;
       case 'dresser': return <Dresser3D {...props} drawerRows={item.drawerRows} drawerCols={item.drawerCols} />;
-      case 'chair': return <Chair3D {...props} />;
+      case 'chair': 
+        if (cid === 'terrace-chair-folding') return <FoldingChair3D {...props} />;
+        return <Chair3D {...props} />;
       case 'shelf': return <Shelf3D {...props} hasDoors={item.hasDoors} />;
       case 'electronics': return <Electronics3D {...props} hideStand={item.hideStand} />;
       case 'table': return <Table3D {...props} isRound={item.type === 'circle'} />;
@@ -95,13 +99,18 @@ const Furniture = ({ item, pixelsPerCm, isChild = false, parentWidth = 0, parent
       case 'picture': return <Picture3D {...props} imageUrl={item.imageUrl} />;
       case 'air-conditioner': return <AirConditioner3D {...props} />;
       case 'rug': return <Rug3D {...props} shape={item.type === 'circle' ? 'circle' : 'rectangle'} />;
+      case 'decoration':
+        if (cid === 'terrace-wall-panel') return <WallPanel3D {...props} panelStyle={item.panelStyle} />;
+        if (cid.includes('plant')) return <Plant3D {...props} />;
+        return <GenericFurniture3D {...props} />;
       default: {
-        const cid = item.catalogId || '';
+        if (cid === 'terrace-wall-panel') return <WallPanel3D {...props} panelStyle={item.panelStyle} />;
         if (cid.includes('sofa')) return <Sofa3D {...props} />;
         if (cid.includes('nightstand')) return <Nightstand3D {...props} />;
         if (cid.includes('armchair')) return <Sofa3D {...props} width={props.width} depth={props.depth} />;
         if (cid.includes('toilet')) return <Toilet3D {...props} />;
         if (cid.includes('bathtub')) return <Bathtub3D {...props} />;
+        if (cid.includes('plant')) return <Plant3D {...props} />;
         return <GenericFurniture3D {...props} />;
       }
     }

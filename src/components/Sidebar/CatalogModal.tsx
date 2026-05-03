@@ -11,7 +11,7 @@ interface CatalogModalProps {
 }
 
 export const CatalogModal: React.FC<CatalogModalProps> = ({ isOpen, onClose }) => {
-  const { addFurniture, pixelsPerCm, setMode } = useStore();
+  const { pixelsPerCm, setMode } = useStore();
   const [search, setSearch] = useState('');
   const [selectedItem, setSelectedItem] = useState<CatalogItem | null>(null);
   const [customWidth, setCustomWidth] = useState<number>(0);
@@ -40,6 +40,7 @@ export const CatalogModal: React.FC<CatalogModalProps> = ({ isOpen, onClose }) =
     useStore.getState().setPendingFurniture({
       type: selectedItem.type === 'circle' ? 'circle' : 'box',
       furnitureType: selectedItem.furnitureType || 'generic',
+      category: selectedItem.category,
       catalogId: selectedItem.id,
       name: selectedItem.name,
       x: 0,
@@ -74,6 +75,7 @@ export const CatalogModal: React.FC<CatalogModalProps> = ({ isOpen, onClose }) =
     useStore.getState().setPendingFurniture({
       type: item.type === 'circle' ? 'circle' : 'box',
       furnitureType: item.furnitureType || 'generic',
+      category: item.category,
       catalogId: item.id,
       name: item.name,
       x: 0,

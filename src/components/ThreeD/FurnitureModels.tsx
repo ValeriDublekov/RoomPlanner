@@ -370,6 +370,169 @@ export const Dresser3D: React.FC<ModelProps & { drawerRows?: number, drawerCols?
   );
 };
 
+export const FoldingChair3D: React.FC<ModelProps> = ({ width, depth, height, color, materials }) => {
+  const woodBaseColor = getSlotColor(materials, 'woodBase', color);
+  const seatHeight = 45;
+  const legThickness = 2.4;
+  const backrestHeight = 15;
+  
+  // Outer frame params (Front-floor to Back-top)
+  const outerLength = Math.sqrt(depth * depth + height * height);
+  const outerAngle = -Math.atan2(depth, height);
+  
+  // Inner frame params (Back-floor to Front-support)
+  const innerLength = Math.sqrt(depth * depth + seatHeight * seatHeight);
+  const innerAngle = Math.atan2(depth, seatHeight);
+  
+  const outerWidth = width;
+  const innerWidth = width - legThickness * 2 - 1.2;
+
+  return (
+    <group position={[width / 2, 0, depth / 2]}>
+      {/* OUTER FRAME (Backrest frame) */}
+      <group position={[0, height / 2, 0]} rotation={[outerAngle, 0, 0]}>
+        <mesh position={[outerWidth / 2 - legThickness / 2, 0, 0]} castShadow>
+          <boxGeometry args={[legThickness, outerLength, legThickness]} />
+          <WoodMaterial color={woodBaseColor} />
+        </mesh>
+        <mesh position={[-outerWidth / 2 + legThickness / 2, 0, 0]} castShadow>
+          <boxGeometry args={[legThickness, outerLength, legThickness]} />
+          <WoodMaterial color={woodBaseColor} />
+        </mesh>
+
+        {/* Backrest Panel */}
+        <group position={[0, outerLength / 2 - backrestHeight / 2 - 1, legThickness / 2]}>
+          <mesh castShadow>
+            <boxGeometry args={[outerWidth, backrestHeight, 1.2]} />
+            <WoodMaterial color={woodBaseColor} />
+          </mesh>
+          <mesh position={[0, 0, 0.65]} rotation={[Math.PI / 2, 0, 0]}>
+            <cylinderGeometry args={[2, 2, 0.2, 24]} />
+            <meshStandardMaterial color="#333" opacity={0.4} transparent />
+          </mesh>
+        </group>
+        
+        {/* Lower Cross Rail */}
+        <mesh position={[0, -outerLength * 0.3, 0]} castShadow>
+          <boxGeometry args={[outerWidth - legThickness, legThickness * 0.8, legThickness * 0.8]} />
+          <WoodMaterial color={woodBaseColor} />
+        </mesh>
+      </group>
+
+      {/* INNER FRAME (Crossing support frame) */}
+      <group position={[0, seatHeight / 2, 0]} rotation={[innerAngle, 0, 0]}>
+        <mesh position={[innerWidth / 2 - legThickness / 2, 0, 0]} castShadow>
+          <boxGeometry args={[legThickness, innerLength, legThickness]} />
+          <WoodMaterial color={woodBaseColor} />
+        </mesh>
+        <mesh position={[-innerWidth / 2 + legThickness / 2, 0, 0]} castShadow>
+          <boxGeometry args={[legThickness, innerLength, legThickness]} />
+          <WoodMaterial color={woodBaseColor} />
+        </mesh>
+
+        {/* Bottom Stabilizer Bar */}
+        <mesh position={[0, -innerLength / 2 + 6, 0]} castShadow>
+          <boxGeometry args={[innerWidth - legThickness, legThickness * 0.8, legThickness * 0.8]} />
+          <WoodMaterial color={woodBaseColor} />
+        </mesh>
+        
+        {/* Seat Support Rail (Upper inner cross rail) */}
+        <mesh position={[0, innerLength / 2 - 1, 0]} castShadow>
+          <boxGeometry args={[innerWidth - legThickness, legThickness * 1.2, legThickness * 1.2]} />
+          <WoodMaterial color={woodBaseColor} />
+        </mesh>
+      </group>
+
+      {/* SEAT */}
+      {(() => {
+        // Geometric alignment for seat
+        // Attach at z(y=seatHeight) on the outer frame
+        const zBack = (depth / 2) - (depth * seatHeight / height);
+        const zFront = depth / 2;
+        const seatDepth = zFront - zBack + 4; // Extend slightly
+        const seatCenterZ = (zBack + zFront) / 2;
+        
+        return (
+          <group position={[0, seatHeight, seatCenterZ]}>
+            {/* Seat Slats */}
+            {Array.from({ length: 6 }).map((_, i) => (
+              <mesh 
+                key={i} 
+                position={[0, 0.5, -seatDepth / 2 + 2 + i * (seatDepth - 4) / 5]} 
+                castShadow 
+                receiveShadow
+              >
+                <boxGeometry args={[width - 1, 1, 3]} />
+                <WoodMaterial color={woodBaseColor} />
+              </mesh>
+            ))}
+            
+            {/* Side Rails for Seat */}
+            <mesh position={[width / 2 - 1.5, -0.6, 0]} castShadow>
+              <boxGeometry args={[2, 2.2, seatDepth - 1]} />
+              <WoodMaterial color={woodBaseColor} />
+            </mesh>
+            <mesh position={[-width / 2 + 1.5, -0.6, 0]} castShadow>
+              <boxGeometry args={[2, 2.2, seatDepth - 1]} />
+              <WoodMaterial color={woodBaseColor} />
+            </mesh>
+          </group>
+        );
+      })()}
+    </group>
+  );
+};
+
+export const Plant3D: React.FC<ModelProps> = ({ width, depth, height, color }) => {
+  const potHeight = height * 0.3;
+  const potRadius = width * 0.4;
+  
+  return (
+    <group>
+      {/* Pot */}
+      <mesh position={[width / 2, potHeight / 2, depth / 2]} castShadow receiveShadow>
+        <cylinderGeometry args={[potRadius, potRadius * 0.8, potHeight, 16]} />
+        <SmartMaterial color={color || "#78350f"} roughness={0.8} />
+      </mesh>
+      
+      {/* Soil */}
+      <mesh position={[width / 2, potHeight - 0.5, depth / 2]}>
+        <cylinderGeometry args={[potRadius * 0.9, potRadius * 0.9, 1, 16]} />
+        <SmartMaterial color="#451a03" roughness={1} />
+      </mesh>
+      
+      {/* Leaves */}
+      <group position={[width / 2, potHeight, depth / 2]}>
+        {Array.from({ length: 8 }).map((_, i) => {
+          const angle = (i / 8) * Math.PI * 2;
+          const leafLen = (height - potHeight) * 0.8;
+          return (
+            <group key={i} rotation={[0, angle, 0]}>
+              <mesh position={[0, leafLen / 2, potRadius * 0.5]} rotation={[0.4, 0, 0]} castShadow>
+                <boxGeometry args={[width * 0.15, leafLen, 0.5]} />
+                <SmartMaterial color="#166534" roughness={0.6} />
+              </mesh>
+            </group>
+          );
+        })}
+        {/* Center leaves */}
+        {Array.from({ length: 5 }).map((_, i) => {
+          const angle = (i / 5) * Math.PI * 2 + 0.5;
+          const leafLen = (height - potHeight) * 1.0;
+          return (
+            <group key={`center-${i}`} rotation={[0, angle, 0]}>
+              <mesh position={[0, leafLen / 2, 2]} rotation={[0.1, 0, 0]} castShadow>
+                <boxGeometry args={[width * 0.1, leafLen, 0.5]} />
+                <SmartMaterial color="#15803d" roughness={0.6} />
+              </mesh>
+            </group>
+          );
+        })}
+      </group>
+    </group>
+  );
+};
+
 export const Chair3D: React.FC<ModelProps> = ({ width, depth, height, color, materials, furnitureType }) => {
   const seatHeight = 45;
   const legRadius = 2;
@@ -739,6 +902,161 @@ export const Rug3D: React.FC<ModelProps & { shape?: 'rectangle' | 'circle' }> = 
         <SmartMaterial color={textileAccentColor} roughness={1} />
       </mesh>
     </group>
+  );
+};
+
+export const WallPanel3D: React.FC<ModelProps & { panelStyle?: 'slats' | 'trellis' | 'green' | 'stone' | 'plain' }> = ({ width, depth, height, color, panelStyle = 'slats' }) => {
+  const edgeMode = useStore(state => state.edgeMode3d);
+  
+  if (panelStyle === 'plain') {
+    return (
+      <mesh position={[width / 2, height / 2, depth / 2]} castShadow receiveShadow>
+        <boxGeometry args={[width, height, depth]} />
+        <SmartMaterial color={color} />
+      </mesh>
+    );
+  }
+
+  if (panelStyle === 'slats') {
+    const slatWidth = 4;
+    const slatGap = 2;
+    const numSlats = Math.floor(width / (slatWidth + slatGap));
+    const startX = (width - (numSlats * (slatWidth + slatGap) - slatGap)) / 2;
+
+    return (
+      <group>
+        {/* Backing */}
+        <mesh position={[width / 2, height / 2, depth * 0.2]} castShadow receiveShadow>
+          <boxGeometry args={[width, height, depth * 0.4]} />
+          <SmartMaterial color="#2d1e17" />
+        </mesh>
+        {/* Slats */}
+        {Array.from({ length: numSlats }).map((_, i) => (
+          <mesh 
+            key={i} 
+            position={[startX + i * (slatWidth + slatGap) + slatWidth / 2, height / 2, depth * 0.7]} 
+            castShadow 
+            receiveShadow
+          >
+            <boxGeometry args={[slatWidth, height, depth * 0.6]} />
+            <WoodMaterial color={color} />
+          </mesh>
+        ))}
+      </group>
+    );
+  }
+
+  if (panelStyle === 'trellis') {
+    const barThinkness = 1.5;
+    const spacing = 15;
+    const numX = Math.ceil(width / spacing) + 2;
+    const numY = Math.ceil(height / spacing) + 2;
+
+    return (
+      <group>
+         <mesh position={[width / 2, height / 2, depth * 0.1]} castShadow receiveShadow>
+          <boxGeometry args={[width, height, depth * 0.2]} />
+          <SmartMaterial color="#000" opacity={0} transparent />
+        </mesh>
+        {/* Frame */}
+        <mesh position={[width / 2, barThinkness / 2, depth / 2]} castShadow>
+          <boxGeometry args={[width, barThinkness, depth]} />
+          <SmartMaterial color={color} />
+        </mesh>
+        <mesh position={[width / 2, height - barThinkness / 2, depth / 2]} castShadow>
+          <boxGeometry args={[width, barThinkness, depth]} />
+          <SmartMaterial color={color} />
+        </mesh>
+        <mesh position={[barThinkness / 2, height / 2, depth / 2]} castShadow>
+          <boxGeometry args={[barThinkness, height, depth]} />
+          <SmartMaterial color={color} />
+        </mesh>
+        <mesh position={[width - barThinkness / 2, height / 2, depth / 2]} castShadow>
+          <boxGeometry args={[barThinkness, height, depth]} />
+          <SmartMaterial color={color} />
+        </mesh>
+
+        {/* Diagonal Bars 1 */}
+        <group clipShadows>
+          {Array.from({ length: numX + numY }).map((_, i) => {
+            const offset = (i - numY) * spacing;
+            return (
+              <mesh 
+                key={`d1-${i}`} 
+                position={[width / 2, height / 2, depth * 0.3]} 
+                rotation={[0, 0, Math.PI / 4]}
+              >
+                <boxGeometry args={[width * 2, barThinkness, depth * 0.2]} />
+                <mesh position={[0, offset, 0]}>
+                   <boxGeometry args={[width * 2, barThinkness, depth * 0.2]} />
+                   <SmartMaterial color={color} />
+                </mesh>
+              </mesh>
+            );
+          })}
+        </group>
+        {/* Diagonal Bars 2 */}
+        <group>
+          {Array.from({ length: numX + numY }).map((_, i) => {
+            const offset = (i - numY) * spacing;
+            return (
+              <mesh 
+                key={`d2-${i}`} 
+                position={[width / 2, height / 2, depth * 0.6]} 
+                rotation={[0, 0, -Math.PI / 4]}
+              >
+                 <mesh position={[0, offset, 0]}>
+                   <boxGeometry args={[width * 2, barThinkness, depth * 0.2]} />
+                   <SmartMaterial color={color} />
+                </mesh>
+              </mesh>
+            );
+          })}
+        </group>
+      </group>
+    );
+  }
+
+  if (panelStyle === 'green') {
+    return (
+      <group>
+        <mesh position={[width / 2, height / 2, depth / 2]} castShadow receiveShadow>
+          <boxGeometry args={[width, height, depth]} />
+          <SmartMaterial color="#14532d" roughness={1} />
+        </mesh>
+        {/* Leaves "noise" */}
+        {!edgeMode && Array.from({ length: 40 }).map((_, i) => (
+          <mesh 
+            key={i} 
+            position={[
+              Math.random() * width, 
+              Math.random() * height, 
+              depth + Math.random() * 2
+            ]} 
+            rotation={[Math.random(), Math.random(), Math.random()]}
+          >
+            <boxGeometry args={[5, 5, 0.5]} />
+            <meshStandardMaterial color={i % 2 === 0 ? "#166534" : "#15803d"} roughness={0.8} />
+          </mesh>
+        ))}
+      </group>
+    );
+  }
+
+  if (panelStyle === 'stone') {
+    return (
+      <mesh position={[width / 2, height / 2, depth / 2]} castShadow receiveShadow>
+        <boxGeometry args={[width, height, depth]} />
+        <SmartMaterial color="#78716c" roughness={0.9} metalness={0.1} />
+      </mesh>
+    );
+  }
+
+  return (
+    <mesh position={[width / 2, height / 2, depth / 2]} castShadow receiveShadow>
+      <boxGeometry args={[width, height, depth]} />
+      <SmartMaterial color={color} />
+    </mesh>
   );
 };
 

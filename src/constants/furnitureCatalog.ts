@@ -92,4 +92,103 @@ export const FURNITURE_CATALOG: CatalogItem[] = [
     defaultColor: '#fef9c3',
     svgPath: 'M 50, 50 m -10, 0 a 10,10 0 1,0 20,0 a 10,10 0 1,0 -20,0 M 50, 50 m -25, 0 a 25,25 0 1,0 50,0 a 40,40 0 1,0 -50,0'
   },
+  
+  // Terrace
+  { 
+    id: 'terrace-chair-folding', 
+    name: 'Folding Wooden Chair', 
+    furnitureType: 'chair', 
+    category: 'Terrace', 
+    type: 'rectangle', 
+    width: 45, 
+    depth: 45, 
+    height3d: 80, 
+    defaultColor: '#d2b48c', 
+    svgPath: 'M0 0 H100 V100 H0 Z M10 20 H90 M10 35 H90 M10 50 H90 M10 65 H90 M10 80 H90' 
+  },
+  { 
+    id: 'terrace-table-square-4', 
+    name: 'Square Table (4 Legs)', 
+    furnitureType: 'table', 
+    category: 'Terrace', 
+    type: 'rectangle', 
+    width: 60, 
+    depth: 60, 
+    height3d: 75, 
+    defaultColor: '#f1f5f9', 
+    svgPath: 'M0 0 H100 V100 H0 Z M10 10 H25 V25 H10 Z M75 10 H90 V25 H75 Z M10 75 H25 V90 H10 Z M75 75 H90 V90 H75 Z' 
+  },
+  { 
+    id: 'terrace-table-square-1', 
+    name: 'Square Table (1 Leg)', 
+    furnitureType: 'table', 
+    category: 'Terrace', 
+    type: 'rectangle', 
+    width: 60, 
+    depth: 60, 
+    height3d: 75, 
+    defaultColor: '#f1f5f9', 
+    svgPath: 'M0 0 H100 V100 H0 Z M40 40 H60 V60 H40 Z' 
+  },
+  { 
+    id: 'terrace-table-round-4', 
+    name: 'Round Table (4 Legs)', 
+    furnitureType: 'table', 
+    category: 'Terrace', 
+    type: 'circle', 
+    width: 60, 
+    depth: 60, 
+    height3d: 75, 
+    defaultColor: '#f1f5f9', 
+    svgPath: 'M50 0 A50 50 0 1 0 50 100 A50 50 0 1 0 50 0 Z M25 25 H35 V35 H25 Z M65 25 H75 V35 H65 Z M25 65 H35 V75 H25 Z M65 65 H75 V75 H65 Z' 
+  },
+  { 
+    id: 'terrace-table-round-1', 
+    name: 'Round Table (1 Leg)', 
+    furnitureType: 'table', 
+    category: 'Terrace', 
+    type: 'circle', 
+    width: 60, 
+    depth: 60, 
+    height3d: 75, 
+    defaultColor: '#f1f5f9', 
+    svgPath: 'M50 0 A50 50 0 1 0 50 100 A50 50 0 1 0 50 0 Z M40 40 H60 V60 H40 Z' 
+  },
+  { 
+    id: 'terrace-wall-panel', 
+    name: 'Wall Decoration Panel', 
+    furnitureType: 'decoration', 
+    category: 'Terrace', 
+    type: 'rectangle', 
+    width: 100, 
+    depth: 5, 
+    height3d: 200, 
+    defaultElevation: 30, 
+    defaultColor: '#D2B48C', 
+    svgPath: 'M0 0 H100 V100 H0 Z M20 0 V100 M40 0 V100 M60 0 V100 M80 0 V100' 
+  },
+  { 
+    id: 'terrace-plant-pot', 
+    name: 'Plant Pot', 
+    furnitureType: 'decoration', 
+    category: 'Terrace', 
+    type: 'circle', 
+    width: 30, 
+    depth: 30, 
+    height3d: 40, 
+    defaultColor: '#78350f', 
+    svgPath: 'M50 10 A40 40 0 1 0 50 90 A40 40 0 1 0 50 10 Z M50 30 Q60 50 50 70 Q40 50 50 30 M30 50 Q50 60 70 50 Q50 40 30 50' 
+  },
+  { 
+    id: 'terrace-outdoor-rug', 
+    name: 'Outdoor Rug', 
+    furnitureType: 'rug', 
+    category: 'Terrace', 
+    type: 'rectangle', 
+    width: 180, 
+    depth: 120, 
+    height3d: 1, 
+    defaultColor: '#f59e0b', 
+    svgPath: 'M0 0 H100 V100 H0 Z M10 10 H90 V90 H10 Z M20 20 H80 V80 H20 Z M0 0 L10 10 M100 0 L90 10 M100 100 L90 90 M0 100 L10 90' 
+  },
 ];

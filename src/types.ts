@@ -17,7 +17,7 @@ export interface RoomObject {
   };
 }
 
-export type FurnitureType = 'bed' | 'desk' | 'wardrobe' | 'dresser' | 'chair' | 'shelf' | 'electronics' | 'table' | 'sofa' | 'armchair' | 'nightstand' | 'toilet' | 'bathtub' | 'light' | 'picture' | 'air-conditioner' | 'rug' | 'generic';
+export type FurnitureType = 'bed' | 'desk' | 'wardrobe' | 'dresser' | 'chair' | 'shelf' | 'electronics' | 'table' | 'sofa' | 'armchair' | 'nightstand' | 'toilet' | 'bathtub' | 'light' | 'picture' | 'air-conditioner' | 'rug' | 'generic' | 'decoration';
 
 export interface MaterialSlot {
   source: 'theme' | 'custom';
@@ -79,6 +79,8 @@ export interface FurnitureObject {
   headboardTilt?: number;
   mattressWidth?: number;
   mattressDepth?: number;
+  panelStyle?: 'slats' | 'trellis' | 'green' | 'stone' | 'plain';
+  category?: 'Bedroom' | 'Living Room' | 'Kitchen' | 'Bathroom' | 'Office' | 'Terrace';
   children?: FurnitureObject[]; // For groups
 }
 
@@ -86,7 +88,7 @@ export interface CatalogItem {
   id: string;
   name: string;
   furnitureType?: FurnitureType;
-  category: 'Bedroom' | 'Living Room' | 'Kitchen' | 'Bathroom' | 'Office';
+  category: 'Bedroom' | 'Living Room' | 'Kitchen' | 'Bathroom' | 'Office' | 'Terrace';
   type: 'rectangle' | 'circle';
   width: number; // in cm
   depth: number; // in cm

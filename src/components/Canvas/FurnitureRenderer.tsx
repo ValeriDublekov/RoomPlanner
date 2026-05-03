@@ -152,7 +152,14 @@ export const FurnitureRenderer: React.FC<FurnitureRendererProps> = ({
         else if (isRug) fillColor = textileAccentColor;
         else if (isTwoColor) fillColor = woodFrontColor;
 
-        const strokeColor = isRug ? textileAccentColor : (isTwoColor ? woodBaseColor : (isSelected ? "#4f46e5" : "#64748b"));
+        const strokeColor = isRug 
+          ? textileAccentColor 
+          : (isTwoColor 
+            ? woodBaseColor 
+            : (isSelected 
+              ? "#4f46e5" 
+              : (shape.category === 'Terrace' ? "#92400e" : "#64748b")
+            ));
 
         return (
           <Path
@@ -321,8 +328,8 @@ export const FurnitureRenderer: React.FC<FurnitureRendererProps> = ({
               width={approxWidth}
               height={approxHeight}
               fill="white"
-              opacity={0.8}
-              cornerRadius={4 / scale}
+              opacity={0.6}
+              cornerRadius={2 / scale}
               listening={false}
             />
             <Text
@@ -334,10 +341,21 @@ export const FurnitureRenderer: React.FC<FurnitureRendererProps> = ({
               align="center"
               verticalAlign="middle"
               fontSize={fontSize}
-              fill={isSelected ? "#4f46e5" : "#64748b"}
+              fill={isSelected ? "#4f46e5" : (shape.category === 'Terrace' ? "#78350f" : "#64748b")}
               fontStyle="bold"
               listening={false}
             />
+            {/* Small category indicator for Terrace if not selected */}
+            {!isSelected && shape.category === 'Terrace' && (
+              <Rect
+                x={approxWidth / 2 - 4 / scale}
+                y={-approxHeight / 2}
+                width={4 / scale}
+                height={approxHeight}
+                fill="#78350f"
+                cornerRadius={[0, 2 / scale, 2 / scale, 0]}
+              />
+            )}
           </Group>
         );
       })()}
