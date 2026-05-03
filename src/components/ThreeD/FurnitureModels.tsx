@@ -1,6 +1,7 @@
 import React from 'react';
 import { useTexture, Edges } from '@react-three/drei';
 import * as THREE from 'three';
+import { useFrame } from '@react-three/fiber';
 import { WOOD_GRAIN } from '../../constants';
 import { useStore } from '../../store';
 
@@ -906,8 +907,28 @@ export const Rug3D: React.FC<ModelProps & { shape?: 'rectangle' | 'circle' }> = 
 };
 
 export const WallPanel3D: React.FC<ModelProps & { panelStyle?: 'slats' | 'trellis' | 'green' | 'stone' | 'plain' }> = ({ width, depth, height, color, panelStyle = 'slats' }) => {
+  const groupRef = React.useRef<THREE.Group>(null);
   const edgeMode = useStore(state => state.edgeMode3d);
   
+  // Create 4 clipping planes and update them to world space to clip the trellis bars
+  const clippingPlanes = React.useMemo(() => [
+    new THREE.Plane(),
+    new THREE.Plane(),
+    new THREE.Plane(),
+    new THREE.Plane()
+  ], []);
+
+  useFrame(() => {
+    if (groupRef.current && panelStyle === 'trellis') {
+      const matrix = groupRef.current.matrixWorld;
+      // Define planes in local space and transform to world space
+      clippingPlanes[0].set(new THREE.Vector3(1, 0, 0), 0).applyMatrix4(matrix);
+      clippingPlanes[1].set(new THREE.Vector3(-1, 0, 0), width).applyMatrix4(matrix);
+      clippingPlanes[2].set(new THREE.Vector3(0, 1, 0), 0).applyMatrix4(matrix);
+      clippingPlanes[3].set(new THREE.Vector3(0, -1, 0), height).applyMatrix4(matrix);
+    }
+  });
+
   if (panelStyle === 'plain') {
     return (
       <mesh position={[width / 2, height / 2, depth / 2]} castShadow receiveShadow>
@@ -949,15 +970,17 @@ export const WallPanel3D: React.FC<ModelProps & { panelStyle?: 'slats' | 'trelli
   if (panelStyle === 'trellis') {
     const barThinkness = 1.5;
     const spacing = 15;
-    const numX = Math.ceil(width / spacing) + 2;
-    const numY = Math.ceil(height / spacing) + 2;
+    const num = Math.ceil((width + height) / spacing) + 4;
+    const barLength = Math.sqrt(width * width + height * height) * 1.5;
 
     return (
-      <group>
-         <mesh position={[width / 2, height / 2, depth * 0.1]} castShadow receiveShadow>
-          <boxGeometry args={[width, height, depth * 0.2]} />
-          <SmartMaterial color="#000" opacity={0} transparent />
+      <group ref={groupRef}>
+        {/* Invisible back panel for raycasting */}
+        <mesh position={[width / 2, height / 2, depth * 0.05]}>
+          <boxGeometry args={[width, height, depth * 0.1]} />
+          <meshBasicMaterial transparent opacity={0} />
         </mesh>
+
         {/* Frame */}
         <mesh position={[width / 2, barThinkness / 2, depth / 2]} castShadow>
           <boxGeometry args={[width, barThinkness, depth]} />
@@ -977,37 +1000,36 @@ export const WallPanel3D: React.FC<ModelProps & { panelStyle?: 'slats' | 'trelli
         </mesh>
 
         {/* Diagonal Bars 1 */}
-        <group>
-          {Array.from({ length: numX + numY }).map((_, i) => {
-            const offset = (i - numY) * spacing;
+        <group position={[width/2, height/2, 0]}>
+          {Array.from({ length: num }).map((_, i) => {
+            const offset = (i - num / 2) * spacing;
             return (
               <mesh 
                 key={`d1-${i}`} 
-                position={[width / 2, height / 2, depth * 0.3]} 
+                position={[0, 0, depth * 0.3]} 
                 rotation={[0, 0, Math.PI / 4]}
               >
-                <boxGeometry args={[width * 2, barThinkness, depth * 0.2]} />
-                <mesh position={[0, offset, 0]}>
-                   <boxGeometry args={[width * 2, barThinkness, depth * 0.2]} />
-                   <SmartMaterial color={color} />
+                <mesh position={[0, offset, 0]} castShadow>
+                   <boxGeometry args={[barLength, barThinkness, depth * 0.2]} />
+                   <SmartMaterial color={color} clippingPlanes={clippingPlanes} />
                 </mesh>
               </mesh>
             );
           })}
         </group>
         {/* Diagonal Bars 2 */}
-        <group>
-          {Array.from({ length: numX + numY }).map((_, i) => {
-            const offset = (i - numY) * spacing;
+        <group position={[width/2, height/2, 0]}>
+          {Array.from({ length: num }).map((_, i) => {
+            const offset = (i - num / 2) * spacing;
             return (
               <mesh 
                 key={`d2-${i}`} 
-                position={[width / 2, height / 2, depth * 0.6]} 
+                position={[0, 0, depth * 0.6]} 
                 rotation={[0, 0, -Math.PI / 4]}
               >
-                 <mesh position={[0, offset, 0]}>
-                   <boxGeometry args={[width * 2, barThinkness, depth * 0.2]} />
-                   <SmartMaterial color={color} />
+                 <mesh position={[0, offset, 0]} castShadow>
+                   <boxGeometry args={[barLength, barThinkness, depth * 0.2]} />
+                   <SmartMaterial color={color} clippingPlanes={clippingPlanes} />
                 </mesh>
               </mesh>
             );

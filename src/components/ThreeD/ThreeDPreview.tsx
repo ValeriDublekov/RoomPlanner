@@ -300,6 +300,7 @@ export const ThreeDPreview: React.FC = () => {
           onCreated={({ gl }) => {
             gl.setClearColor('#0f172a');
             gl.shadowMap.type = THREE.PCFShadowMap;
+            gl.localClippingEnabled = true;
           }}
         >
           <SceneBackground isExporting={isExporting} />

@@ -146,7 +146,94 @@ export const FurnitureRenderer: React.FC<FurnitureRendererProps> = ({
         
         const isTwoColor = shape.furnitureType === 'bed' || shape.furnitureType === 'wardrobe' || shape.furnitureType === 'dresser';
         const isRug = shape.furnitureType === 'rug';
+        const panelStyle = shape.panelStyle || 'plain';
         
+        // Custom rendering for Terrace Wall Panels with specific styles
+        if (shape.catalogId === 'terrace-wall-panel' && (panelStyle === 'slats' || panelStyle === 'trellis' || panelStyle === 'green' || panelStyle === 'stone')) {
+          const w = shape.width;
+          const h = shape.height;
+          
+          if (panelStyle === 'trellis') {
+            const spacing = 15 * pixelsPerCm;
+            const barWidth = 1.5 * pixelsPerCm;
+            const numLines = Math.ceil((w + h) / spacing) + 2;
+            
+            return (
+              <Group clipFunc={(ctx) => ctx.rect(0, 0, w, h)} listening={false}>
+                {/* Diagonal 1 */}
+                {Array.from({ length: numLines }).map((_, i) => {
+                  const offset = (i - numLines / 2) * spacing;
+                  return (
+                    <KonvaLine
+                      key={`d1-${i}`}
+                      points={[-h, offset - h, w + h, offset + w]}
+                      stroke={shape.category === 'Terrace' ? "#92400e" : "#64748b"}
+                      strokeWidth={barWidth}
+                    />
+                  );
+                })}
+                {/* Diagonal 2 */}
+                {Array.from({ length: numLines }).map((_, i) => {
+                  const offset = (i - numLines / 2) * spacing;
+                  return (
+                    <KonvaLine
+                      key={`d2-${i}`}
+                      points={[-h, offset + h, w + h, offset - w]}
+                      stroke={shape.category === 'Terrace' ? "#92400e" : "#64748b"}
+                      strokeWidth={barWidth}
+                    />
+                  );
+                })}
+              </Group>
+            );
+          }
+          
+          if (panelStyle === 'slats') {
+            const spacing = 10 * pixelsPerCm;
+            const slatWidth = 6 * pixelsPerCm;
+            const numSlats = Math.floor(w / spacing);
+            return (
+              <Group clipFunc={(ctx) => ctx.rect(0, 0, w, h)} listening={false}>
+                {Array.from({ length: numSlats + 1 }).map((_, i) => (
+                  <Rect
+                    key={i}
+                    x={i * spacing}
+                    width={slatWidth}
+                    height={h}
+                    fill={woodFrontColor}
+                    stroke={woodBaseColor}
+                    strokeWidth={0.5 / scale}
+                  />
+                ))}
+              </Group>
+            );
+          }
+
+          if (panelStyle === 'green') {
+            return (
+              <Rect
+                width={w}
+                height={h}
+                fill="#166534"
+                opacity={0.8}
+                cornerRadius={2 / scale}
+              />
+            );
+          }
+
+          if (panelStyle === 'stone') {
+            return (
+              <Rect
+                width={w}
+                height={h}
+                fill="#475569"
+                opacity={0.8}
+                cornerRadius={2 / scale}
+              />
+            );
+          }
+        }
+
         let fillColor = woodBaseColor;
         if (shape.furnitureType === 'bed') fillColor = textileMainColor;
         else if (isRug) fillColor = textileAccentColor;
