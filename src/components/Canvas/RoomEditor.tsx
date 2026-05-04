@@ -23,6 +23,8 @@ export const RoomEditor: React.FC<RoomEditorProps> = ({
   const removeRoomVertex = useStore((state) => state.removeRoomVertex);
   const saveHistory = useStore((state) => state.saveHistory);
   
+  const isReadOnly = useStore((state) => state.isReadOnly);
+  
   const [dragDistances, setDragDistances] = useState<{p1: Vector2d, p2: Vector2d, dist: number}[]>([]);
   
   const wallThicknessPx = wallThicknessCm * pixelsPerCm;
@@ -30,7 +32,7 @@ export const RoomEditor: React.FC<RoomEditorProps> = ({
 
   const wallSegments = useMemo(() => getWallSegments(room), [room]);
 
-  if (activeLayer !== 'room' && activeLayer !== 'furniture') return null;
+  if (isReadOnly || (activeLayer !== 'room' && activeLayer !== 'furniture')) return null;
 
   return (
     <Group>

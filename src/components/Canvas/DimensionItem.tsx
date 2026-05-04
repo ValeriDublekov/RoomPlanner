@@ -22,6 +22,7 @@ export const DimensionItem: React.FC<DimensionItemProps> = ({
   isLocked
 }) => {
   const mode = useStore(state => state.mode);
+  const isReadOnly = useStore(state => state.isReadOnly);
   const { p1, p2 } = dimension;
   const dist = getDistance(p1, p2);
   const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x);
@@ -68,16 +69,16 @@ export const DimensionItem: React.FC<DimensionItemProps> = ({
       id={dimension.id}
       name="dimension-item"
       onClick={(e) => {
-        if (e.evt.button !== 0 || mode !== 'select') return;
+        if (isReadOnly || e.evt.button !== 0 || mode !== 'select') return;
         e.cancelBubble = true;
         if (onSelect) onSelect();
       }}
       onTap={(e) => {
-        if (mode !== 'select') return;
+        if (isReadOnly || mode !== 'select') return;
         e.cancelBubble = true;
         if (onSelect) onSelect();
       }}
-      listening={!isLocked}
+      listening={!isReadOnly && !isLocked}
     >
       {/* Hit area for easier selection */}
       <Line

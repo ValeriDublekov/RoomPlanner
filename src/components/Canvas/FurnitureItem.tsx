@@ -33,6 +33,7 @@ export const FurnitureItem: React.FC<FurnitureItemProps> = ({
 }) => {
   const orthoMode = useStore(state => state.orthoMode);
   const mode = useStore(state => state.mode);
+  const isReadOnly = useStore(state => state.isReadOnly);
   const shapeRef = useRef<Konva.Group>(null);
   const trRef = useRef<Konva.Transformer>(null);
 
@@ -111,9 +112,9 @@ export const FurnitureItem: React.FC<FurnitureItemProps> = ({
         offsetX={shape.width / 2}
         offsetY={shape.height / 2}
         rotation={shape.rotation}
-        draggable={!isLocked && mode === 'select'}
+        draggable={!isReadOnly && !isLocked && mode === 'select'}
         onMouseDown={(e) => {
-          if (mode !== 'select') return;
+          if (isReadOnly || mode !== 'select') return;
           e.cancelBubble = true; 
           
           if (isLocked) return;
@@ -124,7 +125,7 @@ export const FurnitureItem: React.FC<FurnitureItemProps> = ({
           }
         }}
         onClick={(e) => {
-          if (!e.evt || e.evt.button !== 0 || mode !== 'select') return;
+          if (isReadOnly || !e.evt || e.evt.button !== 0 || mode !== 'select') return;
           e.cancelBubble = true;
           console.log(`[FurnitureItem Click] ID=${shape.id} isSelected=${isSelected}`);
           if (!isSelected) {
@@ -132,11 +133,15 @@ export const FurnitureItem: React.FC<FurnitureItemProps> = ({
           }
         }}
         onTap={(e) => {
-          if (mode !== 'select') return;
+          if (isReadOnly || mode !== 'select') return;
           e.cancelBubble = true;
           onSelect(e.evt.ctrlKey || e.evt.metaKey);
         }}
         onDragStart={(e) => {
+          if (isReadOnly) {
+            e.target.stopDrag();
+            return;
+          }
           if (e.evt && (e.evt as any).button !== 0) {
             e.cancelBubble = true;
             return;
@@ -166,7 +171,13 @@ export const FurnitureItem: React.FC<FurnitureItemProps> = ({
             rotation: e.target.rotation(),
           });
         }}
-        onTransformStart={onStartChange}
+        onTransformStart={(e) => {
+          if (isReadOnly) {
+            e.cancelBubble = true;
+            return;
+          }
+          onStartChange();
+        }}
         onTransformEnd={handleTransformEnd}
         listening={true}
       >
@@ -197,11 +208,13 @@ export const FurnitureItem: React.FC<FurnitureItemProps> = ({
           <Group y={-35 / scale} x={shape.width / 2 - 25 / scale}>
             <Group 
               onClick={(e) => {
+                if (isReadOnly) return;
                 e.cancelBubble = true;
                 onStartChange();
                 onChange({ rotation: (shape.rotation - 90) % 360 });
               }}
               onTap={(e) => {
+                if (isReadOnly) return;
                 e.cancelBubble = true;
                 onStartChange();
                 onChange({ rotation: (shape.rotation - 90) % 360 });
@@ -228,11 +241,13 @@ export const FurnitureItem: React.FC<FurnitureItemProps> = ({
             <Group 
               x={35 / scale}
               onClick={(e) => {
+                if (isReadOnly) return;
                 e.cancelBubble = true;
                 onStartChange();
                 onChange({ rotation: (shape.rotation + 90) % 360 });
               }}
               onTap={(e) => {
+                if (isReadOnly) return;
                 e.cancelBubble = true;
                 onStartChange();
                 onChange({ rotation: (shape.rotation + 90) % 360 });

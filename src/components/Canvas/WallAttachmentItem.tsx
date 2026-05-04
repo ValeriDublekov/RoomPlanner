@@ -18,7 +18,7 @@ export const WallAttachmentItem: React.FC<WallAttachmentItemProps> = ({
   onSelect,
   scale,
 }) => {
-  const { rooms, wallThickness, pixelsPerCm, updateWallAttachment, saveHistory, activeLayer } = useStore();
+  const { rooms, wallThickness, pixelsPerCm, updateWallAttachment, saveHistory, activeLayer, isReadOnly } = useStore();
   const groupRef = useRef<Konva.Group>(null);
   const trRef = useRef<Konva.Transformer>(null);
   const [isInteracting, setIsInteracting] = useState(false);
@@ -244,21 +244,25 @@ export const WallAttachmentItem: React.FC<WallAttachmentItemProps> = ({
         y={y}
         rotation={angle}
         onMouseDown={(e) => {
-          if (mode !== 'select') return;
+          if (isReadOnly || mode !== 'select') return;
           e.cancelBubble = true;
         }}
         onClick={(e) => {
-          if (e.evt.button !== 0 || activeLayer !== 'room') return;
+          if (isReadOnly || e.evt.button !== 0 || activeLayer !== 'room') return;
           e.cancelBubble = true;
           onSelect();
         }}
         onTap={(e) => {
-          if (activeLayer !== 'room') return;
+          if (isReadOnly || activeLayer !== 'room') return;
           e.cancelBubble = true;
           onSelect();
         }}
-        draggable={true}
+        draggable={!isReadOnly}
         onDragStart={(e) => {
+          if (isReadOnly) {
+            e.target.stopDrag();
+            return;
+          }
           if (e.evt.button !== 0 || activeLayer !== 'room') return;
           onSelect();
           saveHistory();
@@ -371,7 +375,11 @@ export const WallAttachmentItem: React.FC<WallAttachmentItemProps> = ({
             if (newBox.width < 10 * pixelsPerCm) return oldBox;
             return newBox;
           }}
-          onTransformStart={() => {
+          onTransformStart={(e) => {
+            if (isReadOnly) {
+              e.cancelBubble = true;
+              return;
+            }
             saveHistory();
             setIsInteracting(true);
           }}

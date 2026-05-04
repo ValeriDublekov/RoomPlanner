@@ -2,6 +2,7 @@ import React from 'react';
 import { Group, Line, Circle, Text } from 'react-konva';
 import { Vector2d, AppMode } from '../../types';
 import { getDistance, formatDistance } from '../../lib/geometry';
+import { useStore } from '../../store';
 
 interface DrawingLayerProps {
   mode: AppMode;
@@ -22,12 +23,15 @@ export const DrawingLayer: React.FC<DrawingLayerProps> = ({
   scale,
   pixelsPerCm,
 }) => {
+  const isReadOnly = useStore(state => state.isReadOnly);
   const isDrawing = (mode === 'draw-room' || mode === 'draw-furniture' || mode === 'draw-beam') && roomPoints.length > 0;
   const isStartingBeam = mode === 'draw-beam' && roomPoints.length === 0;
   
   const isDragDrawing = (mode === 'add-box' || mode === 'draw-circle') && roomPoints.length === 1;
   const isCalibrating = mode === 'calibrate' && calibrationPoints && calibrationPoints.length === 1;
-  const isActive = isDrawing || isDragDrawing || isCalibrating || isStartingBeam;
+  const isActive = !isReadOnly && (isDrawing || isDragDrawing || isCalibrating || isStartingBeam);
+
+  if (isReadOnly) return null;
 
   return (
     <Group listening={isActive}>

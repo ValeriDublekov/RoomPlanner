@@ -27,6 +27,7 @@ export const BeamItem: React.FC<BeamItemProps> = ({
   const updateBeam = useStore((state) => state.updateBeam);
   const snapToObjects = useStore((state) => state.snapToObjects);
   const activeThemeId = useStore((state) => state.activeThemeId);
+  const isReadOnly = useStore((state) => state.isReadOnly);
   
   const resolvedColor = React.useMemo(() => {
     if (beam.colorType === 'manual') return beam.manualColor || beam.color || '#e2e8f0';
@@ -225,15 +226,16 @@ export const BeamItem: React.FC<BeamItemProps> = ({
         ref={groupRef}
         x={beam.p1.x}
         y={beam.p1.y}
-        draggable={isSelected && mode === 'select'}
+        draggable={!isReadOnly && isSelected && mode === 'select'}
         dragBoundFunc={dragBoundFunc}
         onDragMove={handleDragMove}
         onDragEnd={handleDragEnd}
         onMouseDown={(e) => {
-          if (mode !== 'select') return;
+          if (isReadOnly || mode !== 'select') return;
           e.cancelBubble = true;
         }}
         onClick={(e) => {
+          if (isReadOnly) return;
           console.log('Beam onClick triggered. id:', beam.id, 'mode:', mode, 'activeLayer:', activeLayer);
           // Only select beams when in select mode
           if (mode !== 'select' || activeLayer !== 'room') {
@@ -245,6 +247,7 @@ export const BeamItem: React.FC<BeamItemProps> = ({
           onSelect();
         }}
         onTap={(e) => {
+          if (isReadOnly) return;
           console.log('Beam onTap triggered. id:', beam.id, 'mode:', mode, 'activeLayer:', activeLayer);
           // Only select beams when in select mode
           if (mode !== 'select' || activeLayer !== 'room') {

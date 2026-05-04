@@ -52,6 +52,7 @@ export const RoomItem: React.FC<RoomItemProps> = ({
   const setSelectedId = useStore((state) => state.setSelectedId);
   const setSelectedIds = useStore((state) => state.setSelectedIds);
   const selectedWallIndex = useStore((state) => state.selectedWallIndex);
+  const isReadOnly = useStore((state) => state.isReadOnly);
   
   const wallOpacity = activeLayer === 'room' ? 0.4 : (isDragging ? 0.2 : (isSelected ? 1 : 0.8));
   const floorOpacity = activeLayer === 'room' ? 0 : (isDragging ? 0.1 : 1);
@@ -110,6 +111,7 @@ export const RoomItem: React.FC<RoomItemProps> = ({
     <Group 
       id={room.id}
       onClick={(e) => {
+        if (isReadOnly) return;
         console.log('RoomItem Group onClick:', room.id, 'target name:', e.target.name(), 'activeLayer:', activeLayer, 'mode:', mode);
         // Remove strict target check to allow bubbling from floor area to select the room
         if (e.evt.button !== 0 || mode !== 'select' || activeLayer !== 'room') return;
@@ -119,6 +121,7 @@ export const RoomItem: React.FC<RoomItemProps> = ({
         setSelectedWallIndex(null);
       }} 
       onTap={(e) => {
+        if (isReadOnly) return;
         console.log('RoomItem Group onTap:', room.id);
         if (e.target !== e.currentTarget) return;
         if (mode !== 'select') return;
@@ -126,7 +129,7 @@ export const RoomItem: React.FC<RoomItemProps> = ({
         onSelect();
         setSelectedWallIndex(null);
       }} 
-      listening={true}
+      listening={!isReadOnly}
     >
       {/* 1. Walls Background (The dark structure) */}
       <Group
@@ -182,12 +185,13 @@ export const RoomItem: React.FC<RoomItemProps> = ({
               hitStrokeWidth={wallThicknessPx * 2 + 10}
               opacity={wallOpacity}
               lineCap="butt"
-              listening={true}
+              listening={!isReadOnly}
               onMouseDown={(e) => {
-                if (mode !== 'select' || activeLayer !== 'room') return;
+                if (isReadOnly || mode !== 'select' || activeLayer !== 'room') return;
                 e.cancelBubble = true;
               }}
               onClick={(e) => {
+                if (isReadOnly) return;
                 console.log('Wall clicked:', seg.index, 'activeLayer:', activeLayer, 'mode:', mode);
                 if (mode !== 'select' || activeLayer !== 'room') return;
                 e.cancelBubble = true;
@@ -230,10 +234,11 @@ export const RoomItem: React.FC<RoomItemProps> = ({
             lineJoin="miter"
             opacity={floorOpacity}
             onMouseDown={(e) => {
-              if (mode !== 'select' || activeLayer !== 'room') return;
+              if (isReadOnly || mode !== 'select' || activeLayer !== 'room') return;
               e.cancelBubble = true;
             }}
             onClick={(e) => {
+              if (isReadOnly) return;
               console.log('Room Floor clicked:', room.id, 'mode:', mode);
               if (mode !== 'select' || activeLayer !== 'room') return;
               e.cancelBubble = true;
