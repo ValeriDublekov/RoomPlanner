@@ -48,94 +48,99 @@ export const MobileViewer: React.FC = () => {
   }, [viewMode]);
 
   useEffect(() => {
-    // Initial fit to screen
-    const timer = setTimeout(() => {
-      fitToScreen();
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [projectId, fitToScreen]);
+    // Force fit to screen when project loads or view mode changes to 2D
+    if (viewMode === '2d') {
+      const timer = setTimeout(() => {
+        fitToScreen();
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [viewMode, projectId, fitToScreen]);
 
   return (
     <div className="fixed inset-0 bg-slate-950 flex flex-col overflow-hidden">
       {/* Top Navigation */}
-      <div className="absolute top-0 left-0 right-0 z-50 p-4 flex items-center justify-between pointer-events-none">
+      <div className="absolute top-0 left-0 right-0 z-[60] p-4 flex items-center justify-between pointer-events-none">
         <button 
           onClick={() => navigate('/mobile')}
-          className="w-10 h-10 bg-white/90 backdrop-blur shadow-lg rounded-full flex items-center justify-center text-slate-800 active:scale-90 transition-transform pointer-events-auto"
+          className="w-12 h-12 bg-white shadow-xl rounded-full flex items-center justify-center text-slate-800 active:scale-90 transition-transform pointer-events-auto"
         >
-          <ChevronLeft size={24} />
+          <ChevronLeft size={28} />
         </button>
         
-        <div className="bg-white/90 backdrop-blur px-4 py-2 rounded-full shadow-lg border border-white/20 flex items-center gap-2 pointer-events-auto">
-          <span className="text-sm font-bold text-slate-900 truncate max-w-[150px]">
-            {projectName}
+        <div className="bg-white px-5 py-2.5 rounded-full shadow-xl border border-slate-100 flex items-center gap-2 pointer-events-auto">
+          <span className="text-sm font-bold text-slate-900 truncate max-w-[120px]">
+            {projectName || "Loading..."}
           </span>
           <div className="w-1 h-1 rounded-full bg-slate-300 mx-1" />
           <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider">
-            {viewMode}
+            {viewMode} Mode
           </span>
         </div>
 
         <button 
-          className="w-10 h-10 bg-white/90 backdrop-blur shadow-lg rounded-full flex items-center justify-center text-slate-800 active:scale-90 transition-transform pointer-events-auto"
+          className="w-12 h-12 bg-indigo-600 shadow-xl rounded-full flex items-center justify-center text-white active:scale-90 transition-transform pointer-events-auto"
           onClick={() => fitToScreen()}
+          title="Fit to screen"
         >
-          <Maximize size={20} />
+          <Maximize size={24} />
         </button>
       </div>
 
       {/* Main Content Area */}
       <div className="flex-1 relative">
         {viewMode === '2d' ? (
-          <div className="w-full h-full bg-slate-100">
-            <Canvas />
+          <div className="absolute inset-0 bg-slate-100 flex flex-col">
+            <ErrorBoundary>
+              <Canvas />
+            </ErrorBoundary>
             {/* Simple Instruction Overlay for 2D */}
-            <div className="absolute bottom-24 left-1/2 -translate-x-1/2 px-4 py-2 bg-slate-900/40 backdrop-blur border border-white/10 rounded-full text-[10px] text-white/80 font-medium flex items-center gap-2 pointer-events-none">
-              <Info size={12} />
-              Use two fingers to zoom and pan the plan
+            <div className="absolute bottom-28 left-1/2 -translate-x-1/2 px-4 py-2 bg-slate-900/60 backdrop-blur-md border border-white/10 rounded-full text-[10px] text-white font-bold flex items-center gap-2 pointer-events-none shadow-lg z-10">
+              <Info size={14} className="text-indigo-400" />
+              DRAG TO PAN • PINCH TO ZOOM
             </div>
           </div>
         ) : (
-          <div className="w-full h-full bg-slate-900">
+          <div className="absolute inset-0 bg-slate-900 flex flex-col">
             <ErrorBoundary>
               <ThreeDPreview />
             </ErrorBoundary>
             {/* Simple Instruction Overlay for 3D */}
-            <div className="absolute bottom-24 left-1/2 -translate-x-1/2 px-4 py-2 bg-white/10 backdrop-blur border border-white/10 rounded-full text-[10px] text-white/80 font-medium flex items-center gap-2 pointer-events-none">
-              <RotateCw size={12} />
-              Drag to rotate • Pinch to zoom
+            <div className="absolute bottom-28 left-1/2 -translate-x-1/2 px-4 py-2 bg-white/10 backdrop-blur-md border border-white/10 rounded-full text-[10px] text-white font-bold flex items-center gap-2 pointer-events-none shadow-lg z-10">
+              <RotateCw size={14} className="text-indigo-400" />
+              DRAG TO ROTATE • PINCH TO ZOOM
             </div>
           </div>
         )}
       </div>
 
       {/* Bottom Mode Switcher */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-50">
-        <div className="bg-slate-900/80 backdrop-blur-xl p-1.5 rounded-2xl shadow-2xl border border-white/10 flex items-center gap-1">
+      <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-[100] w-full px-6 max-w-sm">
+        <div className="bg-slate-900/95 backdrop-blur-2xl p-1.5 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.8)] border border-white/20 flex items-center gap-1">
           <button
             onClick={() => setViewMode('2d')}
             className={`
-              flex items-center gap-2 px-5 py-3 rounded-xl transition-all active:scale-95
+              flex-1 flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl transition-all active:scale-95
               ${viewMode === '2d' 
-                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' 
-                : 'text-slate-400 hover:text-white hover:bg-white/5'}
+                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/40' 
+                : 'text-slate-400 hover:text-white'}
             `}
           >
-            <MapIcon size={18} />
-            <span className="text-sm font-bold">2D Plan</span>
+            <MapIcon size={20} />
+            <span className="text-sm font-bold uppercase tracking-tight">2D Plan</span>
           </button>
           
           <button
             onClick={() => setViewMode('3d')}
             className={`
-              flex items-center gap-2 px-5 py-3 rounded-xl transition-all active:scale-95
+              flex-1 flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl transition-all active:scale-95
               ${viewMode === '3d' 
-                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' 
-                : 'text-slate-400 hover:text-white hover:bg-white/5'}
+                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/40' 
+                : 'text-slate-400 hover:text-white'}
             `}
           >
-            <Box size={18} />
-            <span className="text-sm font-bold">3D View</span>
+            <Box size={20} />
+            <span className="text-sm font-bold uppercase tracking-tight">3D View</span>
           </button>
         </div>
       </div>

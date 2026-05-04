@@ -175,7 +175,7 @@ export const ThreeDPreview: React.FC = () => {
 
   return (
     <div className={`fixed inset-0 z-[200] bg-slate-900 flex flex-col ${isReadOnly ? 'z-[40]' : ''}`}>
-      {!isReadOnly && (
+      {!isReadOnly ? (
         <div className="h-14 bg-slate-800 border-b border-slate-700 flex items-center justify-between px-6">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white">
@@ -235,6 +235,8 @@ export const ThreeDPreview: React.FC = () => {
             </button>
           </div>
         </div>
+      ) : (
+        <div className="h-20" /> // Spacer for the mobile viewer top nav
       )}
 
       <div className="flex-1 relative three-canvas">

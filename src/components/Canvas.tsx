@@ -123,15 +123,37 @@ export const Canvas: React.FC = () => {
 
   useEffect(() => {
     if (!containerRef.current) return;
-    const observer = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const { width, height } = entry.contentRect;
-        setDimensions({ width, height });
-        setViewport({ width, height });
+    const updateSize = () => {
+      if (containerRef.current) {
+        setDimensions({
+          width: containerRef.current.offsetWidth,
+          height: containerRef.current.offsetHeight
+        });
+        setViewport({
+          width: containerRef.current.offsetWidth,
+          height: containerRef.current.offsetHeight
+        });
       }
+    };
+
+    updateSize();
+
+    const observer = new ResizeObserver((entries) => {
+      updateSize();
     });
     observer.observe(containerRef.current);
-    return () => observer.disconnect();
+    
+    // Extra checks for mobile
+    const timer1 = setTimeout(updateSize, 100);
+    const timer2 = setTimeout(updateSize, 500);
+
+    window.addEventListener('resize', updateSize);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', updateSize);
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+    };
   }, [setViewport]);
 
   const handleDragMove = (e: Konva.KonvaEventObject<DragEvent>) => {
