@@ -1,7 +1,7 @@
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import { X, BookOpen } from 'lucide-react';
-import manualContent from '../../USER_GUIDE.md?raw';
+import manualContent from '../../docs/USER_GUIDE.md?raw';
 
 interface UserManualModalProps {
   isOpen: boolean;

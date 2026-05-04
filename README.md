@@ -11,3 +11,10 @@ An intuitive interior design tool for creating 2D floor plans and visualizing th
 - **Custom Design**: Individual wall coloring, flooring textures, and advanced CAD furniture symbols.
 - **High-Fidelity 3D**: Architectural sectional cutaways, clay-style rendering, and 1:1 coordinate translation.
 - **Export**: High-resolution PNG export and professional print support.
+
+## AI Agent Notes
+
+For AI-oriented technical context and fast-change guidance, see the `AI_AGENT_CONTEXT/` folder.
+
+- Start with `docs/AI_AGENT_CONTEXT/00_CHEAT_SHEET.md`
+- Full index: `docs/AI_AGENT_CONTEXT/README.md`
