@@ -49,6 +49,7 @@ export const CanvasStage: React.FC<CanvasStageProps> = ({
   mousePos
 }) => {
   const mode = useStore(state => state.mode);
+  const isReadOnly = useStore(state => state.isReadOnly);
   const { handleContextMenu } = useStageContextMenu(stageRef);
 
   return (
@@ -71,10 +72,13 @@ export const CanvasStage: React.FC<CanvasStageProps> = ({
         onClick={onClick}
         onDblClick={onDblClick}
         onMouseMove={onMouseMove}
-        onContextMenu={handleContextMenu}
-        draggable={mode === 'select'}
+        onContextMenu={isReadOnly ? undefined : handleContextMenu}
+        draggable={mode === 'select' || isReadOnly}
         name="stage"
         dragBoundFunc={(pos) => {
+          // In read-only mode, always allow stage panning
+          if (isReadOnly) return pos;
+
           const stage = stageRef.current;
           if (stage && mode === 'select') {
             const pointer = stage.getPointerPosition();

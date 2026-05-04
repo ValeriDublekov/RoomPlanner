@@ -19,6 +19,7 @@ export const useCanvasLogic = (
   const setPosition = useStore(state => state.setPosition);
   const mode = useStore(state => state.mode);
   const setContextMenu = useStore(state => state.setContextMenu);
+  const isReadOnly = useStore(state => state.isReadOnly);
 
   const currentTool = useMemo(() => getToolHandler(mode), [mode]);
 
@@ -61,6 +62,7 @@ export const useCanvasLogic = (
   };
 
   const handleMouseDown = (e: Konva.KonvaEventObject<MouseEvent>) => {
+    if (isReadOnly) return;
     if (e.evt.button !== 0) return;
     const toolContext = getToolContext();
     if (currentTool.onMouseDown && toolContext) {
@@ -86,6 +88,7 @@ export const useCanvasLogic = (
   };
 
   const handleMouseUp = (e: Konva.KonvaEventObject<MouseEvent>) => {
+    if (isReadOnly) return;
     const toolContext = getToolContext();
     if (currentTool.onMouseUp && toolContext) {
       currentTool.onMouseUp(e, toolContext);
@@ -93,6 +96,7 @@ export const useCanvasLogic = (
   };
 
   const handleClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
+    if (isReadOnly) return;
     if (e.evt.button !== 0) return;
     setContextMenu({ visible: false, x: 0, y: 0, targetId: null, targetType: null });
     
@@ -103,6 +107,7 @@ export const useCanvasLogic = (
   };
 
   const handleDblClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
+    if (isReadOnly) return;
     const toolContext = getToolContext();
     if (currentTool.onDblClick && toolContext) {
       currentTool.onDblClick(e, toolContext);

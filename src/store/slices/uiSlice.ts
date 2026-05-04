@@ -66,6 +66,8 @@ export interface UISlice {
   toggleJsonViewer: (show: boolean) => void;
   isCatalogOpen: boolean;
   setIsCatalogOpen: (open: boolean) => void;
+  isReadOnly: boolean;
+  setIsReadOnly: (readOnly: boolean) => void;
   resetApp: () => void;
 }
 
@@ -100,10 +102,12 @@ export const createUISlice: StateCreator<AppState, [], [], UISlice> = (set, get)
   sidebarWidth: 0,
   showJsonViewer: false,
   isCatalogOpen: false,
+  isReadOnly: false,
   setViewport: (viewport) => set({ viewport }),
   setSidebarWidth: (sidebarWidth) => set({ sidebarWidth }),
   toggleJsonViewer: (showJsonViewer) => set({ showJsonViewer }),
   setIsCatalogOpen: (isCatalogOpen) => set({ isCatalogOpen }),
+  setIsReadOnly: (isReadOnly) => set({ isReadOnly }),
 
   setScale: (scale) => set({ scale }),
   setPosition: (position) => set({ position }),

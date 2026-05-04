@@ -6,24 +6,22 @@
 import { useEffect } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from './firebase';
-import { Sidebar, ThreeDPreview, CatalogModal } from './components';
-import { RightSidebar } from './components/RightSidebar';
-import { Canvas } from './components/Canvas';
-import { CalibrationModal } from './components/CalibrationModal';
-import { JsonViewerModal } from './components/Dialogs';
-import { ErrorBoundary } from './components/ErrorBoundary';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useStore } from '@/src/store';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
+import { DesktopLayout } from './components/DesktopLayout';
+import { MobileDashboard } from './components/Mobile/MobileDashboard';
+import { MobileViewer } from './components/Mobile/MobileViewer';
+
+// Helper to detect mobile devices
+const isMobileDevice = () => {
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
+};
 
 export default function App() {
-  const show3d = useStore(state => state.show3d);
-  const showJsonViewer = useStore(state => state.showJsonViewer);
-  const toggleJsonViewer = useStore(state => state.toggleJsonViewer);
   const setCurrentUser = useStore(state => state.setCurrentUser);
   const setIsAuthLoading = useStore(state => state.setIsAuthLoading);
-  const tempCalibrationDist = useStore(state => state.tempCalibrationDist);
-  const isCatalogOpen = useStore(state => state.isCatalogOpen);
-  const setIsCatalogOpen = useStore(state => state.setIsCatalogOpen);
+  const isReadOnly = useStore(state => state.isReadOnly);
 
   // Centralized keyboard shortcuts entry point
   useKeyboardShortcuts();
@@ -36,23 +34,26 @@ export default function App() {
     return () => unsubscribe();
   }, [setCurrentUser, setIsAuthLoading]);
 
+  // Route guarding for read-only mode if needed
+  // This can be expanded based on specific requirements
+
   return (
-    <div className="flex h-screen w-full bg-slate-100 overflow-hidden font-sans antialiased text-slate-900">
-      {tempCalibrationDist !== null && <CalibrationModal />}
-      <JsonViewerModal isOpen={showJsonViewer} onClose={() => toggleJsonViewer(false)} />
-      <CatalogModal isOpen={isCatalogOpen} onClose={() => setIsCatalogOpen(false)} />
-      {show3d && (
-        <ErrorBoundary>
-          <ThreeDPreview />
-        </ErrorBoundary>
-      )}
-      <Sidebar />
-      <main className="flex-1 min-w-0 flex flex-col relative">
-        {/* Main Canvas Area */}
-        <Canvas />
-      </main>
-      <RightSidebar />
-    </div>
+    <BrowserRouter>
+      <Routes>
+        {/* Desktop Route */}
+        <Route 
+          path="/" 
+          element={isMobileDevice() ? <Navigate to="/mobile" replace /> : <DesktopLayout />} 
+        />
+
+        {/* Mobile Routes */}
+        <Route path="/mobile" element={<MobileDashboard />} />
+        <Route path="/mobile/view/:projectId" element={<MobileViewer />} />
+
+        {/* Fallback */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
 

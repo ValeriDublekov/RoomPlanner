@@ -149,17 +149,23 @@ export const Canvas: React.FC = () => {
   const snappedMouse = getSnappedMousePos();
   const pixelsPerCmVal = useStore.getState().pixelsPerCm;
 
+  const isReadOnly = useStore(state => state.isReadOnly);
+
   return (
     <div className="flex-1 bg-slate-50 relative overflow-hidden flex flex-col">
-      <CanvasHeader 
-        onExport={handleExport} 
-        onExportDXF={handleExportDXF} 
-        onExportOBJ={handleExportOBJ} 
-        onExportGLB={handleExportGLB} 
-        onPrint={handlePrint} 
-        getThumbnail={getStageThumbnail} 
-      />
-      <SubHeader />
+      {!isReadOnly && (
+        <>
+          <CanvasHeader 
+            onExport={handleExport} 
+            onExportDXF={handleExportDXF} 
+            onExportOBJ={handleExportOBJ} 
+            onExportGLB={handleExportGLB} 
+            onPrint={handlePrint} 
+            getThumbnail={getStageThumbnail} 
+          />
+          <SubHeader />
+        </>
+      )}
 
       <div ref={containerRef} className="flex-1 relative">
         {gridVisible && activeLayer !== 'blueprint' && <GridLayer scale={scale} position={position} />}
