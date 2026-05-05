@@ -1,7 +1,8 @@
 import { StateCreator } from 'zustand';
 import { AppState } from '../../store';
-import { Vector2d, RoomObject, WallAttachment, FurnitureObject, BeamObject } from '../../types';
-import { getDistance } from '../../lib/geometry';
+import { Vector2d, RoomObject, WallAttachment, FurnitureObject, BeamObject, WallSnap, Vertex, Edge, BeamAttachment } from '../../types';
+import { getDistance, getWallPath, splitRoomPolygons, isInteriorSplit } from '../../lib/geometry';
+import { getRoomVertices, getOrderedVertexIds } from '../../lib/geometry/topology';
 import { INTERIOR_THEMES } from '../../lib/themes';
 
 const syncBeams = (rooms: RoomObject[], beams: BeamObject[]): BeamObject[] => {
@@ -14,8 +15,9 @@ const syncBeams = (rooms: RoomObject[], beams: BeamObject[]): BeamObject[] => {
     if (beam.p1Attachment) {
       const room = rooms.find(r => r.id === beam.p1Attachment?.roomId);
       if (room) {
-        const p1 = room.points[beam.p1Attachment.wallIndex];
-        const p2 = room.points[(beam.p1Attachment.wallIndex + 1) % room.points.length];
+        const points = getRoomVertices(room);
+        const p1 = points[beam.p1Attachment.wallIndex];
+        const p2 = points[(beam.p1Attachment.wallIndex + 1) % points.length];
         if (p1 && p2) {
           const t = beam.p1Attachment.t;
           newP1 = {
@@ -30,8 +32,9 @@ const syncBeams = (rooms: RoomObject[], beams: BeamObject[]): BeamObject[] => {
     if (beam.p2Attachment) {
       const room = rooms.find(r => r.id === beam.p2Attachment?.roomId);
       if (room) {
-        const p1 = room.points[beam.p2Attachment.wallIndex];
-        const p2 = room.points[(beam.p2Attachment.wallIndex + 1) % room.points.length];
+        const points = getRoomVertices(room);
+        const p1 = points[beam.p2Attachment.wallIndex];
+        const p2 = points[(beam.p2Attachment.wallIndex + 1) % points.length];
         if (p1 && p2) {
           const t = beam.p2Attachment.t;
           newP2 = {
@@ -47,8 +50,31 @@ const syncBeams = (rooms: RoomObject[], beams: BeamObject[]): BeamObject[] => {
   });
 };
 
+const generateTopology = (points: Vector2d[], isClosed: boolean) => {
+  const vertices = points.map((p) => ({ 
+    id: Math.random().toString(36).substr(2, 9), 
+    x: p.x, 
+    y: p.y 
+  }));
+  
+  const startVertexId = vertices.length > 0 ? vertices[0].id : undefined;
+  const edgeCount = isClosed ? vertices.length : vertices.length - 1;
+  const edges = [];
+  
+  for (let i = 0; i < edgeCount; i++) {
+    edges.push({
+      id: Math.random().toString(36).substr(2, 9),
+      startVertexId: vertices[i].id,
+      endVertexId: vertices[(i + 1) % vertices.length].id
+    });
+  }
+  
+  return { vertices, edges, startVertexId };
+};
+
 export interface RoomSlice {
   roomPoints: Vector2d[];
+  roomPointsSnaps: (WallSnap | undefined)[];
   rooms: RoomObject[];
   wallAttachments: WallAttachment[];
   beams: BeamObject[];
@@ -62,9 +88,10 @@ export interface RoomSlice {
 
   setWallThickness: (thickness: number) => void;
   setWallHeight: (height: number) => void;
-  addRoomPoint: (point: Vector2d) => void;
+  addRoomPoint: (point: Vector2d, snap?: WallSnap) => void;
   clearRoomPoints: () => void;
   closeRoom: () => void;
+  closeRoomWithWall: (endSnap: WallSnap) => void;
   finishRoom: () => void;
   setDimensionInput: (input: string) => void;
   setSelectedRoomId: (id: string | null) => void;
@@ -90,6 +117,7 @@ export interface RoomSlice {
 
 export const createRoomSlice: StateCreator<AppState, [], [], RoomSlice> = (set, get) => ({
   roomPoints: [],
+  roomPointsSnaps: [],
   rooms: [],
   wallAttachments: [],
   beams: [],
@@ -116,12 +144,15 @@ export const createRoomSlice: StateCreator<AppState, [], [], RoomSlice> = (set, 
     return { wallHeight, furniture: newFurniture };
   }),
   
-  addRoomPoint: (point) => set((state) => ({ roomPoints: [...state.roomPoints, point] })),
+  addRoomPoint: (point, snap) => set((state) => ({ 
+    roomPoints: [...state.roomPoints, point],
+    roomPointsSnaps: [...state.roomPointsSnaps, snap]
+  })),
   
-  clearRoomPoints: () => set({ roomPoints: [] }),
+  clearRoomPoints: () => set({ roomPoints: [], roomPointsSnaps: [] }),
   
   closeRoom: () => set((state) => {
-    if (state.roomPoints.length < 3) return { roomPoints: [], dimensionInput: '' };
+    if (state.roomPoints.length < 3) return { roomPoints: [], roomPointsSnaps: [], dimensionInput: '' };
     
     const uniquePoints = state.roomPoints.filter((p, i, arr) => {
       if (i === 0) return true;
@@ -130,7 +161,7 @@ export const createRoomSlice: StateCreator<AppState, [], [], RoomSlice> = (set, 
       return dist > 0.1;
     });
 
-    if (uniquePoints.length < 3) return { roomPoints: [], dimensionInput: '' };
+    if (uniquePoints.length < 3) return { roomPoints: [], roomPointsSnaps: [], dimensionInput: '' };
 
     const historyEntry = { rooms: state.rooms, furniture: state.furniture, dimensions: state.dimensions, wallAttachments: state.wallAttachments };
 
@@ -157,7 +188,7 @@ export const createRoomSlice: StateCreator<AppState, [], [], RoomSlice> = (set, 
       return {
         furniture: [...state.furniture, newFurniture],
         roomPoints: [],
-        dimensionInput: '',
+        roomPointsSnaps: [],
         mode: 'select',
         selectedId: newFurniture.id,
         history: [...state.history, historyEntry].slice(-50)
@@ -167,9 +198,12 @@ export const createRoomSlice: StateCreator<AppState, [], [], RoomSlice> = (set, 
     const activeThemeId = state.activeThemeId;
     const activeTheme = INTERIOR_THEMES.find(t => t.id === activeThemeId);
 
+    const { vertices, edges, startVertexId } = generateTopology(uniquePoints, true);
     const newRoom: RoomObject = {
       id: Math.random().toString(36).substr(2, 9),
-      points: uniquePoints,
+      vertices,
+      edges,
+      startVertexId,
       isClosed: true,
       wallTypes: uniquePoints.map(() => 'wall'),
       railingStyles: uniquePoints.map(() => 'metal-bars'),
@@ -184,10 +218,126 @@ export const createRoomSlice: StateCreator<AppState, [], [], RoomSlice> = (set, 
     return {
       rooms: [...state.rooms, newRoom],
       roomPoints: [],
+      roomPointsSnaps: [],
       dimensionInput: '',
       history: [...state.history, historyEntry].slice(-50)
     };
   }),
+
+  closeRoomWithWall: (endSnap) => {
+    const state = get();
+    const startSnap = state.roomPointsSnaps[0];
+    if (!startSnap || startSnap.roomId !== endSnap.roomId || state.roomPoints.length < 1) {
+      return; 
+    }
+
+    const room = state.rooms.find(r => r.id === startSnap.roomId);
+    if (!room) return;
+
+    const points = getRoomVertices(room);
+    const p1 = points[endSnap.segmentIndex];
+    const p2 = points[(endSnap.segmentIndex + 1) % points.length];
+    const endPoint = {
+      x: p1.x + endSnap.t * (p2.x - p1.x),
+      y: p1.y + endSnap.t * (p2.y - p1.y)
+    };
+
+    const isSplit = isInteriorSplit(room, state.roomPoints, endPoint, startSnap);
+    
+    state.saveHistory();
+    const activeThemeId = state.activeThemeId;
+    const activeTheme = INTERIOR_THEMES.find(t => t.id === activeThemeId);
+
+    if (isSplit) {
+      const { room1Points, room2Points } = splitRoomPolygons(
+        room,
+        state.roomPoints,
+        endPoint,
+        startSnap,
+        endSnap
+      );
+
+      // Identify which segments are internal
+      // In r1, the segments from drawnPoints start to endPoint are internal.
+      // drawnPoints.length is the number of segments in the split line.
+      const splitLineSegmentCount = state.roomPoints.length;
+      const internalR1 = room1Points.map((_, i) => i < splitLineSegmentCount);
+      const internalR2 = room2Points.map((_, i) => i < splitLineSegmentCount);
+
+      const { vertices: v1, edges: e1, startVertexId: s1 } = generateTopology(room1Points, true);
+      const r1: RoomObject = {
+        id: Math.random().toString(36).substr(2, 9),
+        vertices: v1,
+        edges: e1,
+        startVertexId: s1,
+        isClosed: true,
+        wallTypes: room1Points.map(() => 'wall'),
+        internalWalls: internalR1,
+        railingStyles: room1Points.map(() => 'metal-bars'),
+        materials: room.materials || {
+          wallBase: { 
+            source: 'theme', 
+            value: activeTheme ? activeTheme.wallColors.base : '#f8fafc' 
+          }
+        }
+      };
+
+      const { vertices: v2, edges: e2, startVertexId: s2 } = generateTopology(room2Points, true);
+      const r2: RoomObject = {
+        id: Math.random().toString(36).substr(2, 9),
+        vertices: v2,
+        edges: e2,
+        startVertexId: s2,
+        isClosed: true,
+        wallTypes: room2Points.map(() => 'wall'),
+        internalWalls: internalR2,
+        railingStyles: room2Points.map(() => 'metal-bars'),
+        materials: room.materials || {
+          wallBase: { 
+            source: 'theme', 
+            value: activeTheme ? activeTheme.wallColors.base : '#f8fafc' 
+          }
+        }
+      };
+
+      set({
+        rooms: [...state.rooms.filter(r => r.id !== room.id), r1, r2],
+        roomPoints: [],
+        roomPointsSnaps: [],
+        dimensionInput: ''
+      });
+    } else {
+      // Classic attachment logic
+      const path = getWallPath(room, endSnap, startSnap);
+      const finalPoints = [...state.roomPoints, endPoint, ...path];
+      
+      if (finalPoints.length < 3) return;
+
+      const { vertices: vf, edges: ef, startVertexId: sf } = generateTopology(finalPoints, true);
+      const newRoom: RoomObject = {
+        id: Math.random().toString(36).substr(2, 9),
+        vertices: vf,
+        edges: ef,
+        startVertexId: sf,
+        isClosed: true,
+        wallTypes: finalPoints.map(() => 'wall'),
+        railingStyles: finalPoints.map(() => 'metal-bars'),
+        materials: {
+          wallBase: { 
+            source: 'theme', 
+            value: activeTheme ? activeTheme.wallColors.base : '#f8fafc' 
+          }
+        }
+      };
+
+      set({
+        rooms: [...state.rooms, newRoom],
+        roomPoints: [],
+        roomPointsSnaps: [],
+        dimensionInput: ''
+      });
+    }
+  },
 
   finishRoom: () => set((state) => {
     if (state.roomPoints.length < 2) return state;
@@ -198,9 +348,12 @@ export const createRoomSlice: StateCreator<AppState, [], [], RoomSlice> = (set, 
     const activeThemeId = state.activeThemeId;
     const activeTheme = INTERIOR_THEMES.find(t => t.id === activeThemeId);
 
+    const { vertices, edges, startVertexId } = generateTopology(state.roomPoints, false);
     const newRoom: RoomObject = {
       id: Math.random().toString(36).substr(2, 9),
-      points: [...state.roomPoints],
+      vertices,
+      edges,
+      startVertexId,
       isClosed: false,
       wallTypes: state.roomPoints.map(() => 'wall'),
       railingStyles: state.roomPoints.map(() => 'metal-bars'),
@@ -247,9 +400,19 @@ export const createRoomSlice: StateCreator<AppState, [], [], RoomSlice> = (set, 
   updateRoomPoint: (roomId, pointIndex, newPos) => set((state) => {
     const newRooms = state.rooms.map(r => {
       if (r.id !== roomId) return r;
-      const newPoints = [...r.points];
-      newPoints[pointIndex] = newPos;
-      return { ...r, points: newPoints };
+      
+      // Topology-first update
+      const orderedIds = getOrderedVertexIds(r);
+      const vertexId = orderedIds[pointIndex];
+      
+      if (vertexId) {
+        const updatedVertices = r.vertices.map(v => 
+          v.id === vertexId ? { ...v, x: newPos.x, y: newPos.y } : v
+        );
+        return { ...r, vertices: updatedVertices };
+      }
+      
+      return r;
     });
     return {
       rooms: newRooms,
@@ -261,34 +424,65 @@ export const createRoomSlice: StateCreator<AppState, [], [], RoomSlice> = (set, 
     const room = state.rooms.find(r => r.id === roomId);
     if (!room) return state;
 
+    const orderedIds = getOrderedVertexIds(room);
+    const n = orderedIds.length;
+    if (segmentIndex < 0 || segmentIndex >= (room.isClosed ? n : n - 1)) return state;
+
+    const v1Id = orderedIds[segmentIndex];
+    const v2Id = orderedIds[(segmentIndex + 1) % n];
+
+    // Get coordinates for t-calculation
+    const vertices = room.vertices || [];
+    const v1 = vertices.find(v => v.id === v1Id);
+    const v2 = vertices.find(v => v.id === v2Id);
+    if (!v1 || !v2) return state;
+
+    const d1 = getDistance(v1, pos);
+    const d2 = getDistance(pos, v2);
+    const tSplit = (d1 + d2) > 0.001 ? d1 / (d1 + d2) : 0.5;
+
+    const newVertexId = Math.random().toString(36).substr(2, 9);
+    const newVertex: Vertex = { id: newVertexId, x: pos.x, y: pos.y };
+
+    const newEdge1: Edge = { id: Math.random().toString(36).substr(2, 9), startVertexId: v1Id, endVertexId: newVertexId };
+    const newEdge2: Edge = { id: Math.random().toString(36).substr(2, 9), startVertexId: newVertexId, endVertexId: v2Id };
+
     const newRooms = state.rooms.map(r => {
       if (r.id !== roomId) return r;
-      const newPoints = [...r.points];
-      newPoints.splice(segmentIndex + 1, 0, pos);
       
-      const newWallColors = [...(r.wallColors || [])];
-      if (newWallColors.length > segmentIndex) {
-        newWallColors.splice(segmentIndex + 1, 0, newWallColors[segmentIndex] || '');
-      }
-      
-      const newWallTypes = [...(r.wallTypes || [])];
-      if (newWallTypes.length > segmentIndex) {
-        newWallTypes.splice(segmentIndex + 1, 0, newWallTypes[segmentIndex] || 'wall');
-      }
+      const updatedVertices = [...r.vertices, newVertex];
+      // Replace the old edge connecting v1 and v2 with two new ones
+      const updatedEdges = r.edges.filter(e => !(e.startVertexId === v1Id && e.endVertexId === v2Id));
+      updatedEdges.push(newEdge1, newEdge2);
 
-      const newRailingStyles = [...(r.railingStyles || [])];
-      if (newRailingStyles.length > segmentIndex) {
-        newRailingStyles.splice(segmentIndex + 1, 0, newRailingStyles[segmentIndex] || 'metal-bars');
-      }
-
-      return { 
-        ...r, 
-        points: newPoints,
-        wallColors: newWallColors,
-        wallTypes: newWallTypes,
-        railingStyles: newRailingStyles
+      const splitArr = <T>(arr: T[] | undefined): T[] | undefined => {
+        if (!arr) return arr;
+        const result = [...arr];
+        if (result.length > segmentIndex) {
+          result.splice(segmentIndex + 1, 0, result[segmentIndex]);
+        }
+        return result;
       };
+
+      const updated = {
+        ...r,
+        vertices: updatedVertices,
+        edges: updatedEdges,
+        wallColors: splitArr(r.wallColors),
+        wallTypes: splitArr(r.wallTypes),
+        railingStyles: splitArr(r.railingStyles),
+        internalWalls: splitArr(r.internalWalls),
+      };
+      return updated;
     });
+
+    const remapT = (t: number): { offset: number, newT: number } => {
+      if (t < tSplit) {
+        return { offset: 0, newT: tSplit > 0.001 ? t / tSplit : 0 };
+      } else {
+        return { offset: 1, newT: (1 - tSplit) > 0.001 ? (t - tSplit) / (1 - tSplit) : 0 };
+      }
+    };
 
     const newAttachments = state.wallAttachments.map(a => {
       if (a.roomId !== roomId) return a;
@@ -296,40 +490,37 @@ export const createRoomSlice: StateCreator<AppState, [], [], RoomSlice> = (set, 
         return { ...a, wallSegmentIndex: a.wallSegmentIndex + 1 };
       }
       if (a.wallSegmentIndex === segmentIndex) {
-        if (a.positionAlongWall < 0.5) {
-          return { ...a, positionAlongWall: a.positionAlongWall * 2 };
-        } else {
-          return { ...a, wallSegmentIndex: a.wallSegmentIndex + 1, positionAlongWall: (a.positionAlongWall - 0.5) * 2 };
-        }
+        const { offset, newT } = remapT(a.positionAlongWall);
+        return { ...a, wallSegmentIndex: a.wallSegmentIndex + offset, positionAlongWall: newT };
       }
       return a;
     });
 
     const newBeams = state.beams.map(b => {
-      const updated = { ...b };
-      if (b.p1Attachment && b.p1Attachment.roomId === roomId) {
-        if (b.p1Attachment.wallIndex > segmentIndex) {
-          updated.p1Attachment = { ...b.p1Attachment, wallIndex: b.p1Attachment.wallIndex + 1 };
-        } else if (b.p1Attachment.wallIndex === segmentIndex) {
-          if (b.p1Attachment.t < 0.5) {
-            updated.p1Attachment = { ...b.p1Attachment, t: b.p1Attachment.t * 2 };
-          } else {
-            updated.p1Attachment = { ...b.p1Attachment, wallIndex: b.p1Attachment.wallIndex + 1, t: (b.p1Attachment.t - 0.5) * 2 };
-          }
+      let updatedP1 = b.p1Attachment;
+      let updatedP2 = b.p2Attachment;
+
+      if (updatedP1 && updatedP1.roomId === roomId) {
+        if (updatedP1.wallIndex > segmentIndex) {
+          updatedP1 = { ...updatedP1, wallIndex: updatedP1.wallIndex + 1 };
+        } else if (updatedP1.wallIndex === segmentIndex) {
+          const { offset, newT } = remapT(updatedP1.t);
+          updatedP1 = { ...updatedP1, wallIndex: updatedP1.wallIndex + offset, t: newT };
         }
       }
-      if (b.p2Attachment && b.p2Attachment.roomId === roomId) {
-        if (b.p2Attachment.wallIndex > segmentIndex) {
-          updated.p2Attachment = { ...b.p2Attachment, wallIndex: b.p2Attachment.wallIndex + 1 };
-        } else if (b.p2Attachment.wallIndex === segmentIndex) {
-          if (b.p2Attachment.t < 0.5) {
-            updated.p2Attachment = { ...b.p2Attachment, t: b.p2Attachment.t * 2 };
-          } else {
-            updated.p2Attachment = { ...b.p2Attachment, wallIndex: b.p2Attachment.wallIndex + 1, t: (b.p2Attachment.t - 0.5) * 2 };
-          }
+      if (updatedP2 && updatedP2.roomId === roomId) {
+        if (updatedP2.wallIndex > segmentIndex) {
+          updatedP2 = { ...updatedP2, wallIndex: updatedP2.wallIndex + 1 };
+        } else if (updatedP2.wallIndex === segmentIndex) {
+          const { offset, newT } = remapT(updatedP2.t);
+          updatedP2 = { ...updatedP2, wallIndex: updatedP2.wallIndex + offset, t: newT };
         }
       }
-      return updated;
+
+      if (updatedP1 !== b.p1Attachment || updatedP2 !== b.p2Attachment) {
+        return { ...b, p1Attachment: updatedP1, p2Attachment: updatedP2 };
+      }
+      return b;
     });
 
     return { 
@@ -342,14 +533,30 @@ export const createRoomSlice: StateCreator<AppState, [], [], RoomSlice> = (set, 
   moveWallSegment: (roomId, segmentIndex, delta) => set((state) => {
     const newRooms = state.rooms.map(r => {
       if (r.id !== roomId) return r;
-      const newPoints = [...r.points];
+      
+      const orderedIds = getOrderedVertexIds(r);
+      const n = orderedIds.length;
+      if (n === 0) return r;
+      
       const p1Idx = segmentIndex;
-      const p2Idx = (segmentIndex + 1) % r.points.length;
-      if (!r.isClosed && segmentIndex === r.points.length - 1) return r;
-      newPoints[p1Idx] = { x: newPoints[p1Idx].x + delta.x, y: newPoints[p1Idx].y + delta.y };
-      newPoints[p2Idx] = { x: newPoints[p2Idx].x + delta.x, y: newPoints[p2Idx].y + delta.y };
-      return { ...r, points: newPoints };
+      const p2Idx = (segmentIndex + 1) % n;
+      
+      // If open room and moving last segment, only p1 move is valid for segmentIndex
+      // because segmentIndex i connects vertex i and i+1.
+      if (!r.isClosed && segmentIndex >= n - 1) return r;
+
+      const v1Id = orderedIds[p1Idx];
+      const v2Id = orderedIds[p2Idx];
+
+      const updatedVertices = r.vertices.map(v => {
+        if (v.id === v1Id || v.id === v2Id) {
+          return { ...v, x: v.x + delta.x, y: v.y + delta.y };
+        }
+        return v;
+      });
+      return { ...r, vertices: updatedVertices };
     });
+
     return {
       rooms: newRooms,
       beams: syncBeams(newRooms, state.beams)
@@ -358,73 +565,119 @@ export const createRoomSlice: StateCreator<AppState, [], [], RoomSlice> = (set, 
 
   removeRoomVertex: (roomId, pointIndex) => set((state) => {
     const room = state.rooms.find(r => r.id === roomId);
-    if (!room || room.points.length <= 2) return state;
+    if (!room) return state;
+    
+    const orderedIds = getOrderedVertexIds(room);
+    const n = orderedIds.length;
+    if (n <= (room.isClosed ? 3 : 2)) return state;
 
-    const newRooms = state.rooms.map(r => {
+    const vertexIdToRemove = orderedIds[pointIndex];
+    
+    // Geometry for remapping
+    const oldPoints = getRoomVertices(room);
+    const prevSegIdx = (pointIndex - 1 + n) % n;
+    const currSegIdx = pointIndex;
+    
+    const pPrev = oldPoints[prevSegIdx];
+    const pCurr = oldPoints[pointIndex];
+    const pNext = oldPoints[(pointIndex + 1) % n];
+
+    const l1 = pPrev && pCurr ? getDistance(pPrev, pCurr) : 0;
+    const l2 = pCurr && pNext ? getDistance(pCurr, pNext) : 0;
+    const lTotal = l1 + l2;
+
+    const updatedRooms = state.rooms.map(r => {
       if (r.id !== roomId) return r;
-      const newPoints = [...r.points];
-      newPoints.splice(pointIndex, 1);
       
-      const newWallColors = [...(r.wallColors || [])];
-      if (newWallColors.length > pointIndex) {
-        newWallColors.splice(pointIndex, 1);
-      }
+      const newVertices = r.vertices.filter(v => v.id !== vertexIdToRemove);
       
-      const newWallTypes = [...(r.wallTypes || [])];
-      if (newWallTypes.length > pointIndex) {
-        newWallTypes.splice(pointIndex, 1);
+      // Bridge the gap in edges
+      const inEdge = r.edges.find(e => e.endVertexId === vertexIdToRemove);
+      const outEdge = r.edges.find(e => e.startVertexId === vertexIdToRemove);
+      
+      const newEdges = r.edges.filter(e => e.id !== inEdge?.id && e.id !== outEdge?.id);
+      
+      if (inEdge && outEdge && inEdge.id !== outEdge.id) {
+        newEdges.push({
+          id: Math.random().toString(36).substr(2, 9),
+          startVertexId: inEdge.startVertexId,
+          endVertexId: outEdge.endVertexId
+        });
       }
 
-      const newRailingStyles = [...(r.railingStyles || [])];
-      if (newRailingStyles.length > pointIndex) {
-        newRailingStyles.splice(pointIndex, 1);
-      }
-
-      return { 
-        ...r, 
-        points: newPoints,
-        wallColors: newWallColors,
-        wallTypes: newWallTypes,
-        railingStyles: newRailingStyles
+      const removeIdx = (arr: any[] | undefined) => {
+        if (!arr) return arr;
+        const res = [...arr];
+        if (res.length > pointIndex) {
+          res.splice(pointIndex, 1);
+        }
+        return res;
       };
+
+      const updated = {
+        ...r,
+        vertices: newVertices,
+        edges: newEdges,
+        wallColors: removeIdx(r.wallColors),
+        wallTypes: removeIdx(r.wallTypes),
+        railingStyles: removeIdx(r.railingStyles),
+        internalWalls: removeIdx(r.internalWalls),
+      };
+      return updated;
     });
 
-    const newAttachments = state.wallAttachments.filter(a => {
-      if (a.roomId !== roomId) return true;
-      return a.wallSegmentIndex !== pointIndex && a.wallSegmentIndex !== (pointIndex - 1 + room.points.length) % room.points.length;
-    }).map(a => {
+    const remapT = (t: number, isL2: boolean): number => {
+      if (lTotal < 0.001) return 0.5;
+      return isL2 ? (l1 + t * l2) / lTotal : (t * l1) / lTotal;
+    };
+
+    const newAttachments = state.wallAttachments.map(a => {
       if (a.roomId !== roomId) return a;
+      
+      if (a.wallSegmentIndex === prevSegIdx) {
+        return { ...a, positionAlongWall: remapT(a.positionAlongWall, false) };
+      }
+      if (a.wallSegmentIndex === currSegIdx) {
+        // If it was on second merged part, move back to prevSegIdx
+        return { ...a, wallSegmentIndex: prevSegIdx, positionAlongWall: remapT(a.positionAlongWall, true) };
+      }
       if (a.wallSegmentIndex > pointIndex) {
         return { ...a, wallSegmentIndex: a.wallSegmentIndex - 1 };
       }
       return a;
     });
 
-    const newBeams = state.beams.filter(b => {
-      const p1Att = b.p1Attachment;
-      const p2Att = b.p2Attachment;
-      if (p1Att && p1Att.roomId === roomId) {
-        if (p1Att.wallIndex === pointIndex || p1Att.wallIndex === (pointIndex - 1 + room.points.length) % room.points.length) return false;
+    const newBeams = state.beams.map(b => {
+      const b1 = b.p1Attachment;
+      const b2 = b.p2Attachment;
+
+      const remapBeam = (att: BeamAttachment | undefined) => {
+        if (!att || att.roomId !== roomId) return att;
+        if (att.wallIndex === prevSegIdx) {
+          return { ...att, t: remapT(att.t, false) };
+        }
+        if (att.wallIndex === currSegIdx) {
+          return { ...att, wallIndex: prevSegIdx, t: remapT(att.t, true) };
+        }
+        if (att.wallIndex > pointIndex) {
+          return { ...att, wallIndex: att.wallIndex - 1 };
+        }
+        return att;
+      };
+
+      const updatedP1 = remapBeam(b1);
+      const updatedP2 = remapBeam(b2);
+
+      if (updatedP1 !== b1 || updatedP2 !== b2) {
+        return { ...b, p1Attachment: updatedP1, p2Attachment: updatedP2 };
       }
-      if (p2Att && p2Att.roomId === roomId) {
-        if (p2Att.wallIndex === pointIndex || p2Att.wallIndex === (pointIndex - 1 + room.points.length) % room.points.length) return false;
-      }
-      return true;
-    }).map(b => {
-      const updated = { ...b };
-      if (updated.p1Attachment && updated.p1Attachment.roomId === roomId && updated.p1Attachment.wallIndex > pointIndex) {
-        updated.p1Attachment = { ...updated.p1Attachment, wallIndex: updated.p1Attachment.wallIndex - 1 };
-      }
-      if (updated.p2Attachment && updated.p2Attachment.roomId === roomId && updated.p2Attachment.wallIndex > pointIndex) {
-        updated.p2Attachment = { ...updated.p2Attachment, wallIndex: updated.p2Attachment.wallIndex - 1 };
-      }
-      return updated;
+      return b;
     });
 
     return { 
-      rooms: newRooms, 
+      rooms: updatedRooms, 
       wallAttachments: newAttachments,
-      beams: syncBeams(newRooms, newBeams)
+      beams: syncBeams(updatedRooms, newBeams)
     };
   }),
 
@@ -434,7 +687,7 @@ export const createRoomSlice: StateCreator<AppState, [], [], RoomSlice> = (set, 
     
     state.saveHistory();
     return {
-      roomPoints: [...room.points],
+      roomPoints: [...getRoomVertices(room)],
       rooms: state.rooms.filter(r => r.id !== roomId),
       wallAttachments: state.wallAttachments.filter(a => a.roomId !== roomId),
       mode: 'draw-room',

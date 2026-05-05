@@ -12,6 +12,7 @@ import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { useClipboardPaste } from '../hooks/useClipboardPaste';
 import { useCanvasLogic } from '../hooks/useCanvasLogic';
 import { useCanvasExport } from '../hooks/useCanvasExport';
+import { getRoomVertices } from '../lib/geometry/topology';
 
 export const Canvas: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -46,11 +47,12 @@ export const Canvas: React.FC = () => {
     } else if (selectedRoomId) {
       const r = rooms.find(item => item.id === selectedRoomId);
       if (r) {
+        const points = getRoomVertices(r);
         bounds = {
-          minX: Math.min(...r.points.map(p => p.x)),
-          minY: Math.min(...r.points.map(p => p.y)),
-          maxX: Math.max(...r.points.map(p => p.x)),
-          maxY: Math.max(...r.points.map(p => p.y)),
+          minX: Math.min(...points.map(p => p.x)),
+          minY: Math.min(...points.map(p => p.y)),
+          maxX: Math.max(...points.map(p => p.x)),
+          maxY: Math.max(...points.map(p => p.y)),
         };
       }
     } else if (selectedDimensionId) {

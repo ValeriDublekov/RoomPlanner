@@ -12,6 +12,9 @@ export const generateOBJ = (scene: THREE.Object3D): string => {
   // 2. Setup Exporter & Filtering
   const exporter = new OBJExporter();
   const exportGroup = new THREE.Group();
+  const wallGroup = new THREE.Group();
+  wallGroup.name = 'Walls';
+  exportGroup.add(wallGroup);
 
   // 3. Traverse and clone only Meshes
   scene.traverse((object) => {
@@ -31,7 +34,11 @@ export const generateOBJ = (scene: THREE.Object3D): string => {
       // Keep relevant properties
       clonedMesh.name = mesh.name || 'Unnamed Object';
       
-      exportGroup.add(clonedMesh);
+      if (clonedMesh.name.startsWith('Wall_')) {
+          wallGroup.add(clonedMesh);
+      } else {
+        exportGroup.add(clonedMesh);
+      }
     }
   });
 

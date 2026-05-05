@@ -1,38 +1,50 @@
 import React, { useRef, useEffect, useMemo } from 'react';
 import { Text } from 'react-konva';
-import { RoomObject } from '../../types';
+import { RoomObject, PlanSnapshot } from '../../types';
 import { useStore } from '../../store';
 import Konva from 'konva';
 import { calculateArea } from '../../lib/geometry';
+import { getRoomVertices } from '../../lib/geometry/topology';
 
 interface RoomAreaLabelProps {
   room: RoomObject;
   scale: number;
+  planSnapshot?: PlanSnapshot;
 }
 
 export const RoomAreaLabel: React.FC<RoomAreaLabelProps> = ({
   room,
   scale,
+  planSnapshot,
 }) => {
   const pixelsPerCm = useStore((state) => state.pixelsPerCm);
   const activeLayer = useStore((state) => state.activeLayer);
   const textRef = useRef<Konva.Text>(null);
 
   const areaM2 = useMemo(() => {
-    const areaPx2 = calculateArea(room.points);
+    const points = planSnapshot 
+      ? planSnapshot.walls.filter(w => w.roomId === room.id).map(w => w.interiorFace.p1)
+      : getRoomVertices(room);
+    
+    if (points.length === 0) return 0;
+    const areaPx2 = calculateArea(points);
     const areaCm2 = areaPx2 / (pixelsPerCm * pixelsPerCm);
     return areaCm2 / 10000;
-  }, [room.points, pixelsPerCm]);
+  }, [room, pixelsPerCm, planSnapshot]);
 
   const center = useMemo(() => {
-    if (room.points.length === 0) return { x: 0, y: 0 };
-    const xs = room.points.map(p => p.x);
-    const ys = room.points.map(p => p.y);
+    const points = planSnapshot 
+    ? planSnapshot.walls.filter(w => w.roomId === room.id).map(w => w.interiorFace.p1)
+    : getRoomVertices(room);
+
+    if (points.length === 0) return { x: 0, y: 0 };
+    const xs = points.map(p => p.x);
+    const ys = points.map(p => p.y);
     return {
       x: (Math.min(...xs) + Math.max(...xs)) / 2,
       y: (Math.min(...ys) + Math.max(...ys)) / 2,
     };
-  }, [room.points]);
+  }, [room, planSnapshot]);
 
   const areaText = `${areaM2.toFixed(2)} m²`;
 

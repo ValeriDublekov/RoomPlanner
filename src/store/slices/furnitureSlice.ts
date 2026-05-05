@@ -2,6 +2,7 @@ import { StateCreator } from 'zustand';
 import { AppState } from '../../store';
 import { FurnitureObject } from '../../types';
 import { rotatePoint, scalePoints, isPointInPolygon } from '../../lib/geometry';
+import { getRoomVertices } from '../../lib/geometry/topology';
 import { migrateFurnitureMaterials } from '../../lib/materials';
 import { INTERIOR_THEMES, applyThemeToFurniture } from '../../lib/themes';
 
@@ -41,7 +42,7 @@ export const createFurnitureSlice: StateCreator<AppState, [], [], FurnitureSlice
     if (newItem.furnitureType === 'air-conditioner') {
       newItem.color = '#ffffff'; // Enforce white
       const center = { x: newItem.x + newItem.width / 2, y: newItem.y + newItem.height / 2 };
-      const room = state.rooms.find(r => r.isClosed && isPointInPolygon(center, r.points));
+      const room = state.rooms.find(r => r.isClosed && isPointInPolygon(center, getRoomVertices(r)));
       if (room) {
         // Position it just below the ceiling
         // Everything stored in FurnitureObject must be in pixels
@@ -83,7 +84,7 @@ export const createFurnitureSlice: StateCreator<AppState, [], [], FurnitureSlice
           
           if (typeChanged || positionChanged) {
             const center = { x: updated.x + updated.width / 2, y: updated.y + updated.height / 2 };
-            const room = state.rooms.find(r => r.isClosed && isPointInPolygon(center, r.points));
+            const room = state.rooms.find(r => r.isClosed && isPointInPolygon(center, getRoomVertices(r)));
             if (room) {
               const acHeightPx = updated.height3d || (30 * state.pixelsPerCm);
               const wallHeightPx = state.wallHeight * state.pixelsPerCm;

@@ -2,6 +2,7 @@ import React, { useRef, useEffect } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useStore } from '../../store';
+import { getRoomVertices } from '../../lib/geometry/topology';
 
 interface FPVControlsProps {
   initialPosition: THREE.Vector3;
@@ -127,10 +128,11 @@ export const FPVControls: React.FC<FPVControlsProps> = ({ initialPosition }) => 
     const collisionRadius = 25; // cm (player width)
 
     for (const room of rooms) {
-      const count = room.isClosed ? room.points.length : room.points.length - 1;
+      const points = getRoomVertices(room);
+      const count = room.isClosed ? points.length : points.length - 1;
       for (let i = 0; i < count; i++) {
-        const p1_raw = room.points[i];
-        const p2_raw = room.points[(i + 1) % room.points.length];
+        const p1_raw = points[i];
+        const p2_raw = points[(i + 1) % points.length];
         
         const p1 = { x: p1_raw.x / pixelsPerCm, z: p1_raw.y / pixelsPerCm };
         const p2 = { x: p2_raw.x / pixelsPerCm, z: p2_raw.y / pixelsPerCm };

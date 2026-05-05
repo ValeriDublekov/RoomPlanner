@@ -3,6 +3,9 @@ import { AppState } from '../store';
 /**
  * Keys strictly required for persisting the project state.
  * These are used by both LocalStorage persistence and Cloud/File saving.
+ * 
+ * NOTE: 'rooms' stores topology-first geometry (vertices/edges) as canonical.
+ * 'points' exists only for legacy compatibility during migration.
  */
 /**
  * HOW TO ADD NEW PERSISTED FIELDS:

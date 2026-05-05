@@ -1,6 +1,8 @@
 import Drawing from 'dxf-writer';
-import { RoomObject, FurnitureObject, WallAttachment, DimensionObject } from '../types';
+import { RoomObject, FurnitureObject, WallAttachment, DimensionObject, PlanSnapshot } from '../types';
 import { downloadBlob } from './download';
+import { getRoomWallPolygons, getWallSegmentGeometry } from './geometry';
+import { getRoomVertices } from './geometry/topology';
 
 export interface DXFRoomData {
   rooms: RoomObject[];
@@ -8,13 +10,15 @@ export interface DXFRoomData {
   attachments: WallAttachment[];
   dimensions: DimensionObject[];
   pixelsPerCm: number;
+  wallThickness: number;
+  planSnapshot?: PlanSnapshot;
 }
 
 /**
  * Generates a DXF string from project data.
  */
 export const generateDXF = (data: DXFRoomData): string => {
-  const { rooms, furniture, attachments, dimensions, pixelsPerCm } = data;
+  const { rooms, furniture, attachments, dimensions, pixelsPerCm, wallThickness, planSnapshot } = data;
   const drawing = new Drawing();
   drawing.setUnits('Centimeters');
 
@@ -32,56 +36,54 @@ export const generateDXF = (data: DXFRoomData): string => {
 
   // 2. Draw Rooms (Walls)
   rooms.forEach(room => {
-    const points = room.points;
     drawing.setActiveLayer('Walls');
     
-    for (let i = 0; i < points.length; i++) {
-      const p1 = points[i];
-      const nextIndex = (i + 1) % points.length;
-      if (!room.isClosed && nextIndex === 0) continue;
-      const p2 = points[nextIndex];
+    const snapshotWalls = planSnapshot?.walls.filter(w => w.roomId === room.id);
+    
+    if (snapshotWalls && snapshotWalls.length > 0) {
+      snapshotWalls.forEach(wall => {
+        // Draw closed wall segment as a polygon (4 points)
+        const pts: [number, number][] = [
+          [txX(wall.interiorFace.p1.x), txY(wall.interiorFace.p1.y)],
+          [txX(wall.interiorFace.p2.x), txY(wall.interiorFace.p2.y)],
+          [txX(wall.exteriorFace.p2.x), txY(wall.exteriorFace.p2.y)],
+          [txX(wall.exteriorFace.p1.x), txY(wall.exteriorFace.p1.y)]
+        ];
+        drawing.drawPolyline(pts, true);
+        
+        // Dimension Text for walls
+        drawing.setActiveLayer('Dimensions');
+        const cmLength = Math.sqrt(Math.pow(wall.referenceSegment.p2.x - wall.referenceSegment.p1.x, 2) + Math.pow(wall.referenceSegment.p2.y - wall.referenceSegment.p1.y, 2)) / pixelsPerCm;
+        
+        if (cmLength > 10) {
+          const centerX = (wall.referenceSegment.p1.x + wall.referenceSegment.p2.x) / 2;
+          const centerY = (wall.referenceSegment.p1.y + wall.referenceSegment.p2.y) / 2;
+          const normal = wall.normal;
+          const offset = 15;
+          const labelX = centerX + normal.x * offset * pixelsPerCm;
+          const labelY = centerY + normal.y * offset * pixelsPerCm;
+          
+          const angleRad = Math.atan2(wall.referenceSegment.p2.y - wall.referenceSegment.p1.y, wall.referenceSegment.p2.x - wall.referenceSegment.p1.x);
+          let angle = -angleRad * (180 / Math.PI);
+          if (angle > 90) angle -= 180;
+          if (angle < -90) angle += 180;
+          
+          drawing.drawText(txX(labelX), txY(labelY), 10, angle, `${cmLength.toFixed(1)} cm`, 'center', 'middle');
+        }
+        drawing.setActiveLayer('Walls');
+      });
+    } else {
+      const points = getRoomVertices(room);
+      const wallPolys = getRoomWallPolygons(points, wallThickness * pixelsPerCm, room.isClosed);
       
-      drawing.drawLine(txX(p1.x), txY(p1.y), txX(p2.x), txY(p2.y));
-
-      // Add Dimension Text
-      drawing.setActiveLayer('Dimensions');
-      const dx = p2.x - p1.x;
-      const dy = p2.y - p1.y;
-      const pixelLength = Math.sqrt(dx * dx + dy * dy);
-      const cmLength = pixelLength / pixelsPerCm;
-
-      if (cmLength > 10) { // Only label segments longer than 10cm
-        const midX = (p1.x + p2.x) / 2;
-        const midY = (p1.y + p2.y) / 2;
-        
-        // Offset normal direction (outward-ish)
-        const nx = -dy / pixelLength;
-        const ny = dx / pixelLength;
-        const offset = 15; // 15cm offset for label
-        
-        const labelX = midX + nx * offset * pixelsPerCm;
-        const labelY = midY + ny * offset * pixelsPerCm;
-        
-        // Calculate text rotation (in degrees)
-        // In web: Math.atan2(dy, dx)
-        // In CAD: Math.atan2(-dy, dx)
-        let angle = Math.atan2(-dy, dx) * (180 / Math.PI);
-        
-        // Normalize angle to be readable (not upside down)
-        if (angle > 90) angle -= 180;
-        if (angle < -90) angle += 180;
-        
-        drawing.drawText(
-          txX(labelX), 
-          txY(labelY), 
-          10, // text height in units (cm)
-          angle, // DXF rotation is CCW
-          `${cmLength.toFixed(1)} cm`,
-          'center',
-          'middle'
-        );
-      }
-      drawing.setActiveLayer('Walls');
+      wallPolys.forEach(wp => {
+        drawing.drawLine(txX(wp.inner[0].x), txY(wp.inner[0].y), txX(wp.inner[1].x), txY(wp.inner[1].y));
+        drawing.drawLine(txX(wp.outer[0].x), txY(wp.outer[0].y), txX(wp.outer[1].x), txY(wp.outer[1].y));
+        if (!room.isClosed) {
+          if (wp.index === 0) drawing.drawLine(txX(wp.inner[0].x), txY(wp.inner[0].y), txX(wp.outer[0].x), txY(wp.outer[0].y));
+          if (wp.index === wallPolys.length - 1) drawing.drawLine(txX(wp.inner[1].x), txY(wp.inner[1].y), txX(wp.outer[1].x), txY(wp.outer[1].y));
+        }
+      });
     }
   });
 
@@ -161,8 +163,9 @@ export const generateDXF = (data: DXFRoomData): string => {
     const room = rooms.find(r => r.id === att.roomId);
     if (!room) return;
 
-    const p1 = room.points[att.wallSegmentIndex];
-    const p2 = room.points[(att.wallSegmentIndex + 1) % room.points.length];
+    const points = getRoomVertices(room);
+    const p1 = points[att.wallSegmentIndex];
+    const p2 = points[(att.wallSegmentIndex + 1) % points.length];
     
     const dx = p2.x - p1.x;
     const dy = p2.y - p1.y;

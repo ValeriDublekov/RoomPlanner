@@ -3,16 +3,35 @@ export interface Vector2d {
   y: number;
 }
 
+export interface Vertex {
+  id: string;
+  x: number;
+  y: number;
+}
+
+export interface Edge {
+  id: string;
+  startVertexId: string;
+  endVertexId: string;
+}
+
 export type RailingStyle = 'glass' | 'metal-bars' | 'wooden-slats' | 'concrete';
 
 export interface RoomObject {
   id: string;
-  points: Vector2d[];
+  /**
+   * Canonical room geometry defined by topology.
+   * Ordered boundaries are reconstructed from these descriptors.
+   */
+  vertices: Vertex[];
+  edges: Edge[];
   isClosed: boolean;
+  startVertexId?: string; // Stable starting point for topological traversal
   floorTexture?: string;
   floorColor?: string;
   wallColors?: string[]; // Array of colors for each segment
   wallTypes?: ('wall' | 'railing')[]; // Array of types for each segment
+  internalWalls?: boolean[]; // Array indicating if a segment is an internal shared wall
   railingStyles?: RailingStyle[]; // Array of railing styles for each segment
   defaultWallColor?: string;
   materials?: {
@@ -110,6 +129,12 @@ export interface DimensionObject {
   p2: Vector2d;
 }
 
+export interface WallSnap {
+  roomId: string;
+  segmentIndex: number;
+  t: number;
+}
+
 export interface WallAttachment {
   id: string;
   roomId: string;
@@ -123,6 +148,52 @@ export interface WallAttachment {
   frameColor?: string;
   thinCurtainColor?: string;
   thickCurtainColor?: string;
+}
+
+/**
+ * Represents a derived wall segment with its geometry faces.
+ */
+export interface WallGeometry {
+  /** Unique ID for the wall, e.g., "room-id-wall-index" */
+  id: string;
+  /** ID of the room this wall belongs to */
+  roomId: string;
+  /** Index of the segment in the room's points array */
+  segmentIndex: number;
+  /** The original interior segment defined by the room points */
+  referenceSegment: { p1: Vector2d; p2: Vector2d };
+  /** The interior face of the wall (usually same as reference segment) */
+  interiorFace: { p1: Vector2d; p2: Vector2d };
+  /** The exterior face of the wall, offset by thickness */
+  exteriorFace: { p1: Vector2d; p2: Vector2d };
+  /** A 4-point polygon representing the wall's physical footprint */
+  wallBandPolygon: Vector2d[];
+  /** The outward-facing normal vector for this wall segment */
+  normal: Vector2d;
+  /** The thickness of the wall used for derivation */
+  thickness: number;
+  /** Stable ID shared between overlapping wall segments in different rooms */
+  sharedWallId?: string;
+  /** Indicates if this wall is internal (partition) */
+  isInternal?: boolean;
+}
+
+/**
+ * A read-only snapshot of all derived geometry in the plan.
+ */
+export interface PlanSnapshot {
+  /** All derived wall records */
+  walls: WallGeometry[];
+  /** Stable shared wall entities */
+  sharedWalls?: SharedWall[];
+  /** Timestamp when the snapshot was generated */
+  generatedAt: number;
+}
+
+export interface SharedWall {
+  id: string;
+  /** The wall segments that compose this shared wall */
+  segments: Array<{ roomId: string; segmentIndex: number }>;
 }
 
 export interface BeamAttachment {

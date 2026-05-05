@@ -1,7 +1,10 @@
 import * as THREE from 'three';
-import { RoomObject, FurnitureObject, WallAttachment } from '../types';
-import { getOutwardNormal } from './geometry';
+import { RoomObject, FurnitureObject, WallAttachment, PlanSnapshot } from '../types';
+import { getWallSegmentGeometry } from './geometry';
+import { getRoomVertices } from './geometry/topology';
 import { createFurnitureModel } from './furnitureFactory';
+import { derivePlanSnapshot } from './geometry/planSnapshot';
+import { WallGeometry } from '../types';
 
 interface SceneData {
   rooms: RoomObject[];
@@ -10,13 +13,15 @@ interface SceneData {
   pixelsPerCm: number;
   wallThickness: number;
   wallHeight: number;
+  planSnapshot?: PlanSnapshot;
 }
 
 export const generateProjectScene = (state: SceneData) => {
   const { rooms, furniture, wallAttachments, pixelsPerCm, wallThickness, wallHeight } = state;
+  const planSnapshot = state.planSnapshot || derivePlanSnapshot(rooms, wallThickness, pixelsPerCm);
   const mainGroup = new THREE.Group();
-
-  // Helper to create a basic mesh with name
+  
+  // ... (keeping createMesh)
   const createMesh = (geometry: THREE.BufferGeometry, color: string, name: string, position: [number, number, number], rotation: [number, number, number] = [0, 0, 0]) => {
     const material = new THREE.MeshStandardMaterial({ color });
     const mesh = new THREE.Mesh(geometry, material);
@@ -26,17 +31,23 @@ export const generateProjectScene = (state: SceneData) => {
     return mesh;
   };
 
-  // 1. Process Rooms (Floors and Walls)
+  // 1. Process Rooms (Floors)
   rooms.forEach(room => {
     const roomGroup = new THREE.Group();
     roomGroup.name = `Room_${room.id}`;
+    
+    // Find vertices for floor
+    const snapshotWalls = planSnapshot.walls.filter((w: WallGeometry) => w.roomId === room.id);
+    const points = snapshotWalls.length > 0
+      ? snapshotWalls.map((w: WallGeometry) => w.referenceSegment.p1)
+      : getRoomVertices(room);
 
     // Floor
-    if (room.isClosed && room.points.length > 0) {
+    if (room.isClosed && points.length > 0) {
       const floorShape = new THREE.Shape();
-      floorShape.moveTo(room.points[0].x / pixelsPerCm, -room.points[0].y / pixelsPerCm);
-      for (let i = 1; i < room.points.length; i++) {
-        floorShape.lineTo(room.points[i].x / pixelsPerCm, -room.points[i].y / pixelsPerCm);
+      floorShape.moveTo(points[0].x / pixelsPerCm, -points[0].y / pixelsPerCm);
+      for (let i = 1; i < points.length; i++) {
+        floorShape.lineTo(points[i].x / pixelsPerCm, -points[i].y / pixelsPerCm);
       }
       floorShape.closePath();
       
@@ -44,89 +55,105 @@ export const generateProjectScene = (state: SceneData) => {
       const floorMesh = createMesh(floorGeo, room.floorColor || "#e2e8f0", "Floor", [0, 0.1, 0], [-Math.PI / 2, 0, 0]);
       roomGroup.add(floorMesh);
     }
+    
+    mainGroup.add(roomGroup);
+  });
 
-    // Walls
-    const count = room.isClosed ? room.points.length : room.points.length - 1;
-    for (let i = 0; i < count; i++) {
-      const p1 = room.points[i];
-      const p2 = room.points[(i + 1) % room.points.length];
-      
-      const dx = (p2.x - p1.x) / pixelsPerCm;
-      const dy = (p2.y - p1.y) / pixelsPerCm;
-      const totalLength = Math.sqrt(dx * dx + dy * dy);
-      const angle = Math.atan2(dy, dx);
-      
-      const segmentAttachments = wallAttachments
-        .filter(a => a.roomId === room.id && a.wallSegmentIndex === i)
-        .sort((a, b) => a.positionAlongWall - b.positionAlongWall);
+  // 2. Process Walls (all walls)
+  const wallsGroup = new THREE.Group();
+  wallsGroup.name = "WallsGroup";
+  const processedSharedWalls = new Set<string>();
 
-      const segmentColor = room.wallColors?.[i] || room.defaultWallColor || "#f0f0f0";
-      const normal = getOutwardNormal(room.points, i);
-      const offsetX = (normal.x * wallThickness) / 2;
-      const offsetZ = (normal.y * wallThickness) / 2;
+  planSnapshot.walls.forEach((wall: WallGeometry) => {
+    // Shared wall handling: Render once
+    if (wall.sharedWallId) {
+      if (processedSharedWalls.has(wall.sharedWallId)) return;
+      processedSharedWalls.add(wall.sharedWallId);
+    }
 
-      const addWallPart = (len: number, midX: number, midZ: number, h: number, y: number, nameSuffix = "") => {
-        const geo = new THREE.BoxGeometry(len, h, wallThickness);
-        const mesh = createMesh(geo, segmentColor, `Wall_${i}${nameSuffix}`, [midX, y, midZ], [0, -angle, 0]);
-        roomGroup.add(mesh);
-      };
+    const { roomId, segmentIndex, referenceSegment, normal } = wall;
+    const room = rooms.find(r => r.id === roomId);
+    if (!room) return;
 
-      if (segmentAttachments.length === 0) {
-        const midX = (p1.x + p2.x) / (2 * pixelsPerCm) + offsetX;
-        const midZ = (p1.y + p2.y) / (2 * pixelsPerCm) + offsetZ;
-        addWallPart(totalLength, midX, midZ, wallHeight, wallHeight / 2);
-      } else {
-        let currentPos = 0;
-        segmentAttachments.forEach((att, attIdx) => {
-          const attWidth = att.width / pixelsPerCm;
-          const attCenterPos = att.positionAlongWall * totalLength;
-          const attStartPos = Math.max(0, attCenterPos - attWidth / 2);
-          const attEndPos = Math.min(totalLength, attCenterPos + attWidth / 2);
+    const p1 = referenceSegment.p1;
+    const p2 = referenceSegment.p2;
 
-          if (attStartPos > currentPos) {
-            const partLength = attStartPos - currentPos;
-            const partMidPos = currentPos + partLength / 2;
-            const midX = (p1.x / pixelsPerCm) + Math.cos(angle) * partMidPos + offsetX;
-            const midZ = (p1.y / pixelsPerCm) + Math.sin(angle) * partMidPos + offsetZ;
-            addWallPart(partLength, midX, midZ, wallHeight, wallHeight / 2, `_part_${attIdx}`);
-          }
+    const dx = (p2.x - p1.x) / pixelsPerCm;
+    const dy = (p2.y - p1.y) / pixelsPerCm;
+    const totalLength = Math.sqrt(dx * dx + dy * dy);
+    const angle = Math.atan2(dy, dx);
 
-          const sillHeight = att.type === 'door' ? 0 : 90;
-          const openingHeight = att.type === 'door' ? 210 : 120;
-          const headerHeight = Math.max(0, wallHeight - (sillHeight + openingHeight));
-          
-          const midX = (p1.x / pixelsPerCm) + Math.cos(angle) * attCenterPos + offsetX;
-          const midZ = (p1.y / pixelsPerCm) + Math.sin(angle) * attCenterPos + offsetZ;
+    const segmentAttachments = wallAttachments
+      .filter(a => a.roomId === roomId && a.wallSegmentIndex === segmentIndex)
+      .sort((a, b) => a.positionAlongWall - b.positionAlongWall);
 
-          if (att.type === 'window' && sillHeight > 0) {
-            addWallPart(attWidth, midX, midZ, sillHeight, sillHeight / 2, `_sill_${attIdx}`);
-          }
-          if (headerHeight > 0) {
-            addWallPart(attWidth, midX, midZ, headerHeight, wallHeight - headerHeight / 2, `_header_${attIdx}`);
-          }
+    const segmentColor = room.wallColors?.[segmentIndex] || room.defaultWallColor || "#f0f0f0";
+    
+    const offsetX = (normal.x * wallThickness) / (2 * pixelsPerCm);
+    const offsetZ = (normal.y * wallThickness) / (2 * pixelsPerCm);
 
-          // Glass
-          if (att.type === 'window') {
-            const glassH = Math.min(openingHeight, wallHeight - sillHeight);
-            const glassGeo = new THREE.BoxGeometry(attWidth, glassH, wallThickness * 0.2);
-            const glassMesh = createMesh(glassGeo, "#93c5fd", `Window_Glass_${attIdx}`, [midX, sillHeight + glassH / 2, midZ], [0, -angle, 0]);
-            roomGroup.add(glassMesh);
-          }
+    const addWallPart = (len: number, midX: number, midZ: number, h: number, y: number, nameSuffix = "") => {
+      const geo = new THREE.BoxGeometry(Math.max(0.01, len), h, wallThickness);
+      const mesh = createMesh(geo, segmentColor, `Wall_${segmentIndex}${nameSuffix}`, [midX, y, midZ], [0, -angle, 0]);
+      wallsGroup.add(mesh);
+    };
 
-          currentPos = attEndPos;
-        });
+    if (segmentAttachments.length === 0) {
+      const midX = (p1.x + p2.x) / (2 * pixelsPerCm) + offsetX;
+      const midZ = (p1.y + p2.y) / (2 * pixelsPerCm) + offsetZ;
+      addWallPart(totalLength, midX, midZ, wallHeight, wallHeight / 2);
+    } else {
+      let currentPos = 0;
+      segmentAttachments.forEach((att, attIdx) => {
+        const attWidth = att.width / pixelsPerCm;
+        const attCenterPos = att.positionAlongWall * totalLength;
+        const attStartPos = Math.max(0, attCenterPos - attWidth / 2);
+        const attEndPos = Math.min(totalLength, attCenterPos + attWidth / 2);
 
-        if (currentPos < totalLength) {
-          const partLength = totalLength - currentPos;
+        if (attStartPos > currentPos) {
+          const partLength = attStartPos - currentPos;
           const partMidPos = currentPos + partLength / 2;
           const midX = (p1.x / pixelsPerCm) + Math.cos(angle) * partMidPos + offsetX;
           const midZ = (p1.y / pixelsPerCm) + Math.sin(angle) * partMidPos + offsetZ;
-          addWallPart(partLength, midX, midZ, wallHeight, wallHeight / 2, `_end`);
+          addWallPart(partLength, midX, midZ, wallHeight, wallHeight / 2, `_part_${attIdx}`);
         }
+
+        const sillHeight = att.type === 'door' ? 0 : 90;
+        const openingHeight = att.type === 'door' ? 210 : 120;
+        const headerHeight = Math.max(0, wallHeight - (sillHeight + openingHeight));
+        
+        const midX = (p1.x / pixelsPerCm) + Math.cos(angle) * attCenterPos + offsetX;
+        const midZ = (p1.y / pixelsPerCm) + Math.sin(angle) * attCenterPos + offsetZ;
+
+        if (att.type === 'window' && sillHeight > 0) {
+          addWallPart(attWidth, midX, midZ, sillHeight, sillHeight / 2, `_sill_${attIdx}`);
+        }
+        if (headerHeight > 0) {
+          addWallPart(attWidth, midX, midZ, headerHeight, wallHeight - headerHeight / 2, `_header_${attIdx}`);
+        }
+
+        if (att.type === 'window') {
+          const glassH = Math.min(openingHeight, wallHeight - sillHeight);
+          const glassGeo = new THREE.BoxGeometry(attWidth, glassH, wallThickness * 0.2);
+          const glassMesh = createMesh(glassGeo, "#93c5fd", `Window_Glass_${attIdx}`, [midX, sillHeight + glassH / 2, midZ], [0, -angle, 0]);
+          wallsGroup.add(glassMesh);
+        }
+
+        currentPos = attEndPos;
+      });
+
+      if (currentPos < totalLength) {
+        const partLength = totalLength - currentPos;
+        const partMidPos = currentPos + partLength / 2;
+        const midX = (p1.x / pixelsPerCm) + Math.cos(angle) * partMidPos + offsetX;
+        const midZ = (p1.y / pixelsPerCm) + Math.sin(angle) * partMidPos + offsetZ;
+        addWallPart(partLength, midX, midZ, wallHeight, wallHeight / 2, `_end`);
       }
     }
-    mainGroup.add(roomGroup);
   });
+
+  mainGroup.add(wallsGroup);
+
 
   // 2. Process Furniture
   furniture.forEach(item => {

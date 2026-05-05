@@ -3,3 +3,7 @@ export * from './collision';
 export * from './polygonUtils';
 export * from './snapping';
 export * from './formatting';
+export * from './planSnapshot';
+export * from './attachments';
+export * from './walls';
+export * from './topology';

@@ -1,18 +1,21 @@
 import React, { useRef, useMemo, useState } from 'react';
 import { Line, Group, Circle, Text, Rect } from 'react-konva';
-import { RoomObject, Vector2d } from '@/src/types';
+import { RoomObject, Vector2d, PlanSnapshot } from '@/src/types';
 import { useStore } from '@/src/store';
 import { getOutwardNormal, getWallSegments } from '@/src/lib/geometry';
+import { getRoomVertices } from '@/src/lib/geometry/topology';
 import { DimensionLabel } from './DimensionLabel';
 
 interface RoomEditorProps {
   room: RoomObject;
   scale: number;
+  planSnapshot?: PlanSnapshot;
 }
 
 export const RoomEditor: React.FC<RoomEditorProps> = ({
   room,
   scale,
+  planSnapshot,
 }) => {
   const wallThicknessCm = useStore((state) => state.wallThickness);
   const pixelsPerCm = useStore((state) => state.pixelsPerCm);
@@ -41,8 +44,9 @@ export const RoomEditor: React.FC<RoomEditorProps> = ({
         const midX = (seg.p1.x + seg.p2.x) / 2;
         const midY = (seg.p1.y + seg.p2.y) / 2;
         
+        const points = getRoomVertices(room);
         // Calculate outward normal for parallel dragging
-        const normal = getOutwardNormal(room.points, idx);
+        const normal = getOutwardNormal(points, idx);
         const nx = normal.x;
         const ny = normal.y;
 
@@ -80,14 +84,15 @@ export const RoomEditor: React.FC<RoomEditorProps> = ({
 
                   // Calculate distances to opposite walls
                   const newDistances: {p1: Vector2d, p2: Vector2d, dist: number}[] = [];
-                  const currentP1 = room.points[idx];
-                  const currentP2 = room.points[(idx + 1) % room.points.length];
+                  const points = getRoomVertices(room);
+                  const currentP1 = points[idx];
+                  const currentP2 = points[(idx + 1) % points.length];
                   const mid = { x: (currentP1.x + currentP2.x) / 2, y: (currentP1.y + currentP2.y) / 2 };
 
                   wallSegments.forEach((other, oIdx) => {
                     if (oIdx === idx) return;
                     
-                    const otherNormal = getOutwardNormal(room.points, oIdx);
+                    const otherNormal = getOutwardNormal(points, oIdx);
                     const onx = otherNormal.x;
                     const ony = otherNormal.y;
 
@@ -163,7 +168,7 @@ export const RoomEditor: React.FC<RoomEditorProps> = ({
       })}
 
       {/* Vertex Handles for Corner Moving */}
-      {room.points.map((p, idx) => (
+      {getRoomVertices(room).map((p, idx) => (
         <Circle
           key={`vertex-editor-${idx}`}
           x={p.x}
@@ -201,7 +206,7 @@ export const RoomEditor: React.FC<RoomEditorProps> = ({
           }}
           onContextMenu={(e) => {
             e.evt.preventDefault();
-            if (room.points.length > 2) {
+            if (getRoomVertices(room).length > 2) {
               saveHistory();
               removeRoomVertex(room.id, idx);
             }

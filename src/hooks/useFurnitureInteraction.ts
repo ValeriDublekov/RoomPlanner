@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import Konva from 'konva';
 import { FurnitureObject, RoomObject, Vector2d } from '../types';
 import { useStore } from '../store';
@@ -10,8 +10,10 @@ import {
   checkPolygonsIntersect, 
   checkCirclePolygonIntersect,
   isPointInPolygon,
-  getSnappedFurniturePosition
+  getSnappedFurniturePosition,
+  derivePlanSnapshot
 } from '../lib/geometry';
+import { getRoomVertices } from '../lib/geometry/topology';
 
 export const useFurnitureInteraction = (
   shape: FurnitureObject,
@@ -23,6 +25,8 @@ export const useFurnitureInteraction = (
 ) => {
   const [dragDistances, setDragDistances] = useState<{ p1: Vector2d, p2: Vector2d, dist: number }[]>([]);
   const [isColliding, setIsColliding] = useState(false);
+  const wallThickness = useStore(state => state.wallThickness);
+  const planSnapshot = useMemo(() => derivePlanSnapshot(rooms, wallThickness, pixelsPerCm), [rooms, wallThickness, pixelsPerCm]);
 
   const handleDragMove = (e: Konva.KonvaEventObject<DragEvent>) => {
     const node = e.target;
@@ -52,7 +56,8 @@ export const useFurnitureInteraction = (
       rooms,
       allFurniture,
       snapThreshold,
-      shape.id
+      shape.id,
+      planSnapshot
     );
 
     const currentX = snappedPos.x;
@@ -83,17 +88,13 @@ export const useFurnitureInteraction = (
       let minFaceDist = Infinity;
       let nearestPointOnFace = side;
 
-      rooms.forEach(room => {
-        for (let i = 0; i < room.points.length; i++) {
-          const p1 = room.points[i];
-          const p2 = room.points[(i + 1) % room.points.length];
-          const result = getDistanceToSegment(side, p1, p2);
-          if (typeof result === 'object') {
-            const distToFace = result.distance;
-            if (distToFace < minFaceDist) {
-              minFaceDist = distToFace;
-              nearestPointOnFace = result.point;
-            }
+      planSnapshot.walls.forEach(wall => {
+        const result = getDistanceToSegment(side, wall.interiorFace.p1, wall.interiorFace.p2);
+        if (typeof result === 'object') {
+          const distToFace = result.distance;
+          if (distToFace < minFaceDist) {
+            minFaceDist = distToFace;
+            nearestPointOnFace = result.point;
           }
         }
       });
@@ -147,23 +148,27 @@ export const useFurnitureInteraction = (
         }
       }
 
+      // Wall collision (respecting wall thickness)
       if (!colliding) {
-        for (const room of rooms) {
-          if (!isPointInPolygon(center, room.points)) {
+        for (const wall of planSnapshot.walls) {
+          if (checkCirclePolygonIntersect(center, radius - collisionEpsilon, wall.wallBandPolygon)) {
             colliding = true;
             break;
           }
-          for (let i = 0; i < room.points.length; i++) {
-            const p1 = room.points[i];
-            const p2 = room.points[(i + 1) % room.points.length];
-            const result = getDistanceToSegment(center, p1, p2);
-            if (typeof result === 'object' && result.distance < (radius - 1)) {
-              colliding = true;
-              break;
-            }
-          }
-          if (colliding) break;
         }
+      }
+
+      // Boundary check: must be inside a room
+      if (!colliding) {
+        let insideAnyRoom = false;
+        for (const room of rooms) {
+          const points = getRoomVertices(room);
+          if (isPointInPolygon(center, points)) {
+            insideAnyRoom = true;
+            break;
+          }
+        }
+        if (!insideAnyRoom) colliding = true;
       }
     } else {
       const currentVertices = getFurnitureVertices({
@@ -192,15 +197,31 @@ export const useFurnitureInteraction = (
         }
       }
 
+      // Wall collision (respecting wall thickness)
       if (!colliding) {
-        for (const room of rooms) {
-          for (const vertex of currentVertices) {
-            if (!isPointInPolygon(vertex, room.points)) {
-              colliding = true;
+        for (const wall of planSnapshot.walls) {
+          if (checkPolygonsIntersect(currentVertices, wall.wallBandPolygon)) {
+            colliding = true;
+            break;
+          }
+        }
+      }
+
+      // Boundary check: must be inside a room
+      if (!colliding) {
+        for (const vertex of currentVertices) {
+          let vertexInside = false;
+          for (const room of rooms) {
+            const points = getRoomVertices(room);
+            if (isPointInPolygon(vertex, points)) {
+              vertexInside = true;
               break;
             }
           }
-          if (colliding) break;
+          if (!vertexInside) {
+            colliding = true;
+            break;
+          }
         }
       }
     }

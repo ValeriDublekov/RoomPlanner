@@ -151,12 +151,20 @@ describe('Geometry Utilities', () => {
   });
 
   describe('getSnappedPosition', () => {
-    const rooms = [{
-      points: [
-        { x: 0, y: 0 },
-        { x: 100, y: 0 },
-        { x: 100, y: 100 },
-        { x: 0, y: 100 }
+    const rooms: any[] = [{
+      id: 'room-1',
+      isClosed: true,
+      vertices: [
+        { id: 'v0', x: 0, y: 0 },
+        { id: 'v1', x: 100, y: 0 },
+        { id: 'v2', x: 100, y: 100 },
+        { id: 'v3', x: 0, y: 100 }
+      ],
+      edges: [
+        { id: 'e0', startVertexId: 'v0', endVertexId: 'v1' },
+        { id: 'e1', startVertexId: 'v1', endVertexId: 'v2' },
+        { id: 'e2', startVertexId: 'v2', endVertexId: 'v3' },
+        { id: 'e3', startVertexId: 'v3', endVertexId: 'v0' }
       ]
     }];
     const furniture = [
@@ -382,13 +390,20 @@ describe('Geometry Utilities', () => {
   });
 
   describe('getSnappedFurniturePosition', () => {
-    const rooms = [{
+    const rooms: any[] = [{
       id: 'room1',
-      points: [
-        { x: 0, y: 0 },
-        { x: 500, y: 0 },
-        { x: 500, y: 500 },
-        { x: 0, y: 500 }
+      isClosed: true,
+      vertices: [
+        { id: 'v0', x: 0, y: 0 },
+        { id: 'v1', x: 500, y: 0 },
+        { id: 'v2', x: 500, y: 500 },
+        { id: 'v3', x: 0, y: 500 }
+      ],
+      edges: [
+        { id: 'e0', startVertexId: 'v0', endVertexId: 'v1' },
+        { id: 'e1', startVertexId: 'v1', endVertexId: 'v2' },
+        { id: 'e2', startVertexId: 'v2', endVertexId: 'v3' },
+        { id: 'e3', startVertexId: 'v3', endVertexId: 'v0' }
       ]
     }];
     const furniture: any[] = [];
@@ -423,6 +438,44 @@ describe('Geometry Utilities', () => {
     });
     it('returns false if line misses circle', () => {
       expect(checkCircleLineIntersect({ x: 0, y: 0 }, 10, { x: 20, y: 20 }, { x: 40, y: 40 })).toBe(false);
+    });
+  });
+
+  describe('Wall Semantics (Interior Polygon Assumption)', () => {
+    it('treats room topology as the boundary of the interior usable area', () => {
+      const room: any = {
+        id: 'r1',
+        vertices: [
+          { id: 'v0', x: 0, y: 0 },
+          { id: 'v1', x: 100, y: 0 },
+          { id: 'v2', x: 100, y: 100 },
+          { id: 'v3', x: 0, y: 100 }
+        ],
+        edges: [
+          { id: 'e0', startVertexId: 'v0', endVertexId: 'v1' },
+          { id: 'e1', startVertexId: 'v1', endVertexId: 'v2' },
+          { id: 'e2', startVertexId: 'v2', endVertexId: 'v3' },
+          { id: 'e3', startVertexId: 'v3', endVertexId: 'v0' }
+        ],
+        isClosed: true
+      };
+
+      // Assumption: area represents the interior floor space
+      const roomPoints = [
+        { x: 0, y: 0 },
+        { x: 100, y: 0 },
+        { x: 100, y: 100 },
+        { x: 0, y: 100 }
+      ];
+      expect(calculateArea(roomPoints)).toBe(10000);
+
+      // Assumption: a point slightly inside the boundary is considered "inside" the usable space
+      expect(isPointInPolygon({ x: 1, y: 1 }, roomPoints)).toBe(true);
+      expect(isPointInPolygon({ x: 99, y: 99 }, roomPoints)).toBe(true);
+
+      // Assumption: a point outside the boundary is NOT in the usable space (it's in/beyond the wall)
+      expect(isPointInPolygon({ x: -1, y: -1 }, roomPoints)).toBe(false);
+      expect(isPointInPolygon({ x: 101, y: 50 }, roomPoints)).toBe(false);
     });
   });
 });

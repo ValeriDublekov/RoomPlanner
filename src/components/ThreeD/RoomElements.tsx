@@ -1,9 +1,10 @@
 import React, { useMemo } from 'react';
 import * as THREE from 'three';
 import { useTexture, Edges } from '@react-three/drei';
-import { RoomObject, WallAttachment, BeamObject, InteriorTheme } from '../../types';
+import { RoomObject, WallAttachment, BeamObject, InteriorTheme, PlanSnapshot } from '../../types';
 import { FLOOR_TEXTURES, WOOD_GRAIN } from '../../constants';
 import { getOutwardNormal } from '../../lib/geometry';
+import { getRoomVertices } from '../../lib/geometry/topology';
 import { useStore } from '../../store';
 import { INTERIOR_THEMES } from '../../lib/themes';
 
@@ -62,18 +63,21 @@ export const Beam3D: React.FC<{
 /* eslint-disable @typescript-eslint/no-unused-vars */
 const SmartMaterial = (props: any) => {
   const edgeMode = useStore(state => state.edgeMode3d);
+  
+  // Destructure to separate Three.js material props from our custom logic
+  const { 
+    color, 
+    transparent, 
+    opacity, 
+    side, 
+    roughness = 0.7, 
+    metalness = 0,
+    emissive,
+    emissiveIntensity,
+    ...otherProps 
+  } = props;
+
   if (edgeMode) {
-    const { 
-      color: _c, 
-      map: _m, 
-      emissive: _e, 
-      emissiveIntensity: _ei, 
-      transparent, 
-      opacity, 
-      side, 
-      ...otherProps 
-    } = props;
-/* eslint-enable @typescript-eslint/no-unused-vars */
     return (
       <>
         <meshBasicMaterial 
@@ -87,20 +91,46 @@ const SmartMaterial = (props: any) => {
       </>
     );
   }
-  return <meshStandardMaterial {...props} />;
+
+  return (
+    <>
+      <meshStandardMaterial 
+        color={color}
+        transparent={transparent}
+        opacity={opacity}
+        side={side || THREE.FrontSide}
+        roughness={roughness}
+        metalness={metalness}
+        emissive={emissive}
+        emissiveIntensity={emissiveIntensity}
+        {...otherProps}
+      />
+      {/* Add subtle edges to standard mode to improve structural visibility, 
+          especially when walls are very light or same color as floor */}
+      <Edges 
+        color={new THREE.Color(color).offsetHSL(0, 0, -0.2)} 
+        threshold={25} 
+        renderOrder={1}
+      />
+    </>
+  );
 };
 
-export const Floor: React.FC<{ room: RoomObject, pixelsPerCm: number }> = ({ room, pixelsPerCm }) => {
+export const Floor: React.FC<{ room: RoomObject, pixelsPerCm: number, planSnapshot?: PlanSnapshot }> = ({ room, pixelsPerCm, planSnapshot }) => {
   const floorShape = useMemo(() => {
     const s = new THREE.Shape();
-    if (room.points.length === 0) return s;
-    s.moveTo(room.points[0].x / pixelsPerCm, -room.points[0].y / pixelsPerCm);
-    for (let i = 1; i < room.points.length; i++) {
-      s.lineTo(room.points[i].x / pixelsPerCm, -room.points[i].y / pixelsPerCm);
+    const points = planSnapshot 
+      ? planSnapshot.walls.filter(w => w.roomId === room.id).map(w => w.referenceSegment.p1)
+      : getRoomVertices(room);
+    
+    if (points.length === 0) return s;
+    s.moveTo(points[0].x / pixelsPerCm, -points[0].y / pixelsPerCm);
+    for (let i = 1; i < points.length; i++) {
+      s.lineTo(points[i].x / pixelsPerCm, -points[i].y / pixelsPerCm);
     }
     s.closePath();
     return s;
-  }, [room.points, pixelsPerCm]);
+  }, [room, pixelsPerCm, planSnapshot]);
 
   const textureData = FLOOR_TEXTURES.find(t => t.id === room.floorTexture);
   const floorColor = room.floorColor || (textureData ? "#ffffff" : "#e2e8f0");
@@ -146,17 +176,21 @@ const FloorTexturedMaterial: React.FC<{ url: string, color: string, floorTexture
   );
 };
 
-export const Ceiling: React.FC<{ room: RoomObject, pixelsPerCm: number, height: number }> = ({ room, pixelsPerCm, height }) => {
+export const Ceiling: React.FC<{ room: RoomObject, pixelsPerCm: number, height: number, planSnapshot?: PlanSnapshot }> = ({ room, pixelsPerCm, height, planSnapshot }) => {
   const ceilingShape = useMemo(() => {
     const s = new THREE.Shape();
-    if (room.points.length === 0) return s;
-    s.moveTo(room.points[0].x / pixelsPerCm, -room.points[0].y / pixelsPerCm);
-    for (let i = 1; i < room.points.length; i++) {
-      s.lineTo(room.points[i].x / pixelsPerCm, -room.points[i].y / pixelsPerCm);
+    const points = planSnapshot 
+      ? planSnapshot.walls.filter(w => w.roomId === room.id).map(w => w.referenceSegment.p1)
+      : getRoomVertices(room);
+      
+    if (points.length === 0) return s;
+    s.moveTo(points[0].x / pixelsPerCm, -points[0].y / pixelsPerCm);
+    for (let i = 1; i < points.length; i++) {
+      s.lineTo(points[i].x / pixelsPerCm, -points[i].y / pixelsPerCm);
     }
     s.closePath();
     return s;
-  }, [room.points, pixelsPerCm]);
+  }, [room, pixelsPerCm, planSnapshot]);
 
   return (
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, height + 0.1, 0]}>
@@ -217,8 +251,9 @@ export const WallSegments: React.FC<{
   pixelsPerCm: number, 
   wallThickness: number, 
   wallHeight: number,
-  attachments: WallAttachment[] 
-}> = ({ room, pixelsPerCm, wallThickness, wallHeight, attachments }) => {
+  attachments: WallAttachment[],
+  planSnapshot?: PlanSnapshot
+}> = ({ room, pixelsPerCm, wallThickness, wallHeight, attachments, planSnapshot }) => {
   const activeThemeId = useStore(state => state.activeThemeId);
   const activeTheme = React.useMemo(() => {
     if (!activeThemeId) return null;
@@ -239,240 +274,251 @@ export const WallSegments: React.FC<{
       opacity?: number
     }[] = [];
     
-    const count = room.isClosed ? room.points.length : room.points.length - 1;
-    for (let i = 0; i < count; i++) {
-      const p1 = room.points[i];
-      const p2 = room.points[(i + 1) % room.points.length];
-      
-      const dx = (p2.x - p1.x) / pixelsPerCm;
-      const dy = (p2.y - p1.y) / pixelsPerCm;
-      const totalLength = Math.sqrt(dx * dx + dy * dy);
-      const angle = Math.atan2(dy, dx);
-      
-      const segmentAttachments = attachments
-        .filter(a => a.roomId === room.id && a.wallSegmentIndex === i)
-        .sort((a, b) => a.positionAlongWall - b.positionAlongWall);
+    const snapshotWalls = planSnapshot?.walls.filter(w => w.roomId === room.id);
+    
+    if (snapshotWalls && snapshotWalls.length > 0) {
+      snapshotWalls.forEach(wall => {
+        const { referenceSegment, normal, segmentIndex } = wall;
+        const p1 = referenceSegment.p1;
+        const p2 = referenceSegment.p2;
 
-      let segmentColor = room.wallColors?.[i] || room.materials?.wallBase?.value || room.defaultWallColor || "#f0f0f0";
-      
-      // If we don't have materials or specifically set wall colors, and there's a theme, use theme default
-      if (!room.wallColors?.[i] && !room.materials?.wallBase && activeTheme) {
-        segmentColor = activeTheme.wallColors.base;
-      }
+        const dx = (p2.x - p1.x) / pixelsPerCm;
+        const dy = (p2.y - p1.y) / pixelsPerCm;
+        const totalLength = Math.sqrt(dx * dx + dy * dy);
+        const angle = Math.atan2(dy, dx);
 
-      const normal = getOutwardNormal(room.points, i);
-      const offsetX = (normal.x * wallThickness) / 2;
-      const offsetZ = (normal.y * wallThickness) / 2;
+        const segmentAttachments = attachments
+          .filter(a => a.roomId === room.id && a.wallSegmentIndex === segmentIndex)
+          .sort((a, b) => a.positionAlongWall - b.positionAlongWall);
 
-      const isRailing = room.wallTypes?.[i] === 'railing';
-      const railingStyle = room.railingStyles?.[i] || 'metal-bars';
-      const effectiveWallHeight = isRailing ? 100 : wallHeight;
+        let segmentColor = room.wallColors?.[segmentIndex] || room.materials?.wallBase?.value || room.defaultWallColor || "#f0f0f0";
+        if (!room.wallColors?.[segmentIndex] && !room.materials?.wallBase && activeTheme) {
+          segmentColor = activeTheme.wallColors.base;
+        }
 
-      if (segmentAttachments.length === 0 || isRailing) {
-        const midX = (p1.x + p2.x) / (2 * pixelsPerCm) + offsetX;
-        const midZ = (p1.y + p2.y) / (2 * pixelsPerCm) + offsetZ;
-        
-        if (isRailing) {
-          if (railingStyle === 'glass') {
-            // Glass panel with small frame at bottom
-            segs.push({ type: 'wall', length: totalLength, angle, midX, midZ, height: 10, y: 5, color: segmentColor, depth: wallThickness });
-            segs.push({ type: 'glass', length: totalLength, angle, midX, midZ, height: 90, y: 55, color: '#93c5fd', depth: 4 });
-            segs.push({ type: 'frame', length: totalLength, angle, midX, midZ, height: 4, y: 100, color: '#cbd5e1', depth: 6 });
-          } else if (railingStyle === 'metal-bars') {
-            // Top and bottom rails
-            segs.push({ type: 'frame', length: totalLength, angle, midX, midZ, height: 4, y: 2, color: '#334155', depth: 4 });
-            segs.push({ type: 'frame', length: totalLength, angle, midX, midZ, height: 4, y: 98, color: '#334155', depth: 6 });
-            
-            // Vertical bars
-            const barSpacing = 15; // cm
-            const barCount = Math.floor(totalLength / barSpacing);
-            const actualSpacing = totalLength / (barCount + 1);
-            
-            for (let j = 1; j <= barCount; j++) {
-              const posAlong = j * actualSpacing;
-              const barX = (p1.x / pixelsPerCm) + Math.cos(angle) * posAlong + offsetX;
-              const barZ = (p1.y / pixelsPerCm) + Math.sin(angle) * posAlong + offsetZ;
-              segs.push({ type: 'frame', length: 2, angle, midX: barX, midZ: barZ, height: 92, y: 50, color: '#475569', depth: 2 });
-            }
-          } else if (railingStyle === 'wooden-slats') {
-            // Top and bottom rails
-            segs.push({ type: 'wall', length: totalLength, angle, midX, midZ, height: 4, y: 2, color: '#451a03', depth: 6 });
-            segs.push({ type: 'wall', length: totalLength, angle, midX, midZ, height: 6, y: 97, color: '#451a03', depth: 8 });
+        const offsetX = (normal.x * wallThickness) / (2 * pixelsPerCm);
+        const offsetZ = (normal.y * wallThickness) / (2 * pixelsPerCm);
 
-            const slatWidth = 8;
-            const slatSpacing = 15;
-            const slatCount = Math.floor(totalLength / slatSpacing);
-            const actualSpacing = totalLength / (slatCount + 1);
+        const isRailing = room.wallTypes?.[segmentIndex] === 'railing';
+        const railingStyle = room.railingStyles?.[segmentIndex] || 'metal-bars';
+        const effectiveWallHeight = Math.max(1, isRailing ? 100 : wallHeight);
 
-            for (let j = 1; j <= slatCount; j++) {
-              const posAlong = j * actualSpacing;
-              const slatX = (p1.x / pixelsPerCm) + Math.cos(angle) * posAlong + offsetX;
-              const slatZ = (p1.y / pixelsPerCm) + Math.sin(angle) * posAlong + offsetZ;
-              segs.push({ type: 'wall', length: slatWidth, angle, midX: slatX, midZ: slatZ, height: 90, y: 50, color: '#78350f', depth: 4 });
-            }
+        if (segmentAttachments.length === 0 || isRailing) {
+          const midX = (p1.x + p2.x) / (2 * pixelsPerCm) + offsetX;
+          const midZ = (p1.y + p2.y) / (2 * pixelsPerCm) + offsetZ;
+          
+          if (isRailing) {
+            if (railingStyle === 'glass') {
+                segs.push({ type: 'wall', length: totalLength, angle, midX, midZ, height: 10, y: 5, color: segmentColor, depth: wallThickness });
+                segs.push({ type: 'glass', length: totalLength, angle, midX, midZ, height: 90, y: 55, color: '#93c5fd', depth: 4 });
+                segs.push({ type: 'frame', length: totalLength, angle, midX, midZ, height: 4, y: 100, color: '#cbd5e1', depth: 6 });
+              } else if (railingStyle === 'metal-bars') {
+                segs.push({ type: 'frame', length: totalLength, angle, midX, midZ, height: 4, y: 2, color: '#334155', depth: 4 });
+                segs.push({ type: 'frame', length: totalLength, angle, midX, midZ, height: 4, y: 98, color: '#334155', depth: 6 });
+                const barSpacing = 15;
+                const barCount = Math.floor(totalLength / barSpacing);
+                const actualSpacing = totalLength / (barCount + 1);
+                for (let j = 1; j <= barCount; j++) {
+                  const posAlong = j * actualSpacing;
+                  const barX = (p1.x / pixelsPerCm) + Math.cos(angle) * posAlong + offsetX;
+                  const barZ = (p1.y / pixelsPerCm) + Math.sin(angle) * posAlong + offsetZ;
+                  segs.push({ type: 'frame', length: 2, angle, midX: barX, midZ: barZ, height: 92, y: 50, color: '#475569', depth: 2 });
+                }
+              } else if (railingStyle === 'wooden-slats') {
+                segs.push({ type: 'wall', length: totalLength, angle, midX, midZ, height: 4, y: 2, color: '#451a03', depth: 6 });
+                segs.push({ type: 'wall', length: totalLength, angle, midX, midZ, height: 6, y: 97, color: '#451a03', depth: 8 });
+                const slatWidth = 8;
+                const slatSpacing = 15;
+                const slatCount = Math.floor(totalLength / slatSpacing);
+                const actualSpacing = totalLength / (slatCount + 1);
+                for (let j = 1; j <= slatCount; j++) {
+                  const posAlong = j * actualSpacing;
+                  const slatX = (p1.x / pixelsPerCm) + Math.cos(angle) * posAlong + offsetX;
+                  const slatZ = (p1.y / pixelsPerCm) + Math.sin(angle) * posAlong + offsetZ;
+                  segs.push({ type: 'wall', length: slatWidth, angle, midX: slatX, midZ: slatZ, height: 90, y: 50, color: '#78350f', depth: 4 });
+                }
+              } else {
+                segs.push({ type: 'wall', length: totalLength, angle, midX, midZ, height: 100, y: 50, color: segmentColor, depth: wallThickness });
+                segs.push({ type: 'wall', length: totalLength + 0.2, angle, midX, midZ, height: 4, y: 102, color: '#cbd5e1', depth: wallThickness + 4 });
+              }
           } else {
-            // Concrete / Parapet
-            segs.push({ type: 'wall', length: totalLength, angle, midX, midZ, height: 100, y: 50, color: segmentColor, depth: wallThickness });
-            segs.push({ type: 'wall', length: totalLength + 0.2, angle, midX, midZ, height: 4, y: 102, color: '#cbd5e1', depth: wallThickness + 4 });
+            segs.push({ type: 'wall', length: totalLength, angle, midX, midZ, height: effectiveWallHeight, y: effectiveWallHeight / 2, color: segmentColor });
           }
         } else {
-          segs.push({ type: 'wall', length: totalLength, angle, midX, midZ, height: wallHeight, y: wallHeight / 2, color: segmentColor });
-        }
-      } else {
-        let currentPos = 0;
-        segmentAttachments.forEach(att => {
-          const attWidth = att.width / pixelsPerCm;
-          const attCenterPos = att.positionAlongWall * totalLength;
-          const attStartPos = Math.max(0, attCenterPos - attWidth / 2);
-          const attEndPos = Math.min(totalLength, attCenterPos + attWidth / 2);
+          let currentPos = 0;
+          segmentAttachments.forEach(att => {
+            const attWidth = att.width / pixelsPerCm;
+            const attCenterPos = att.positionAlongWall * totalLength;
+            const attStartPos = Math.max(0, attCenterPos - attWidth / 2);
+            const attEndPos = Math.min(totalLength, attCenterPos + attWidth / 2);
 
-          if (attStartPos > currentPos) {
-            const partLength = attStartPos - currentPos;
+            if (attStartPos > currentPos) {
+              const partLength = attStartPos - currentPos;
+              const partMidPos = currentPos + partLength / 2;
+              const midX = (p1.x / pixelsPerCm) + Math.cos(angle) * partMidPos + offsetX;
+              const midZ = (p1.y / pixelsPerCm) + Math.sin(angle) * partMidPos + offsetZ;
+              segs.push({ type: 'wall', length: partLength, angle, midX, midZ, height: effectiveWallHeight, y: effectiveWallHeight / 2, color: segmentColor });
+            }
+
+            const sillHeight = att.type === 'door' ? 0 : 90;
+            const openingHeight = att.type === 'door' ? 210 : 120;
+            const headerHeight = Math.max(0, effectiveWallHeight - (sillHeight + openingHeight));
+            const midX = (p1.x / pixelsPerCm) + Math.cos(angle) * attCenterPos + offsetX;
+            const midZ = (p1.y / pixelsPerCm) + Math.sin(angle) * attCenterPos + offsetZ;
+
+            if (att.type === 'window' && sillHeight > 0) {
+              segs.push({ type: 'wall', length: attWidth, angle, midX, midZ, height: sillHeight, y: sillHeight / 2, color: segmentColor });
+            }
+
+            if (headerHeight > 0) {
+              segs.push({ type: 'wall', length: attWidth, angle, midX, midZ, height: headerHeight, y: effectiveWallHeight - headerHeight / 2, color: segmentColor });
+            }
+
+            if (att.type === 'window') {
+              segs.push({ type: 'glass', length: attWidth, angle, midX, midZ, height: Math.min(openingHeight, wallHeight - sillHeight), y: sillHeight + Math.min(openingHeight, wallHeight - sillHeight) / 2, color: '#93c5fd' });
+            }
+
+            const frameColor = att.frameColor || '#ffffff';
+            const frameThickness = 5;
+            const frameDepth = wallThickness + 2;
+
+            const sideX1 = (p1.x / pixelsPerCm) + Math.cos(angle) * (attCenterPos - attWidth / 2 + frameThickness / 2) + offsetX;
+            const sideZ1 = (p1.y / pixelsPerCm) + Math.sin(angle) * (attCenterPos - attWidth / 2 + frameThickness / 2) + offsetZ;
+            segs.push({ type: 'frame', length: frameThickness, angle, midX: sideX1, midZ: sideZ1, height: openingHeight, y: sillHeight + openingHeight / 2, color: frameColor, depth: frameDepth });
+
+            const sideX2 = (p1.x / pixelsPerCm) + Math.cos(angle) * (attCenterPos + attWidth / 2 - frameThickness / 2) + offsetX;
+            const sideZ2 = (p1.y / pixelsPerCm) + Math.sin(angle) * (attCenterPos + attWidth / 2 - frameThickness / 2) + offsetZ;
+            segs.push({ type: 'frame', length: frameThickness, angle, midX: sideX2, midZ: sideZ2, height: openingHeight, y: sillHeight + openingHeight / 2, color: frameColor, depth: frameDepth });
+
+            const topY = sillHeight + openingHeight - frameThickness / 2;
+            segs.push({ type: 'frame', length: attWidth, angle, midX, midZ, height: frameThickness, y: topY, color: frameColor, depth: frameDepth });
+
+            if (att.type === 'window') {
+              const bottomY = sillHeight + frameThickness / 2;
+              segs.push({ type: 'frame', length: attWidth, angle, midX, midZ, height: frameThickness, y: bottomY, color: frameColor, depth: frameDepth });
+            }
+
+            if (att.type === 'window' && att.curtainType && att.curtainType !== 'none') {
+                const curtainOffset = wallThickness / 2 + 5;
+                const cMidX = midX - normal.x * (curtainOffset / pixelsPerCm);
+                const cMidZ = midZ - normal.y * (curtainOffset / pixelsPerCm);
+                
+                if (att.curtainType === 'thin' || att.curtainType === 'both') {
+                  segs.push({ 
+                    type: 'curtain', 
+                    length: attWidth + 20, 
+                    angle, 
+                    midX: cMidX, 
+                    midZ: cMidZ, 
+                    height: openingHeight + 10, 
+                    y: sillHeight + openingHeight / 2, 
+                    color: att.thinCurtainColor || '#ffffff', 
+                    opacity: 0.6, 
+                    depth: 1 
+                  });
+                }
+                
+                if (att.curtainType === 'thick' || att.curtainType === 'both') {
+                  const thickOffset = (att.curtainType === 'both' ? 2 : 0) / pixelsPerCm;
+                  const thickColor = att.thickCurtainColor || '#f1f5f9';
+                  
+                  if (att.curtainType === 'both') {
+                    const sideWidth = (attWidth + 40) * 0.25;
+                    const offsetFromCenter = (attWidth + 40) / 2 - sideWidth / 2;
+                    const lx = cMidX - (Math.cos(angle) * offsetFromCenter) - normal.x * thickOffset;
+                    const lz = cMidZ - (Math.sin(angle) * offsetFromCenter) - normal.y * thickOffset;
+                    segs.push({ type: 'curtain', length: sideWidth, angle, midX: lx, midZ: lz, height: openingHeight + 20, y: sillHeight + openingHeight / 2 + 5, color: thickColor, opacity: 0.9, depth: 2 });
+                    const rx = cMidX + (Math.cos(angle) * offsetFromCenter) - normal.x * thickOffset;
+                    const rz = cMidZ + (Math.sin(angle) * offsetFromCenter) - normal.y * thickOffset;
+                    segs.push({ type: 'curtain', length: sideWidth, angle, midX: rx, midZ: rz, height: openingHeight + 20, y: sillHeight + openingHeight / 2 + 5, color: thickColor, opacity: 0.9, depth: 2 });
+                  } else {
+                    segs.push({ type: 'curtain', length: attWidth + 40, angle, midX: cMidX - normal.x * thickOffset, midZ: cMidZ - normal.y * thickOffset, height: openingHeight + 20, y: sillHeight + openingHeight / 2 + 5, color: thickColor, opacity: 0.9, depth: 2 });
+                  }
+                }
+              }
+
+            currentPos = attEndPos;
+          });
+
+          if (currentPos < totalLength) {
+            const partLength = totalLength - currentPos;
             const partMidPos = currentPos + partLength / 2;
             const midX = (p1.x / pixelsPerCm) + Math.cos(angle) * partMidPos + offsetX;
             const midZ = (p1.y / pixelsPerCm) + Math.sin(angle) * partMidPos + offsetZ;
-            segs.push({ type: 'wall', length: partLength, angle, midX, midZ, height: wallHeight, y: wallHeight / 2, color: segmentColor });
+            segs.push({ type: 'wall', length: partLength, angle, midX, midZ, height: effectiveWallHeight, y: effectiveWallHeight / 2, color: segmentColor });
           }
+        }
+      });
+    } else {
+      const points = getRoomVertices(room);
+      const count = room.isClosed ? points.length : points.length - 1;
+      for (let i = 0; i < count; i++) {
+        const p1 = points[i];
+        const p2 = points[(i + 1) % points.length];
+        
+        const dx = (p2.x - p1.x) / pixelsPerCm;
+        const dy = (p2.y - p1.y) / pixelsPerCm;
+        const totalLength = Math.sqrt(dx * dx + dy * dy);
+        const angle = Math.atan2(dy, dx);
+        
+        const segmentAttachments = attachments
+          .filter(a => a.roomId === room.id && a.wallSegmentIndex === i)
+          .sort((a, b) => a.positionAlongWall - b.positionAlongWall);
 
-          const sillHeight = att.type === 'door' ? 0 : 90;
-          const openingHeight = att.type === 'door' ? 210 : 120;
-          const headerHeight = Math.max(0, wallHeight - (sillHeight + openingHeight));
-          
-          const midX = (p1.x / pixelsPerCm) + Math.cos(angle) * attCenterPos + offsetX;
-          const midZ = (p1.y / pixelsPerCm) + Math.sin(angle) * attCenterPos + offsetZ;
+        let segmentColor = room.wallColors?.[i] || room.materials?.wallBase?.value || room.defaultWallColor || "#f0f0f0";
+        if (!room.wallColors?.[i] && !room.materials?.wallBase && activeTheme) {
+          segmentColor = activeTheme.wallColors.base;
+        }
 
-          // Sill (wall under window)
-          if (att.type === 'window' && sillHeight > 0) {
-            segs.push({ type: 'wall', length: attWidth, angle, midX, midZ, height: sillHeight, y: sillHeight / 2, color: segmentColor });
-          }
+        const normal = getOutwardNormal(points, i);
+        const offsetX = (normal.x * wallThickness) / (2 * pixelsPerCm);
+        const offsetZ = (normal.y * wallThickness) / (2 * pixelsPerCm);
 
-          // Header (wall above window/door)
-          if (headerHeight > 0) {
-            segs.push({ type: 'wall', length: attWidth, angle, midX, midZ, height: headerHeight, y: wallHeight - headerHeight / 2, color: segmentColor });
-          }
+        const isRailing = room.wallTypes?.[i] === 'railing';
+        const effectiveWallHeight = Math.max(1, isRailing ? 100 : wallHeight);
 
-          // Glass or Door Opening
-          if (att.type === 'window') {
-            segs.push({ type: 'glass', length: attWidth, angle, midX, midZ, height: Math.min(openingHeight, wallHeight - sillHeight), y: sillHeight + Math.min(openingHeight, wallHeight - sillHeight) / 2, color: '#93c5fd' });
-          }
+        if (segmentAttachments.length === 0 || isRailing) {
+          const midX = (p1.x + p2.x) / (2 * pixelsPerCm) + offsetX;
+          const midZ = (p1.y + p2.y) / (2 * pixelsPerCm) + offsetZ;
+          segs.push({ type: 'wall', length: totalLength, angle, midX, midZ, height: effectiveWallHeight, y: effectiveWallHeight / 2, color: segmentColor });
+        } else {
+          let currentPos = 0;
+          segmentAttachments.forEach(att => {
+            const attWidth = att.width / pixelsPerCm;
+            const attCenterPos = att.positionAlongWall * totalLength;
+            const attStartPos = Math.max(0, attCenterPos - attWidth / 2);
+            const attEndPos = Math.min(totalLength, attCenterPos + attWidth / 2);
 
-          // Frame
-          const frameColor = att.frameColor || '#ffffff';
-          const frameThickness = 5;
-          const frameDepth = wallThickness + 2;
-
-          // Vertical Frame Sides
-          const sideX1 = (p1.x / pixelsPerCm) + Math.cos(angle) * (attCenterPos - attWidth / 2 + frameThickness / 2) + offsetX;
-          const sideZ1 = (p1.y / pixelsPerCm) + Math.sin(angle) * (attCenterPos - attWidth / 2 + frameThickness / 2) + offsetZ;
-          segs.push({ type: 'frame', length: frameThickness, angle, midX: sideX1, midZ: sideZ1, height: openingHeight, y: sillHeight + openingHeight / 2, color: frameColor, depth: frameDepth });
-
-          const sideX2 = (p1.x / pixelsPerCm) + Math.cos(angle) * (attCenterPos + attWidth / 2 - frameThickness / 2) + offsetX;
-          const sideZ2 = (p1.y / pixelsPerCm) + Math.sin(angle) * (attCenterPos + attWidth / 2 - frameThickness / 2) + offsetZ;
-          segs.push({ type: 'frame', length: frameThickness, angle, midX: sideX2, midZ: sideZ2, height: openingHeight, y: sillHeight + openingHeight / 2, color: frameColor, depth: frameDepth });
-
-          // Horizontal Frame Top
-          const topY = sillHeight + openingHeight - frameThickness / 2;
-          segs.push({ type: 'frame', length: attWidth, angle, midX, midZ, height: frameThickness, y: topY, color: frameColor, depth: frameDepth });
-
-          // Horizontal Frame Bottom (for windows)
-          if (att.type === 'window') {
-            const bottomY = sillHeight + frameThickness / 2;
-            segs.push({ type: 'frame', length: attWidth, angle, midX, midZ, height: frameThickness, y: bottomY, color: frameColor, depth: frameDepth });
-          }
-
-          // Curtains
-          if (att.type === 'window' && att.curtainType && att.curtainType !== 'none') {
-            const curtainOffset = wallThickness / 2 + 5;
-            const cMidX = midX - normal.x * curtainOffset;
-            const cMidZ = midZ - normal.y * curtainOffset;
-            
-            if (att.curtainType === 'thin' || att.curtainType === 'both') {
-              segs.push({ 
-                type: 'curtain', 
-                length: attWidth + 20, 
-                angle, 
-                midX: cMidX, 
-                midZ: cMidZ, 
-                height: openingHeight + 10, 
-                y: sillHeight + openingHeight / 2, 
-                color: att.thinCurtainColor || '#ffffff', 
-                opacity: 0.6, 
-                depth: 1 
-              });
+            if (attStartPos > currentPos) {
+              const partLength = attStartPos - currentPos;
+              const partMidPos = currentPos + partLength / 2;
+              const midX = (p1.x / pixelsPerCm) + Math.cos(angle) * partMidPos + offsetX;
+              const midZ = (p1.y / pixelsPerCm) + Math.sin(angle) * partMidPos + offsetZ;
+              segs.push({ type: 'wall', length: partLength, angle, midX, midZ, height: effectiveWallHeight, y: effectiveWallHeight / 2, color: segmentColor });
             }
-            
-            if (att.curtainType === 'thick' || att.curtainType === 'both') {
-              const thickOffset = att.curtainType === 'both' ? 2 : 0;
-              const thickColor = att.thickCurtainColor || '#f1f5f9';
-              
-              if (att.curtainType === 'both') {
-                // Split thick curtains at the ends
-                const sideWidth = (attWidth + 40) * 0.25; // Each side takes 25% of width
-                const offsetFromCenter = (attWidth + 40) / 2 - sideWidth / 2;
-                
-                // Left side
-                const lx = cMidX - Math.cos(angle) * offsetFromCenter - normal.x * thickOffset;
-                const lz = cMidZ - Math.sin(angle) * offsetFromCenter - normal.y * thickOffset;
-                segs.push({ 
-                  type: 'curtain', 
-                  length: sideWidth, 
-                  angle, 
-                  midX: lx, 
-                  midZ: lz, 
-                  height: openingHeight + 20, 
-                  y: sillHeight + openingHeight / 2 + 5, 
-                  color: thickColor, 
-                  opacity: 0.9, 
-                  depth: 2 
-                });
 
-                // Right side
-                const rx = cMidX + Math.cos(angle) * offsetFromCenter - normal.x * thickOffset;
-                const rz = cMidZ + Math.sin(angle) * offsetFromCenter - normal.y * thickOffset;
-                segs.push({ 
-                  type: 'curtain', 
-                  length: sideWidth, 
-                  angle, 
-                  midX: rx, 
-                  midZ: rz, 
-                  height: openingHeight + 20, 
-                  y: sillHeight + openingHeight / 2 + 5, 
-                  color: thickColor, 
-                  opacity: 0.9, 
-                  depth: 2 
-                });
-              } else {
-                // Full width thick curtain
-                segs.push({ 
-                  type: 'curtain', 
-                  length: attWidth + 40, 
-                  angle, 
-                  midX: cMidX - normal.x * thickOffset, 
-                  midZ: cMidZ - normal.y * thickOffset, 
-                  height: openingHeight + 20, 
-                  y: sillHeight + openingHeight / 2 + 5, 
-                  color: thickColor, 
-                  opacity: 0.9, 
-                  depth: 2 
-                });
-              }
+            const midX = (p1.x / pixelsPerCm) + Math.cos(angle) * attCenterPos + offsetX;
+            const midZ = (p1.y / pixelsPerCm) + Math.sin(angle) * attCenterPos + offsetZ;
+
+            if (att.type === 'window') {
+              segs.push({ type: 'glass', length: attWidth, angle, midX, midZ, height: 120, y: 150, color: '#93c5fd' });
             }
+
+            currentPos = attEndPos;
+          });
+
+          if (currentPos < totalLength) {
+            const partLength = totalLength - currentPos;
+            const partMidPos = currentPos + partLength / 2;
+            const midX = (p1.x / pixelsPerCm) + Math.cos(angle) * partMidPos + offsetX;
+            const midZ = (p1.y / pixelsPerCm) + Math.sin(angle) * partMidPos + offsetZ;
+            segs.push({ type: 'wall', length: partLength, angle, midX, midZ, height: effectiveWallHeight, y: effectiveWallHeight / 2, color: segmentColor });
           }
-
-          currentPos = attEndPos;
-        });
-
-        if (currentPos < totalLength) {
-          const partLength = totalLength - currentPos;
-          const partMidPos = currentPos + partLength / 2;
-          const midX = (p1.x / pixelsPerCm) + Math.cos(angle) * partMidPos + offsetX;
-          const midZ = (p1.y / pixelsPerCm) + Math.sin(angle) * partMidPos + offsetZ;
-          segs.push({ type: 'wall', length: partLength, angle, midX, midZ, height: wallHeight, y: wallHeight / 2, color: segmentColor });
         }
       }
     }
     return segs;
-  }, [room.points, pixelsPerCm, attachments, room.wallColors, room.defaultWallColor, room.materials, activeThemeId, activeTheme, wallHeight, wallThickness, room.id, room.isClosed]);
+  }, [room, pixelsPerCm, attachments, room.wallColors, room.defaultWallColor, room.materials, room.wallTypes, room.railingStyles, room.internalWalls, activeThemeId, activeTheme, wallHeight, wallThickness, room.id, room.isClosed, planSnapshot]);
 
   return (
     <group>

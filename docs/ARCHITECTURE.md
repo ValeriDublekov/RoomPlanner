@@ -44,7 +44,7 @@ The application is structured into logical modules to ensure maintainability and
 Defined in `src/types.ts`:
 
 - **Vector2d**: Simple `{ x, y }` coordinate.
-- **RoomObject**: A polygon representing a room, defined by an array of points.
+- **RoomObject**: A room defined by a topological graph of vertices and edges, forming a closed or open boundary.
 - **FurnitureObject**: A rectangular or polygonal object with position, dimensions, rotation, and optional internal points.
 - **AppMode**: Current interaction mode (`select`, `draw-room`, `draw-furniture`, `calibrate`, `add-box`, `measure`, `dimension`).
 - **LayerType**: Logical layers (`blueprint`, `room`, `furniture`) used to organize rendering and interaction.

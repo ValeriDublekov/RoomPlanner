@@ -26,9 +26,13 @@ Persistence configuration changes can silently affect reload behavior.
 This is a high-impact file because it combines:
 
 - history handling
-- project migrations
+- project migrations (including points-to-topology logic)
 - local save/download
 - cloud save logic
+
+### `src/lib/geometry/topology.ts`
+
+This file defines the core relationship between stored topological data (vertices/edges) and derived spatial data (ordered polygons). **Bugs here can break all room rendering and attachment placements.**
 
 ### `src/components/ThreeD/ThreeDPreview.tsx`
 
@@ -66,6 +70,7 @@ When making non-trivial changes, use this order:
 
 - not every state field is persisted
 - not every save action goes to Firestore
-- room point order is not arbitrary
-- wall attachments are not independent from room geometry
+- **Topology Sovereignty**: Room geometry is **not** a simple list of points. It is a graph. Never modify `vertices` or `edges` without considering the implications for the `getOrderedVertexIds` traversal.
+- **Attachment Fragility**: `wallAttachments` and `beam` attachments are coupled to ordered segment indices. Adding a vertex in the "middle" of a segment shifts all subsequent indices, which **will** displace attachments unless remapped.
+- **Shared Wall Logic**: Multiple rooms may share vertices or edges via topology IDs (future expansion), but currently, each room owns its vertices/edges.
 - export functions are not necessarily pure

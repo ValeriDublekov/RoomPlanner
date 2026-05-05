@@ -1,6 +1,7 @@
 import { StateCreator } from 'zustand';
 import { AppState } from '../../store';
 import { AppMode, LayerType, EdgeMap, Vector2d, FurnitureObject } from '../../types';
+import { getRoomVertices } from '../../lib/geometry/topology';
 
 export interface UISlice {
   scale: number;
@@ -112,7 +113,6 @@ export const createUISlice: StateCreator<AppState, [], [], UISlice> = (set, get)
   setScale: (scale) => set({ scale }),
   setPosition: (position) => set({ position }),
   setMode: (mode) => {
-    console.log('setMode called with:', mode);
     set({ 
       mode, 
       roomPoints: [], 
@@ -189,7 +189,7 @@ export const createUISlice: StateCreator<AppState, [], [], UISlice> = (set, get)
     }
 
     const allPoints = [
-      ...rooms.flatMap(r => r.points),
+      ...rooms.flatMap(r => getRoomVertices(r)),
       ...furniture.flatMap(f => [
         { x: f.x, y: f.y },
         { x: f.x + f.width, y: f.y + f.height }

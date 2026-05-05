@@ -1,41 +1,127 @@
-import { Vector2d, EdgeMap } from '../../types';
+import { Vector2d, EdgeMap, PlanSnapshot, RoomObject } from '../../types';
 import { getDistance, getDistanceToSegment, rotatePoint } from './mathUtils';
-import { isPointInPolygon } from './collision';
 import { getFurnitureVertices } from './polygonUtils';
+import { buildTopologyGraph } from './topology';
 
 /**
- * Finds the nearest vertex (corner) or edge within a threshold.
+ * Unique key for a point to deduplicate vertices.
  */
-export const getSnappedPosition = (
+const getPointKey = (p: Vector2d) => `${p.x.toFixed(3)},${p.y.toFixed(3)}`;
+
+/**
+ * Canonical key for a segment to handle shared boundaries.
+ */
+const getSegmentKey = (p1: Vector2d, p2: Vector2d) => {
+  const x1 = Number(p1.x.toFixed(3));
+  const y1 = Number(p1.y.toFixed(3));
+  const x2 = Number(p2.x.toFixed(3));
+  const y2 = Number(p2.y.toFixed(3));
+  
+  if (x1 < x2 || (x1 === x2 && y1 < y2)) {
+    return `${x1},${y1}_${x2},${y2}`;
+  }
+  return `${x2},${y2}_${x1},${y1}`;
+};
+
+export interface SnapResult {
+  point: Vector2d;
+  minDist: number;
+  snappedWall?: {
+    roomId: string;
+    segmentIndex: number;
+    t: number;
+  };
+}
+
+/**
+ * Finds the nearest vertex (corner) or edge within a threshold and returns detailed metadata.
+ */
+export const getDetailedSnappedPosition = (
   pos: Vector2d,
-  rooms: { points: Vector2d[] }[],
+  rooms: RoomObject[],
   furniture: { x: number; y: number; width: number; height: number; rotation: number }[],
   threshold: number,
   edgeMap: EdgeMap | null = null,
   bgTransform: { x: number, y: number, scale: number, rotation: number } | null = null,
-  lastPoint: Vector2d | null = null
-): Vector2d => {
+  lastPoint: Vector2d | null = null,
+  planSnapshot: PlanSnapshot | null = null
+): SnapResult => {
   let nearest = { ...pos };
   let minDist = threshold;
+  let snappedWall: SnapResult['snappedWall'] = undefined;
 
   // 1. Vector Snapping
-  for (const room of rooms) {
-    for (const p of room.points) {
-      const d = getDistance(pos, p);
-      if (d < minDist) {
-        minDist = d;
-        nearest = { ...p };
+  if (planSnapshot) {
+    // Vertex Snapping
+    for (const wall of planSnapshot.walls) {
+      for (const face of [wall.interiorFace, wall.exteriorFace]) {
+        const ip1 = face.p1;
+        const ip2 = face.p2;
+        
+        const d1 = getDistance(pos, ip1);
+        if (d1 < minDist) {
+          minDist = d1;
+          nearest = { ...ip1 };
+          snappedWall = { roomId: wall.roomId, segmentIndex: wall.segmentIndex, t: 0 };
+        }
+        const d2 = getDistance(pos, ip2);
+        if (d2 < minDist) {
+          minDist = d2;
+          nearest = { ...ip2 };
+          snappedWall = { roomId: wall.roomId, segmentIndex: wall.segmentIndex, t: 1 };
+        }
       }
     }
     
-    for (let i = 0; i < room.points.length; i++) {
-      const p1 = room.points[i];
-      const p2 = room.points[(i + 1) % room.points.length];
-      const result = getDistanceToSegment(pos, p1, p2);
-      if (result.distance < minDist) {
-        minDist = result.distance;
-        nearest = result.point;
+    // Segment Snapping
+    for (const wall of planSnapshot.walls) {
+      for (const face of [wall.interiorFace, wall.exteriorFace]) {
+        const result = getDistanceToSegment(pos, face.p1, face.p2);
+        if (result.distance < minDist) {
+          minDist = result.distance;
+          nearest = result.point;
+          
+          const dx = face.p2.x - face.p1.x;
+          const dy = face.p2.y - face.p1.y;
+          const lenSq = dx * dx + dy * dy;
+          let t = 0;
+          if (lenSq > 0) {
+            t = ((nearest.x - face.p1.x) * dx + (nearest.y - face.p1.y) * dy) / lenSq;
+          }
+          snappedWall = { roomId: wall.roomId, segmentIndex: wall.segmentIndex, t: Math.max(0, Math.min(1, t)) };
+        }
       }
+    }
+  } else {
+    // Topology Snapping (no planSnapshot)
+    for (const room of rooms) {
+      const graph = buildTopologyGraph(room);
+      graph.edges.forEach((edge, i) => {
+        const p1 = graph.vertices[edge.p1].position;
+        const p2 = graph.vertices[edge.p2].position;
+        
+        const d1 = getDistance(pos, p1);
+        if (d1 < minDist) {
+          minDist = d1;
+          nearest = { ...p1 };
+          snappedWall = { roomId: room.id, segmentIndex: i, t: 0 };
+        }
+
+        const result = getDistanceToSegment(pos, p1, p2);
+        if (result.distance < minDist) {
+          minDist = result.distance;
+          nearest = result.point;
+          
+          const dx = p2.x - p1.x;
+          const dy = p2.y - p1.y;
+          const lenSq = dx * dx + dy * dy;
+          let t = 0;
+          if (lenSq > 0) {
+            t = ((nearest.x - p1.x) * dx + (nearest.y - p1.y) * dy) / lenSq;
+          }
+          snappedWall = { roomId: room.id, segmentIndex: i, t: Math.max(0, Math.min(1, t)) };
+        }
+      });
     }
   }
 
@@ -46,6 +132,7 @@ export const getSnappedPosition = (
       if (d < minDist) {
         minDist = d;
         nearest = { ...v };
+        snappedWall = undefined; // Snap to furniture resets wall snap
       }
     }
     for (let i = 0; i < vertices.length; i++) {
@@ -55,12 +142,14 @@ export const getSnappedPosition = (
       if (result.distance < minDist) {
         minDist = result.distance;
         nearest = result.point;
+        snappedWall = undefined;
       }
     }
   }
 
   // 2. Image Snapping
   if (minDist === threshold && edgeMap && bgTransform) {
+    // ... we don't return snappedWall for image snapping
     const radius = Math.max(8, threshold / bgTransform.scale);
     const rad = (bgTransform.rotation * Math.PI) / 180;
     const cos = Math.cos(-rad);
@@ -143,7 +232,23 @@ export const getSnappedPosition = (
     }
   }
 
-  return nearest;
+  return { point: nearest, minDist, snappedWall };
+};
+
+/**
+ * Finds the nearest vertex (corner) or edge within a threshold.
+ */
+export const getSnappedPosition = (
+  pos: Vector2d,
+  rooms: RoomObject[],
+  furniture: { x: number; y: number; width: number; height: number; rotation: number }[],
+  threshold: number,
+  edgeMap: EdgeMap | null = null,
+  bgTransform: { x: number, y: number, scale: number, rotation: number } | null = null,
+  lastPoint: Vector2d | null = null,
+  planSnapshot: PlanSnapshot | null = null
+): Vector2d => {
+  return getDetailedSnappedPosition(pos, rooms as any, furniture, threshold, edgeMap, bgTransform, lastPoint, planSnapshot).point;
 };
 
 /**
@@ -154,10 +259,11 @@ export const getSnappedFurniturePosition = (
   width: number,
   height: number,
   rotation: number,
-  rooms: { id: string, points: Vector2d[] }[],
+  rooms: RoomObject[],
   furniture: { id: string, x: number; y: number; width: number; height: number; rotation: number }[],
   threshold: number,
-  ignoredId?: string
+  ignoredId?: string,
+  planSnapshot: PlanSnapshot | null = null
 ): Vector2d & { suggestedRotation?: number } => {
   const currentPos = { ...centerPos };
   const snappedTargetIds = new Set<string>();
@@ -179,28 +285,54 @@ export const getSnappedFurniturePosition = (
 
     for (let sideIndex = 0; sideIndex < worldSides.length; sideIndex++) {
       const side = worldSides[sideIndex];
-      for (const room of rooms) {
-        for (let i = 0; i < room.points.length; i++) {
-          const wallId = `wall-${room.id}-${i}`;
-          if (snappedTargetIds.has(wallId)) continue;
-
-          const p1 = room.points[i];
-          const p2 = room.points[(i + 1) % room.points.length];
-          const result = getDistanceToSegment(side, p1, p2);
+      
+      // Wall Snapping
+      if (planSnapshot) {
+        for (const wall of planSnapshot.walls) {
+          if (snappedTargetIds.has(wall.id)) continue;
           
-          if (result.distance < threshold && result.distance < minSnapDist) {
-            minSnapDist = result.distance;
-            bestSnap = {
-              offsetX: result.point.x - side.x,
-              offsetY: result.point.y - side.y,
-              targetId: wallId,
-              sideIndex: sideIndex,
-              isWall: true
-            };
+          for (const face of [wall.interiorFace, wall.exteriorFace]) {
+            const result = getDistanceToSegment(side, face.p1, face.p2);
+            if (result.distance < threshold && result.distance < minSnapDist) {
+              minSnapDist = result.distance;
+              bestSnap = {
+                offsetX: result.point.x - side.x,
+                offsetY: result.point.y - side.y,
+                targetId: wall.id,
+                sideIndex: sideIndex,
+                isWall: true
+              };
+            }
+          }
+        }
+      } else {
+        // Topology Snapping
+        for (const room of rooms) {
+          const graph = buildTopologyGraph(room);
+          for (let i = 0; i < graph.edges.length; i++) {
+            const edge = graph.edges[i];
+            const wallId = edge.id;
+            if (snappedTargetIds.has(wallId)) continue;
+
+            const p1 = graph.vertices[edge.p1].position;
+            const p2 = graph.vertices[edge.p2].position;
+            const result = getDistanceToSegment(side, p1, p2);
+            
+            if (result.distance < threshold && result.distance < minSnapDist) {
+              minSnapDist = result.distance;
+              bestSnap = {
+                offsetX: result.point.x - side.x,
+                offsetY: result.point.y - side.y,
+                targetId: wallId,
+                sideIndex: sideIndex,
+                isWall: true
+              };
+            }
           }
         }
       }
 
+      // Furniture Snapping
       for (const other of furniture) {
         if (other.id === ignoredId) continue;
         const targetId = `furniture-${other.id}`;

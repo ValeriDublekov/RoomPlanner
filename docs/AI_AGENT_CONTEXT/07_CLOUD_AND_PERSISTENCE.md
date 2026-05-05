@@ -29,7 +29,14 @@ Save strategy:
 1. if user is signed in, save to Firestore
 2. otherwise, download local JSON
 
-Cloud save payload includes serialized project state and metadata such as timestamps and optional thumbnails.
+Cloud save payload includes serialized project state (using the topology-first RoomObject format) and metadata.
+
+### Attachment Stability & Migrations
+
+Because `wallAttachments` and `beam` attachments are coupled to ordered segment indices, any migration or logic that modifies room topology must handle index remapping. 
+
+- **Explicit Saves**: The stored JSON contains raw vertices/edges. Reconstruction happens on the client side after loading.
+- **Data Integrity**: When loading legacy projects (points-first), they are automatically migrated to topology-first during the `loadState` flow.
 
 ## Load Behavior
 
@@ -54,7 +61,7 @@ Agents changing save behavior should keep in mind:
 
 These are not the same thing.
 
-- browser persistence is handled by Zustand persist in `src/store.ts`
-- explicit project save/load is handled in `projectSlice.ts`
+- **Browser Persistence (Autosave)**: Handled by Zustand `persist` in `src/store.ts`. This saves the entire active store state to `localStorage` (including transient UI states).
+- **Explicit Project Save/Load**: Handled in `projectSlice.ts`. This is a selective export of the domain model (rooms, furniture, etc.) for cloud storage or file export.
 
-Changes to one do not automatically cover the other.
+**Crucial**: Migrations (topology-first transition, etc.) must be applied to both paths to prevent stale data in the browser from breaking new code.

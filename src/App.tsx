@@ -21,7 +21,6 @@ const isMobileDevice = () => {
 export default function App() {
   const setCurrentUser = useStore(state => state.setCurrentUser);
   const setIsAuthLoading = useStore(state => state.setIsAuthLoading);
-  const isReadOnly = useStore(state => state.isReadOnly);
 
   // Centralized keyboard shortcuts entry point
   useKeyboardShortcuts();

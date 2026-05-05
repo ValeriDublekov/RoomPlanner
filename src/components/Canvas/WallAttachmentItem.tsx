@@ -1,8 +1,9 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useMemo } from 'react';
 import { Group, Rect, Arc, Transformer, Text, Line } from 'react-konva';
-import { WallAttachment, Vector2d } from '../../types';
+import { WallAttachment, PlanSnapshot } from '../../types';
 import { useStore } from '../../store';
-import { getDistance, formatDistance, getOutwardNormal } from '../../lib/geometry';
+import { formatDistance, getAttachmentTransform, getOutwardNormal } from '../../lib/geometry';
+import { getRoomVertices } from '../../lib/geometry/topology';
 import Konva from 'konva';
 
 interface WallAttachmentItemProps {
@@ -10,6 +11,7 @@ interface WallAttachmentItemProps {
   isSelected: boolean;
   onSelect: () => void;
   scale: number;
+  planSnapshot?: PlanSnapshot;
 }
 
 export const WallAttachmentItem: React.FC<WallAttachmentItemProps> = ({
@@ -17,8 +19,9 @@ export const WallAttachmentItem: React.FC<WallAttachmentItemProps> = ({
   isSelected,
   onSelect,
   scale,
+  planSnapshot,
 }) => {
-  const { rooms, wallThickness, pixelsPerCm, updateWallAttachment, saveHistory, activeLayer, isReadOnly } = useStore();
+  const { rooms, wallThickness, pixelsPerCm, updateWallAttachment, saveHistory, activeLayer, isReadOnly, mode } = useStore();
   const groupRef = useRef<Konva.Group>(null);
   const trRef = useRef<Konva.Transformer>(null);
   const [isInteracting, setIsInteracting] = useState(false);
@@ -32,24 +35,52 @@ export const WallAttachmentItem: React.FC<WallAttachmentItemProps> = ({
   }, [isSelected]);
 
   const room = rooms.find(r => r.id === attachment.roomId);
-  if (!room) return null;
+  const transform = useMemo(() => {
+    if (planSnapshot) return getAttachmentTransform(attachment, planSnapshot);
+    // Legacy fallback if snapshot not provided
+    const tempSnapshot: PlanSnapshot = { 
+      walls: rooms.flatMap(r => {
+        const pts = getRoomVertices(r);
+        return pts.map((p, i) => ({
+            id: `${r.id}-${i}`,
+            roomId: r.id,
+            segmentIndex: i,
+            referenceSegment: { p1: p, p2: pts[(i+1)%pts.length] },
+            normal: getOutwardNormal(pts, i),
+            thickness: wallThickness,
+            interiorFace: { p1: p, p2: pts[(i+1)%pts.length]},
+            exteriorFace: { p1: p, p2: pts[(i+1)%pts.length]},
+            wallBandPolygon: [p, p, p, p]
+        }));
+      }),
+      sharedWalls: [],
+      generatedAt: 0
+    };
+    return getAttachmentTransform(attachment, tempSnapshot);
+  }, [attachment, planSnapshot, rooms, wallThickness]);
 
-  const p1 = room.points[attachment.wallSegmentIndex];
-  const p2 = room.points[(attachment.wallSegmentIndex + 1) % room.points.length];
+  if (!room || !transform) return null;
+
+  const { position, rotation, normal } = transform;
+  const { x, y } = position;
+  const angle = rotation;
+
+  const p1 = transform.position; // fallback placeholder
+  const p2 = transform.position; // fallback placeholder
+
+  // We still need p1 and p2 for distance lines. 
+  // Let's get them from the snapshot if possible.
+  const wall = planSnapshot?.walls.find(w => w.roomId === attachment.roomId && w.segmentIndex === attachment.wallSegmentIndex);
+  const segP1 = wall ? wall.referenceSegment.p1 : { x: 0, y: 0 };
+  const segP2 = wall ? wall.referenceSegment.p2 : { x: 0, y: 0 };
   
-  const dx = p2.x - p1.x;
-  const dy = p2.y - p1.y;
+  const dx = segP2.x - segP1.x;
+  const dy = segP2.y - segP1.y;
   const length = Math.sqrt(dx * dx + dy * dy);
-  const angle = Math.atan2(dy, dx) * (180 / Math.PI);
-
-  // Exact projection point on the wall line
-  const x = p1.x + dx * attachment.positionAlongWall;
-  const y = p1.y + dy * attachment.positionAlongWall;
 
   const widthPx = attachment.width * pixelsPerCm;
   const thicknessPx = wallThickness * pixelsPerCm;
 
-  const normal = getOutwardNormal(room.points, attachment.wallSegmentIndex);
   const localY = { x: -dy / length, y: dx / length };
   const dot = localY.x * normal.x + localY.y * normal.y;
   const isLocalYOutside = dot > 0;
@@ -72,7 +103,7 @@ export const WallAttachmentItem: React.FC<WallAttachmentItemProps> = ({
     handleDragMove(e);
   };
 
-  const handleDragMove = (e: Konva.KonvaEventObject<DragEvent | Event>) => {
+  const handleDragMove = (_e: Konva.KonvaEventObject<DragEvent | Event>) => {
     const node = groupRef.current;
     if (!node) return;
     
@@ -83,29 +114,29 @@ export const WallAttachmentItem: React.FC<WallAttachmentItemProps> = ({
     };
 
     // Project onto wall segment to get t
-    const dx = p2.x - p1.x;
-    const dy = p2.y - p1.y;
-    const l2 = dx * dx + dy * dy;
-    let t = ((relPos.x - p1.x) * dx + (relPos.y - p1.y) * dy) / l2;
+    const dx_seg = segP2.x - segP1.x;
+    const dy_seg = segP2.y - segP1.y;
+    const l2 = dx_seg * dx_seg + dy_seg * dy_seg;
+    let t = ((relPos.x - segP1.x) * dx_seg + (relPos.y - segP1.y) * dy_seg) / l2;
     t = Math.max(0, Math.min(1, t));
 
     // Check if adjacent walls are perpendicular
-    const prevIdx = (attachment.wallSegmentIndex - 1 + room.points.length) % room.points.length;
-    const nextIdx = (attachment.wallSegmentIndex + 1) % room.points.length;
+    // NOTE: This still uses getRoomVertices for now, as SharedWalls transition is incomplete
+    const points = getRoomVertices(room);
+    const prevIdx = (attachment.wallSegmentIndex - 1 + points.length) % points.length;
+    const nextIdx = (attachment.wallSegmentIndex + 1) % points.length;
     
-    const prevP = room.points[prevIdx];
-    const nextP = room.points[(nextIdx + 1) % room.points.length];
+    const prevP = points[prevIdx];
+    const nextP = points[(nextIdx + 1) % points.length];
 
-    const prevAngle = Math.atan2(p1.y - prevP.y, p1.x - prevP.x) * (180 / Math.PI);
-    const nextAngle = Math.atan2(nextP.y - p2.y, nextP.x - p2.x) * (180 / Math.PI);
+    const prevAngle = Math.atan2(segP1.y - prevP.y, segP1.x - prevP.x) * (180 / Math.PI);
+    const nextAngle = Math.atan2(nextP.y - segP2.y, nextP.x - segP2.x) * (180 / Math.PI);
 
     const isPrevPerp = Math.abs((prevAngle - angle + 360) % 180 - 90) < 5;
     const isNextPerp = Math.abs((nextAngle - angle + 360) % 180 - 90) < 5;
 
     // Calculate distance from edge of attachment to perpendicular wall
     const halfWidth = (attachment.width * pixelsPerCm) / 2;
-    // Since points p1 and p2 are now the inner face of the wall, 
-    // we don't need to subtract half wall thickness anymore.
     const edgeDistToP1 = t * length - halfWidth;
     const edgeDistToP2 = (1 - t) * length - halfWidth;
 
@@ -124,10 +155,10 @@ export const WallAttachmentItem: React.FC<WallAttachmentItemProps> = ({
       y: node.y()
     };
 
-    const dx_seg = p2.x - p1.x;
-    const dy_seg = p2.y - p1.y;
+    const dx_seg = segP2.x - segP1.x;
+    const dy_seg = segP2.y - segP1.y;
     const l2 = dx_seg * dx_seg + dy_seg * dy_seg;
-    let t = ((relPos.x - p1.x) * dx_seg + (relPos.y - p1.y) * dy_seg) / l2;
+    let t = ((relPos.x - segP1.x) * dx_seg + (relPos.y - segP1.y) * dy_seg) / l2;
     t = Math.max(0, Math.min(1, t));
 
     updateWallAttachment(attachment.id, { positionAlongWall: t });
@@ -135,7 +166,6 @@ export const WallAttachmentItem: React.FC<WallAttachmentItemProps> = ({
 
   // Calculate edge points for distance lines
   const halfWidthPx = (attachment.width * pixelsPerCm) / 2;
-  const halfWallPx = (wallThickness * pixelsPerCm) / 2;
   const dx_norm = dx / length;
   const dy_norm = dy / length;
 
@@ -153,14 +183,14 @@ export const WallAttachmentItem: React.FC<WallAttachmentItemProps> = ({
           {distances.left !== null && (
             <>
               <Line
-                points={[p1.x, p1.y, edge1X, edge1Y]}
+                points={[segP1.x, segP1.y, edge1X, edge1Y]}
                 stroke="#f43f5e"
                 strokeWidth={3 / scale}
                 dash={[4 / scale, 4 / scale]}
               />
               <Group
-                x={(p1.x + edge1X) / 2}
-                y={(p1.y + edge1Y) / 2}
+                x={(segP1.x + edge1X) / 2}
+                y={(segP1.y + edge1Y) / 2}
                 rotation={(() => {
                   let a = angle;
                   if (a > 90) a -= 180;
@@ -169,140 +199,139 @@ export const WallAttachmentItem: React.FC<WallAttachmentItemProps> = ({
                 })()}
               >
                 <Rect
-                  x={-20 / scale}
-                  y={-25 / scale}
-                  width={40 / scale}
-                  height={16 / scale}
-                  fill="white"
-                  stroke="#f43f5e"
-                  strokeWidth={1 / scale}
-                  cornerRadius={4 / scale}
+                    x={-20 / scale}
+                    y={-25 / scale}
+                    width={40 / scale}
+                    height={16 / scale}
+                    fill="white"
+                    stroke="#f43f5e"
+                    strokeWidth={1 / scale}
+                    cornerRadius={4 / scale}
+                    />
+                    <Text
+                    x={-20 / scale}
+                    y={-22 / scale}
+                    width={40 / scale}
+                    text={formatDistance(distances.left * pixelsPerCm, 1)}
+                    fontSize={12 / scale}
+                    fontStyle="bold"
+                    fill="#f43f5e"
+                    align="center"
+                    />
+                </Group>
+                </>
+            )}
+
+            {/* Line to P2 */}
+            {distances.right !== null && (
+                <>
+                <Line
+                    points={[edge2X, edge2Y, segP2.x, segP2.y]}
+                    stroke="#f43f5e"
+                    strokeWidth={3 / scale}
+                    dash={[4 / scale, 4 / scale]}
                 />
-                <Text
-                  x={-20 / scale}
-                  y={-22 / scale}
-                  width={40 / scale}
-                  text={formatDistance(distances.left * pixelsPerCm, 1)}
-                  fontSize={12 / scale}
-                  fontStyle="bold"
-                  fill="#f43f5e"
-                  align="center"
-                />
-              </Group>
-            </>
-          )}
+                <Group
+                    x={(segP2.x + edge2X) / 2}
+                    y={(segP2.y + edge2Y) / 2}
+                    rotation={(() => {
+                    let a = angle;
+                    if (a > 90) a -= 180;
+                    if (a < -90) a += 180;
+                    return a;
+                    })()}
+                >
+                    <Rect
+                    x={-20 / scale}
+                    y={-25 / scale}
+                    width={40 / scale}
+                    height={16 / scale}
+                    fill="white"
+                    stroke="#f43f5e"
+                    strokeWidth={1 / scale}
+                    cornerRadius={4 / scale}
+                    />
+                    <Text
+                    x={-20 / scale}
+                    y={-22 / scale}
+                    width={40 / scale}
+                    text={formatDistance(distances.right * pixelsPerCm, 1)}
+                    fontSize={12 / scale}
+                    fontStyle="bold"
+                    fill="#f43f5e"
+                    align="center"
+                    />
+                </Group>
+                </>
+            )}
+            </Group>
+        )}
 
-          {/* Line to P2 */}
-          {distances.right !== null && (
-            <>
-              <Line
-                points={[edge2X, edge2Y, p2.x, p2.y]}
-                stroke="#f43f5e"
-                strokeWidth={3 / scale}
-                dash={[4 / scale, 4 / scale]}
-              />
-              <Group
-                x={(p2.x + edge2X) / 2}
-                y={(p2.y + edge2Y) / 2}
-                rotation={(() => {
-                  let a = angle;
-                  if (a > 90) a -= 180;
-                  if (a < -90) a += 180;
-                  return a;
-                })()}
-              >
-                <Rect
-                  x={-20 / scale}
-                  y={-25 / scale}
-                  width={40 / scale}
-                  height={16 / scale}
-                  fill="white"
-                  stroke="#f43f5e"
-                  strokeWidth={1 / scale}
-                  cornerRadius={4 / scale}
-                />
-                <Text
-                  x={-20 / scale}
-                  y={-22 / scale}
-                  width={40 / scale}
-                  text={formatDistance(distances.right * pixelsPerCm, 1)}
-                  fontSize={12 / scale}
-                  fontStyle="bold"
-                  fill="#f43f5e"
-                  align="center"
-                />
-              </Group>
-            </>
-          )}
-        </Group>
-      )}
+        <Group
+            ref={groupRef}
+            name="wall-attachment"
+            x={x}
+            y={y}
+            rotation={angle}
+            onMouseDown={(e) => {
+            if (isReadOnly || mode !== 'select') return;
+            e.cancelBubble = true;
+            }}
+            onClick={(e) => {
+            if (isReadOnly || e.evt.button !== 0 || activeLayer !== 'room') return;
+            e.cancelBubble = true;
+            onSelect();
+            }}
+            onTap={(e) => {
+            if (isReadOnly || activeLayer !== 'room') return;
+            e.cancelBubble = true;
+            onSelect();
+            }}
+            draggable={!isReadOnly}
+            onDragStart={(e) => {
+            if (isReadOnly) {
+                e.target.stopDrag();
+                return;
+            }
+            if (e.evt.button !== 0 || activeLayer !== 'room') return;
+            onSelect();
+            saveHistory();
+            setIsInteracting(true);
+            }}
+            onDragMove={handleDragMove}
+            onDragEnd={handleDragEnd}
+            dragBoundFunc={(pos) => {
+            const stage = groupRef.current?.getStage();
+            if (!stage) return pos;
 
-      <Group
-        ref={groupRef}
-        name="wall-attachment"
-        x={x}
-        y={y}
-        rotation={angle}
-        onMouseDown={(e) => {
-          if (isReadOnly || mode !== 'select') return;
-          e.cancelBubble = true;
-        }}
-        onClick={(e) => {
-          if (isReadOnly || e.evt.button !== 0 || activeLayer !== 'room') return;
-          e.cancelBubble = true;
-          onSelect();
-        }}
-        onTap={(e) => {
-          if (isReadOnly || activeLayer !== 'room') return;
-          e.cancelBubble = true;
-          onSelect();
-        }}
-        draggable={!isReadOnly}
-        onDragStart={(e) => {
-          if (isReadOnly) {
-            e.target.stopDrag();
-            return;
-          }
-          if (e.evt.button !== 0 || activeLayer !== 'room') return;
-          onSelect();
-          saveHistory();
-          setIsInteracting(true);
-        }}
-        onDragMove={handleDragMove}
-        onDragEnd={handleDragEnd}
-        dragBoundFunc={(pos) => {
-          // This is absolute. We handle snapping in onDragMove and reset in onDragEnd.
-          // But for visual feedback during drag, we can project here too.
-          const stage = groupRef.current?.getStage();
-          if (!stage) return pos;
+            const relMouse = {
+                x: (pos.x - stage.x()) / stage.scaleX(),
+                y: (pos.y - stage.y()) / stage.scaleY()
+            };
 
-          const relMouse = {
-            x: (pos.x - stage.x()) / stage.scaleX(),
-            y: (pos.y - stage.y()) / stage.scaleY()
-          };
+            const dx_s = segP2.x - segP1.x;
+            const dy_s = segP2.y - segP1.y;
+            const l2_s = dx_s * dx_s + dy_s * dy_s;
+            if (l2_s === 0) return pos;
+            let t = ((relMouse.x - segP1.x) * dx_s + (relMouse.y - segP1.y) * dy_s) / l2_s;
+            t = Math.max(0, Math.min(1, t));
 
-          const dx = p2.x - p1.x;
-          const dy = p2.y - p1.y;
-          const l2 = dx * dx + dy * dy;
-          let t = ((relMouse.x - p1.x) * dx + (relMouse.y - p1.y) * dy) / l2;
-          t = Math.max(0, Math.min(1, t));
+            const snappedRel = {
+                x: segP1.x + t * dx_s,
+                y: segP1.y + t * dy_s
+            };
 
-          const snappedRel = {
-            x: p1.x + t * dx,
-            y: p1.y + t * dy
-          };
-
-          return {
-            x: snappedRel.x * stage.scaleX() + stage.x(),
-            y: snappedRel.y * stage.scaleY() + stage.y()
-          };
-        }}
-        width={widthPx}
-        height={thicknessPx}
-        offsetX={widthPx / 2}
-        offsetY={finalOffsetY}
-        listening={activeLayer === 'room' || true}
-      >
+            return {
+                x: snappedRel.x * stage.scaleX() + stage.x(),
+                y: snappedRel.y * stage.scaleY() + stage.y()
+            };
+            }}
+            width={widthPx}
+            height={thicknessPx}
+            offsetX={widthPx / 2}
+            offsetY={finalOffsetY}
+            listening={activeLayer === 'room' || true}
+        >
         {/* 
           The "Cutter" Rectangle 
           This white fill visually masks the dark room wall underneath.

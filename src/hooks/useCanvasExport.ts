@@ -6,7 +6,9 @@ import { exportToDXF } from '../lib/dxfExport';
 import { exportToOBJ } from '../lib/objExport';
 import { exportToGLB } from '../lib/glbExport';
 import { generateProjectScene } from '../lib/threeSceneGenerator';
+import { getRoomVertices } from '../lib/geometry/topology';
 import { downloadURL } from '../lib/download';
+import { derivePlanSnapshot } from '../lib/geometry/planSnapshot';
 
 export const useCanvasExport = (stageRef: React.RefObject<Konva.Stage | null>) => {
   const handleExport = async () => {
@@ -29,7 +31,7 @@ export const useCanvasExport = (stageRef: React.RefObject<Konva.Stage | null>) =
 
     const { rooms, furniture, dimensions: savedDimensions } = useStore.getState();
     const allPoints: { x: number; y: number }[] = [];
-    rooms.forEach(r => allPoints.push(...r.points));
+    rooms.forEach(r => allPoints.push(...getRoomVertices(r)));
     furniture.forEach(f => allPoints.push(...getFurnitureVertices(f)));
     savedDimensions.forEach(d => { allPoints.push(d.p1); allPoints.push(d.p2); });
 
@@ -112,7 +114,7 @@ export const useCanvasExport = (stageRef: React.RefObject<Konva.Stage | null>) =
 
     const { rooms, furniture, dimensions: savedDimensions } = useStore.getState();
     const allPoints: { x: number; y: number }[] = [];
-    rooms.forEach(r => allPoints.push(...r.points));
+    rooms.forEach(r => allPoints.push(...getRoomVertices(r)));
     furniture.forEach(f => allPoints.push(...getFurnitureVertices(f)));
     savedDimensions.forEach(d => { allPoints.push(d.p1); allPoints.push(d.p2); });
 
@@ -232,7 +234,7 @@ export const useCanvasExport = (stageRef: React.RefObject<Konva.Stage | null>) =
 
     const { rooms, furniture, dimensions: savedDimensions } = useStore.getState();
     const allPoints: { x: number; y: number }[] = [];
-    rooms.forEach(r => allPoints.push(...r.points));
+    rooms.forEach(r => allPoints.push(...getRoomVertices(r)));
     furniture.forEach(f => allPoints.push(...getFurnitureVertices(f)));
     savedDimensions.forEach(d => { allPoints.push(d.p1); allPoints.push(d.p2); });
 
@@ -297,13 +299,17 @@ export const useCanvasExport = (stageRef: React.RefObject<Konva.Stage | null>) =
   };
 
   const handleExportDXF = () => {
-    const { rooms, furniture, wallAttachments, dimensions, pixelsPerCm } = useStore.getState();
+    const { rooms, furniture, wallAttachments, dimensions, pixelsPerCm, wallThickness } = useStore.getState();
+    const planSnapshot = derivePlanSnapshot(rooms, wallThickness, pixelsPerCm);
+    
     exportToDXF({
       rooms,
       furniture,
       attachments: wallAttachments,
       dimensions,
-      pixelsPerCm
+      pixelsPerCm,
+      wallThickness,
+      planSnapshot
     });
   };
 

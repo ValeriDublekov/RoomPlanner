@@ -66,10 +66,9 @@ export const CanvasStage: React.FC<CanvasStageProps> = ({
         onMouseDown={(e) => {
           onMouseDown(e);
         }}
-        onMouseUp={onMouseUp}
-        onDragMove={onDragMove}
-        onDragEnd={onDragEnd}
-        onClick={onClick}
+        onClick={(e) => {
+          onClick(e);
+        }}
         onDblClick={onDblClick}
         onMouseMove={onMouseMove}
         onContextMenu={isReadOnly ? undefined : handleContextMenu}

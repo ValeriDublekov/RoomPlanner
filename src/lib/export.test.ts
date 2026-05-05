@@ -65,11 +65,17 @@ describe('Export Utilities', () => {
   const mockRooms: RoomObject[] = [
     {
       id: 'room1',
-      points: [
-        { x: 0, y: 0 },
-        { x: 100, y: 0 },
-        { x: 100, y: 100 },
-        { x: 0, y: 100 }
+      vertices: [
+        { id: 'v0', x: 0, y: 0 },
+        { id: 'v1', x: 100, y: 0 },
+        { id: 'v2', x: 100, y: 100 },
+        { id: 'v3', x: 0, y: 100 }
+      ],
+      edges: [
+        { id: 'e0', startVertexId: 'v0', endVertexId: 'v1' },
+        { id: 'e1', startVertexId: 'v1', endVertexId: 'v2' },
+        { id: 'e2', startVertexId: 'v2', endVertexId: 'v3' },
+        { id: 'e3', startVertexId: 'v3', endVertexId: 'v0' }
       ],
       isClosed: true
     }
@@ -94,7 +100,8 @@ describe('Export Utilities', () => {
       furniture: mockFurniture,
       attachments: [],
       dimensions: [],
-      pixelsPerCm: 1
+      pixelsPerCm: 1,
+      wallThickness: 20
     };
 
     it('generateDXF returns a string without side effects', () => {
@@ -124,8 +131,8 @@ describe('Export Utilities', () => {
       });
 
       expect(scene).toBeInstanceOf(THREE.Group);
-      // RoomGroup + FurnitureModel
-      expect(scene.children.length).toBe(2); 
+      // RoomGroup + WallsGroup + FurnitureModel
+      expect(scene.children.length).toBe(3); 
     });
   });
 

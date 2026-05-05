@@ -1,6 +1,6 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useStore } from '../store';
-import { getSnappedPosition, getOrthoPoint, getSnappedFurniturePosition } from '../lib/geometry';
+import { getSnappedPosition, getOrthoPoint, getSnappedFurniturePosition, derivePlanSnapshot } from '../lib/geometry';
 import { Vector2d } from '../types';
 
 export const useMouseSnapping = (mousePos: { x: number, y: number }, isCtrlPressed: boolean, isAltPressed: boolean) => {
@@ -21,8 +21,11 @@ export const useMouseSnapping = (mousePos: { x: number, y: number }, isCtrlPress
     roomPoints,
     measurePoints,
     pixelsPerCm,
-    pendingFurniture
+    pendingFurniture,
+    wallThickness
   } = useStore();
+
+  const planSnapshot = useMemo(() => derivePlanSnapshot(rooms, wallThickness, pixelsPerCm), [rooms, wallThickness, pixelsPerCm]);
 
   const getSnappedMousePos = useCallback((forceIgnoreGrid = false): Vector2d & { suggestedRotation?: number } => {
     let pos = { ...mousePos };
@@ -45,7 +48,9 @@ export const useMouseSnapping = (mousePos: { x: number, y: number }, isCtrlPress
           pendingFurniture.rotation,
           rooms,
           furniture,
-          15 / scale // Slightly higher threshold for box snapping
+          15 / scale, // Slightly higher threshold for box snapping
+          undefined,
+          planSnapshot
         );
         snapped = snappedRes;
         suggestedRotation = snappedRes.suggestedRotation;
@@ -64,7 +69,8 @@ export const useMouseSnapping = (mousePos: { x: number, y: number }, isCtrlPress
           snapThreshold, 
           shouldSnapToImage ? edgeMap : null,
           { x: backgroundPosition.x, y: backgroundPosition.y, scale: backgroundScale, rotation: backgroundRotation },
-          lastPoint
+          lastPoint,
+          planSnapshot
         );
       }
     }
@@ -110,7 +116,7 @@ export const useMouseSnapping = (mousePos: { x: number, y: number }, isCtrlPress
     }
 
     return { ...pos, suggestedRotation };
-  }, [mousePos, isCtrlPressed, orthoMode, snapToGrid, snapToObjects, mode, roomPoints, measurePoints, rooms, furniture, pendingFurniture, scale, pixelsPerCm, snapToImage, edgeMap, backgroundPosition, backgroundScale, backgroundRotation]);
+  }, [mousePos, isCtrlPressed, isAltPressed, orthoMode, snapToGrid, snapToObjects, mode, activeLayer, roomPoints, measurePoints, rooms, furniture, pendingFurniture, scale, pixelsPerCm, snapToImage, edgeMap, backgroundPosition, backgroundScale, backgroundRotation, planSnapshot]);
 
   return { getSnappedMousePos };
 };

@@ -28,7 +28,7 @@ export const useStore = create<AppState>()(
     }),
     {
       name: 'floor-plan-storage',
-      version: 2,
+      version: 4,
       
       /**
        * Migrate persisted state to the current version.
@@ -36,11 +36,11 @@ export const useStore = create<AppState>()(
        * For cloud/file persistence migrations, see src/store/slices/projectSlice.ts (loadState).
        */
       migrate: (persistedState: unknown, version: number): unknown => {
-        const state = persistedState as PersistedState;
+        const state = persistedState as any;
         
         if (version < 1 && state && state.rooms) {
           // Fix for early experimental data structures
-          state.rooms = state.rooms.map(room => ({
+          state.rooms = state.rooms.map((room: any) => ({
             ...room,
             points: Array.isArray(room.points) ? room.points : []
           }));
@@ -48,6 +48,44 @@ export const useStore = create<AppState>()(
 
         if (version < 2 && state && state.furniture) {
           state.furniture = state.furniture.map(migrateFurnitureMaterials);
+        }
+
+        if (version < 4 && state && state.rooms) {
+          state.rooms = state.rooms.map((room: any) => {
+            let vertices = room.vertices;
+            let edges = room.edges;
+            let startVertexId = room.startVertexId;
+            
+            if ((!vertices || version < 4) && (room.points || vertices)) {
+              // If we are migrating from points OR fixing a broken topology migration
+              const points = room.points || vertices.map((v: any) => ({ x: v.x, y: v.y }));
+              
+              vertices = points.map((p: any, i: number) => ({
+                id: i.toString(),
+                x: p.x,
+                y: p.y
+              }));
+              
+              startVertexId = "0";
+              const edgeCount = room.isClosed ? vertices.length : vertices.length - 1;
+              edges = [];
+              for (let i = 0; i < edgeCount; i++) {
+                edges.push({
+                  id: `${room.id}-edge-${i}`,
+                  startVertexId: i.toString(),
+                  endVertexId: ((i + 1) % vertices.length).toString()
+                });
+              }
+            }
+            
+            const { points: _points, ...rest } = room;
+            return {
+              ...rest,
+              vertices: vertices || [],
+              edges: edges || [],
+              startVertexId: startVertexId || (vertices?.[0]?.id)
+            };
+          });
         }
         
         return state;

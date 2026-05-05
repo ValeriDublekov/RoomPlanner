@@ -6,3 +6,4 @@ export * from './useKeyboardShortcuts';
 export * from './useMouseSnapping';
 export * from './useStageContextMenu';
 export * from './useFileOperations';
+export * from './usePlanSnapshot';

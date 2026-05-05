@@ -3,8 +3,10 @@ import { Canvas, useThree, useFrame } from '@react-three/fiber';
 import { OrbitControls, Environment, ContactShadows } from '@react-three/drei';
 import * as THREE from 'three';
 import { useStore } from '@/src/store';
-import { FurnitureObject } from '@/src/types';
+import { FurnitureObject, PlanSnapshot } from '@/src/types';
 import { Camera, MousePointer2, Box } from 'lucide-react';
+import { getRoomVertices } from '@/src/lib/geometry/topology';
+import { usePlanSnapshot } from '@/src/hooks/usePlanSnapshot';
 import { FPVControls, WallSegments, Ceiling, Beam3D, Bed3D, Desk3D, Wardrobe3D, Dresser3D, Chair3D, FoldingChair3D,
   Shelf3D, Electronics3D, Table3D, GenericFurniture3D, Plant3D,
   Sofa3D, Nightstand3D, Toilet3D, Bathtub3D, Light3D,
@@ -149,6 +151,8 @@ export const ThreeDPreview: React.FC = () => {
   const { rooms, furniture, beams, pixelsPerCm, setShow3d, wallThickness, wallHeight, setWallHeight, wallAttachments, edgeMode3d, setEdgeMode3d, setThreeScene, isReadOnly } = useStore();
   const [isExporting, setIsExporting] = useState(false);
   const [viewMode, setViewMode] = useState<'dollhouse' | 'first-person'>('dollhouse');
+  
+  const planSnapshot = usePlanSnapshot();
 
   useEffect(() => {
     console.log(`[3D Preview] Switched to ${viewMode} view`);
@@ -159,11 +163,14 @@ export const ThreeDPreview: React.FC = () => {
   };
 
   const center = useMemo(() => {
-    // ... logic remains same
     if (rooms.length === 0) return new THREE.Vector3(0, 0, 0);
     let minX = Infinity, minZ = Infinity, maxX = -Infinity, maxZ = -Infinity;
     rooms.forEach(room => {
-      room.points.forEach(p => {
+      const points = planSnapshot 
+        ? planSnapshot.walls.filter(w => w.roomId === room.id).map(w => w.referenceSegment.p1)
+        : getRoomVertices(room);
+        
+      points.forEach(p => {
         minX = Math.min(minX, p.x / pixelsPerCm);
         minZ = Math.min(minZ, p.y / pixelsPerCm);
         maxX = Math.max(maxX, p.x / pixelsPerCm);
@@ -171,7 +178,7 @@ export const ThreeDPreview: React.FC = () => {
       });
     });
     return new THREE.Vector3((minX + maxX) / 2, 0, (minZ + maxZ) / 2);
-  }, [rooms, pixelsPerCm]);
+  }, [rooms, pixelsPerCm, planSnapshot]);
 
   return (
     <div className={`fixed inset-0 z-[200] bg-slate-900 flex flex-col ${isReadOnly ? 'z-[40]' : ''}`}>
@@ -298,12 +305,14 @@ export const ThreeDPreview: React.FC = () => {
                     wallThickness={wallThickness} 
                     wallHeight={wallHeight}
                     attachments={wallAttachments}
+                    planSnapshot={planSnapshot}
                   />
                   {viewMode === 'first-person' && (
                     <Ceiling 
                       room={room} 
                       pixelsPerCm={pixelsPerCm} 
                       height={wallHeight} 
+                      planSnapshot={planSnapshot}
                     />
                   )}
                 </React.Fragment>

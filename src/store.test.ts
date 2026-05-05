@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useStore } from './store';
+import { getRoomVertices } from './lib/geometry/topology';
 import { User } from 'firebase/auth';
 
 // Mock Firebase
@@ -52,7 +53,7 @@ describe('AppState Store', () => {
   });
 
   describe('uiSlice', () => {
-    it('sets app mode and resets temporary states', () => {
+    it('sets app mode and resets temporary states but preserves selection', () => {
       useStore.setState({ 
         roomPoints: [{ x: 1, y: 2 }],
         selectedId: 'some-id'
@@ -63,7 +64,23 @@ describe('AppState Store', () => {
       const state = useStore.getState();
       expect(state.mode).toBe('draw-room');
       expect(state.roomPoints).toHaveLength(0);
-      expect(state.selectedId).toBeNull();
+      // Selection should persist unless explicitly cleared
+      expect(state.selectedId).toBe('some-id');
+    });
+
+    it('preserves attachment selection when switching to select mode', () => {
+      const attachmentId = 'att-123';
+      useStore.setState({ 
+        selectedAttachmentId: attachmentId,
+        mode: 'draw-room'
+      });
+      
+      // Simulating what happened in ArchitecturalLayer or WallAttachmentItem
+      useStore.getState().setMode('select');
+      
+      const state = useStore.getState();
+      expect(state.mode).toBe('select');
+      expect(state.selectedAttachmentId).toBe(attachmentId);
     });
 
     it('sets active layer and resets selection', () => {
@@ -95,7 +112,7 @@ describe('AppState Store', () => {
       
       const state = useStore.getState();
       expect(state.rooms).toHaveLength(1);
-      expect(state.rooms[0].points).toHaveLength(3);
+      expect(getRoomVertices(state.rooms[0])).toHaveLength(3);
       expect(state.roomPoints).toHaveLength(0);
     });
   });
@@ -132,9 +149,19 @@ describe('AppState Store', () => {
 
   describe('projectSlice', () => {
     it('undoes changes using history', () => {
-      const initialRooms = [{ id: 'r1', points: [], isClosed: true }];
+      const initialRooms: any[] = [{ 
+        id: 'r1', 
+        vertices: [{id: 'v1', x: 0, y: 0}], 
+        edges: [], 
+        isClosed: true 
+      }];
       useStore.setState({
-        rooms: [{ id: 'r2', points: [], isClosed: true }],
+        rooms: [{ 
+          id: 'r2', 
+          vertices: [{id: 'v2', x: 10, y: 10}], 
+          edges: [], 
+          isClosed: true 
+        }],
         history: [{ rooms: initialRooms, furniture: [], dimensions: [] }]
       });
       
@@ -144,7 +171,15 @@ describe('AppState Store', () => {
     });
 
     it('saves history entry', () => {
-      useStore.setState({ rooms: [{ id: 'r1', points: [], isClosed: true }], history: [] });
+      useStore.setState({ 
+        rooms: [{ 
+          id: 'r1', 
+          vertices: [{id: 'v1', x: 0, y: 0}], 
+          edges: [], 
+          isClosed: true 
+        }], 
+        history: [] 
+      });
       useStore.getState().saveHistory();
       
       expect(useStore.getState().history).toHaveLength(1);
@@ -196,7 +231,7 @@ describe('AppState Store', () => {
     it('migrates version 0 rooms correctly', () => {
       const persistedState = {
         rooms: [
-          { id: '1', points: null }
+          { id: '1', points: null, vertices: [], edges: [] }
         ]
       };
       
@@ -205,6 +240,97 @@ describe('AppState Store', () => {
         const result = migrate(persistedState, 0);
         expect(result.rooms[0].points).toEqual([]);
       }
+    });
+
+    it('migrates version 2 rooms to version 4', () => {
+      const persistedState = {
+        version: 2,
+        rooms: [
+          { id: '1', points: [{x:0, y:0}, {x:100, y:0}, {x:100, y:100}, {x:0, y:100}], isClosed: true }
+        ]
+      };
+      
+      useStore.getState().loadState(persistedState);
+      
+      const state = useStore.getState();
+      expect(state.version).toBe(4);
+      expect(state.rooms[0].vertices).toBeDefined();
+      expect(state.rooms[0].edges).toBeDefined();
+      expect(state.rooms[0].vertices).toHaveLength(4);
+      expect(state.rooms[0].edges).toHaveLength(4);
+    });
+
+    it('remaps wallAttachments on splitWallSegment', () => {
+      const roomId = 'room-1';
+      useStore.setState({
+        rooms: [
+          { 
+            id: roomId, 
+            vertices: [
+              { id: 'v0', x: 0, y: 0 },
+              { id: 'v1', x: 100, y: 0 },
+              { id: 'v2', x: 100, y: 100 },
+              { id: 'v3', x: 0, y: 100 }
+            ],
+            edges: [
+              { id: 'e0', startVertexId: 'v0', endVertexId: 'v1' },
+              { id: 'e1', startVertexId: 'v1', endVertexId: 'v2' },
+              { id: 'e2', startVertexId: 'v2', endVertexId: 'v3' },
+              { id: 'e3', startVertexId: 'v3', endVertexId: 'v0' }
+            ],
+            isClosed: true 
+          }
+        ],
+        wallAttachments: [
+          { id: 'att-1', roomId, type: 'window', wallSegmentIndex: 0, positionAlongWall: 0.75, width: 20 }
+        ]
+      });
+
+      // Split segment 0 (0,0)-(100,0) at (50,0).
+      // Attachment at 0.75 on segment 0 becomes 0.75-0.5 = 0.25 on segment 1 (new segment).
+      useStore.getState().splitWallSegment(roomId, 0, { x: 50, y: 0 });
+
+      const state = useStore.getState();
+      // SegmentIndex should be 1 now
+      expect(state.wallAttachments[0].wallSegmentIndex).toBe(1);
+      expect(state.wallAttachments[0].positionAlongWall).toBeCloseTo(0.5);
+    });
+
+    it('remaps wallAttachments on removeRoomVertex', () => {
+      const roomId = 'room-2';
+      useStore.setState({
+        rooms: [
+          { 
+            id: roomId, 
+            vertices: [
+              { id: 'v0', x: 0, y: 0 },
+              { id: 'v1', x: 50, y: 0 },
+              { id: 'v2', x: 100, y: 0 },
+              { id: 'v3', x: 100, y: 100 },
+              { id: 'v4', x: 0, y: 100 }
+            ],
+            edges: [
+              { id: 'e0', startVertexId: 'v0', endVertexId: 'v1' },
+              { id: 'e1', startVertexId: 'v1', endVertexId: 'v2' },
+              { id: 'e2', startVertexId: 'v2', endVertexId: 'v3' },
+              { id: 'e3', startVertexId: 'v3', endVertexId: 'v4' },
+              { id: 'e4', startVertexId: 'v4', endVertexId: 'v0' }
+            ],
+            isClosed: true 
+          }
+        ],
+        wallAttachments: [
+          { id: 'att-2', roomId, type: 'window', wallSegmentIndex: 2, positionAlongWall: 0.5, width: 20 }
+        ]
+      });
+
+      // Remove vertex index 1. Segment 2 is unaffected by vertex removal, 
+      // but its index might change if index < 1 was removed. 
+      // Wait, let's remove index 0. Then segment 2 becomes segment 1.
+      useStore.getState().removeRoomVertex(roomId, 0);
+
+      const state = useStore.getState();
+      expect(state.wallAttachments[0].wallSegmentIndex).toBe(1);
     });
   });
 });

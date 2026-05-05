@@ -27,6 +27,7 @@ import { useStore } from '../../store';
 import { cn } from '../../lib/utils';
 import { FurnitureObject, WallAttachment, BeamObject } from '../../types';
 import { isPointInPolygon } from '../../lib/geometry';
+import { getRoomVertices } from '../../lib/geometry/topology';
 
 const FurnitureIcon = ({ type }: { type: FurnitureObject['furnitureType'] }) => {
   switch (type) {
@@ -120,7 +121,7 @@ export const SceneExplorer: React.FC = () => {
       const matchesRoom = roomLabel.toLowerCase().includes(searchLower);
 
       const roomFurniture = furniture.filter(f => {
-        const inRoom = isPointInPolygon({ x: f.x + f.width / 2, y: f.y + f.height / 2 }, room.points);
+        const inRoom = isPointInPolygon({ x: f.x + f.width / 2, y: f.y + f.height / 2 }, getRoomVertices(room));
         const matchesSearch = f.name.toLowerCase().includes(searchLower);
         return inRoom && (matchesSearch || matchesRoom);
       });

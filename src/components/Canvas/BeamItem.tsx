@@ -1,9 +1,10 @@
 import React, { useState, useRef } from 'react';
 import { Line, Group, Text } from 'react-konva';
 import Konva from 'konva';
-import { BeamObject, AppMode, Vector2d } from '@/src/types';
+import { BeamObject, AppMode, Vector2d, PlanSnapshot } from '@/src/types';
 import { useStore } from '@/src/store';
 import { getDistance, getDistanceToSegment } from '@/src/lib/geometry';
+import { getRoomVertices } from '@/src/lib/geometry/topology';
 import { INTERIOR_THEMES } from '@/src/lib/themes';
 
 interface BeamItemProps {
@@ -12,6 +13,7 @@ interface BeamItemProps {
   onSelect: () => void;
   scale: number;
   mode: AppMode;
+  planSnapshot?: PlanSnapshot;
 }
 
 export const BeamItem: React.FC<BeamItemProps> = ({
@@ -20,6 +22,7 @@ export const BeamItem: React.FC<BeamItemProps> = ({
   onSelect,
   scale,
   mode,
+  planSnapshot,
 }) => {
   const activeLayer = useStore((state) => state.activeLayer);
   const pixelsPerCm = useStore((state) => state.pixelsPerCm);
@@ -127,19 +130,30 @@ export const BeamItem: React.FC<BeamItemProps> = ({
       let minWallDist = Infinity;
       let nearestPointOnWall = point;
 
-      rooms.forEach(room => {
-        for (let i = 0; i < room.points.length; i++) {
-          const v1 = room.points[i];
-          const v2 = room.points[(i + 1) % room.points.length];
-          if (!room.isClosed && i === room.points.length - 1) continue;
-          
-          const result = getDistanceToSegment(point, v1, v2);
+      if (planSnapshot) {
+        planSnapshot.walls.forEach(wall => {
+          const result = getDistanceToSegment(point, wall.interiorFace.p1, wall.interiorFace.p2);
           if (result.distance < minWallDist) {
             minWallDist = result.distance;
             nearestPointOnWall = result.point;
           }
-        }
-      });
+        });
+      } else {
+        rooms.forEach(room => {
+          const points = getRoomVertices(room);
+          for (let i = 0; i < points.length; i++) {
+            const v1 = points[i];
+            const v2 = points[(i + 1) % points.length];
+            if (!room.isClosed && i === points.length - 1) continue;
+            
+            const result = getDistanceToSegment(point, v1, v2);
+            if (result.distance < minWallDist) {
+              minWallDist = result.distance;
+              nearestPointOnWall = result.point;
+            }
+          }
+        });
+      }
 
       if (minWallDist < 200) {
         newDistances.push({ p1: point, p2: nearestPointOnWall, dist: minWallDist });
@@ -156,7 +170,6 @@ export const BeamItem: React.FC<BeamItemProps> = ({
     const parent = node.getParent() as Konva.Container;
     if (!parent) return;
 
-    // Final world position from absolute position
     const worldPos = parent.getAbsoluteTransform().copy().invert().point(node.getAbsolutePosition());
     
     const dx = worldPos.x - beam.p1.x;
@@ -165,23 +178,34 @@ export const BeamItem: React.FC<BeamItemProps> = ({
     const newP1 = { x: beam.p1.x + dx, y: beam.p1.y + dy };
     const newP2 = { x: beam.p2.x + dx, y: beam.p2.y + dy };
 
-    // Recalculate attachments
     const findAttachment = (point: Vector2d) => {
-      const threshold = 15; // slightly larger for drag end snapping
+      const threshold = 15;
       let best = null;
       let minDist = Infinity;
-      rooms.forEach(room => {
-        for (let i = 0; i < room.points.length; i++) {
-          const v1 = room.points[i];
-          const v2 = room.points[(i + 1) % room.points.length];
-          if (!room.isClosed && i === room.points.length - 1) continue;
-          const res = getDistanceToSegment(point, v1, v2);
+
+      if (planSnapshot) {
+        planSnapshot.walls.forEach(wall => {
+          const res = getDistanceToSegment(point, wall.interiorFace.p1, wall.interiorFace.p2);
           if (res.distance < threshold && res.distance < minDist) {
             minDist = res.distance;
-            best = { roomId: room.id, wallIndex: i, t: res.t };
+            best = { roomId: wall.roomId, wallIndex: wall.segmentIndex, t: res.t };
           }
-        }
-      });
+        });
+      } else {
+        rooms.forEach(room => {
+          const points = getRoomVertices(room);
+          for (let i = 0; i < points.length; i++) {
+            const v1 = points[i];
+            const v2 = points[(i + 1) % points.length];
+            if (!room.isClosed && i === points.length - 1) continue;
+            const res = getDistanceToSegment(point, v1, v2);
+            if (res.distance < threshold && res.distance < minDist) {
+              minDist = res.distance;
+              best = { roomId: room.id, wallIndex: i, t: res.t };
+            }
+          }
+        });
+      }
       return best;
     };
 

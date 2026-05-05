@@ -1,5 +1,5 @@
 import React from 'react';
-import { MousePointer2, Pencil, Square, Ruler, DoorOpen, Layout, Circle, BookPlus, LogIn, LogOut, User as UserIcon, Cloud, Download, Upload } from 'lucide-react';
+import { MousePointer2, Pencil, Ruler, DoorOpen, Layout, BookPlus, LogIn, LogOut, User as UserIcon } from 'lucide-react';
 import { useStore } from '@/src/store';
 import { ToolButton, FileActions } from './Sidebar';
 import { loginWithGoogle, logout } from '@/src/firebase';
@@ -7,9 +7,6 @@ import { loginWithGoogle, logout } from '@/src/firebase';
 const tools = [
   { id: 'select', icon: MousePointer2, label: 'Select (V)' },
   { id: 'draw-room', icon: Pencil, label: 'Draw Room (R)' },
-  { id: 'add-box', icon: Square, label: 'Add Box (B)' },
-  { id: 'draw-circle', icon: Circle, label: 'Add Circle (O)' },
-  { id: 'draw-furniture', icon: Pencil, label: 'Draw Object (F)' },
   { id: 'calibrate', icon: Ruler, label: 'Calibrate (C)' },
   { id: 'measure', icon: Ruler, label: 'Measure (M)' },
   { id: 'dimension', icon: Ruler, label: 'Dimension (D)' },
@@ -62,7 +59,7 @@ export const Sidebar: React.FC = () => {
                 if (tool.id === 'select') return true;
                 if (activeLayer === 'blueprint') return tool.id === 'calibrate';
                 if (activeLayer === 'room') return tool.id === 'draw-room' || tool.id === 'add-door' || tool.id === 'add-window' || tool.id === 'draw-beam';
-                if (activeLayer === 'furniture') return tool.id === 'add-box' || tool.id === 'draw-circle' || tool.id === 'draw-furniture' || tool.id === 'measure' || tool.id === 'dimension';
+                if (activeLayer === 'furniture') return tool.id === 'measure' || tool.id === 'dimension';
                 return false;
               })
               .map((tool) => (

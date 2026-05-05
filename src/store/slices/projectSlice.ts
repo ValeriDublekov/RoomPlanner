@@ -44,7 +44,7 @@ export const createProjectSlice: StateCreator<AppState, [], [], ProjectSlice> = 
   projectId: null,
   projectName: 'New Project',
   cloudName: null,
-  pixelsPerCm: 1,
+  pixelsPerCm: 20,
   backgroundImage: null,
   backgroundVisible: true,
   backgroundOpacity: 0.5,
@@ -55,7 +55,7 @@ export const createProjectSlice: StateCreator<AppState, [], [], ProjectSlice> = 
   tempCalibrationDist: null,
   history: [],
   isSaving: false,
-  version: 2,
+  version: 4,
 
   setPixelsPerCm: (pixelsPerCm) => set({ pixelsPerCm }),
   setProjectName: (projectName) => set({ projectName }),
@@ -137,6 +137,46 @@ export const createProjectSlice: StateCreator<AppState, [], [], ProjectSlice> = 
     // Always apply semantic materials migration to ensure consistency
     furniture = furniture.map(migrateFurnitureMaterials);
 
+    // Migration for topology (Version 4)
+    let rooms = projectData.rooms || [];
+    if (currentVersion < 4) {
+      rooms = rooms.map((room: any) => {
+        let vertices = room.vertices;
+        let edges = room.edges;
+        let startVertexId = room.startVertexId;
+
+        if ((!vertices || currentVersion < 4) && (room.points || vertices)) {
+          // If we are migrating from points OR fixing a broken topology migration
+          const points = room.points || vertices.map((v: any) => ({ x: v.x, y: v.y }));
+
+          vertices = points.map((p: any, i: number) => ({
+            id: i.toString(),
+            x: p.x,
+            y: p.y
+          }));
+          
+          startVertexId = "0";
+          
+          const edgeCount = room.isClosed ? vertices.length : vertices.length - 1;
+          edges = [];
+          for (let i = 0; i < edgeCount; i++) {
+            edges.push({
+              id: `${room.id}-edge-${i}`,
+              startVertexId: i.toString(),
+              endVertexId: ((i + 1) % vertices.length).toString()
+            });
+          }
+        }
+        const { points: _points, ...rest } = room;
+        return { 
+          ...rest, 
+          vertices: vertices || [], 
+          edges: edges || [],
+          startVertexId
+        };
+      });
+    }
+
     // Ensure all attachments have default curtain colors if missing
     const wallAttachments = (projectData.wallAttachments || []).map((a: any) => ({
       ...a,
@@ -146,8 +186,8 @@ export const createProjectSlice: StateCreator<AppState, [], [], ProjectSlice> = 
 
     set({
       projectName: projectData.projectName || 'Loaded Project',
-      pixelsPerCm: projectData.pixelsPerCm || (projectData as any).pixelsPrCm || 20, // Support typo from potentially old versions
-      rooms: projectData.rooms || [],
+      pixelsPerCm: projectData.pixelsPerCm || (projectData as any).pixelsPrCm || 20, // Restore legacy default for proper scaling
+      rooms,
       furniture,
       dimensions: projectData.dimensions || [],
       wallAttachments,
@@ -161,7 +201,7 @@ export const createProjectSlice: StateCreator<AppState, [], [], ProjectSlice> = 
       backgroundRotation: projectData.backgroundRotation ?? 0,
       backgroundOpacity: projectData.backgroundOpacity ?? 0.5,
       projectId: null,
-      version: 2,
+      version: 4,
       history: [],
       selectedId: null,
       selectedRoomId: null,
@@ -178,7 +218,7 @@ export const createProjectSlice: StateCreator<AppState, [], [], ProjectSlice> = 
       // @ts-expect-error - Zustand standard pattern for accessing state in actions
       acc[key] = (state as any)[key];
       return acc;
-    }, { version: 2 } as PersistedState);
+    }, { version: 4 } as PersistedState);
 
     const jsonString = JSON.stringify(projectData);
     

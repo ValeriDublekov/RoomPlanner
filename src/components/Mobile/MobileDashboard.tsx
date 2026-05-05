@@ -65,7 +65,10 @@ export const MobileDashboard: React.FC = () => {
 
   useEffect(() => {
     if (currentUser) {
-      fetchProjects();
+      const timer = setTimeout(() => {
+        fetchProjects();
+      }, 0);
+      return () => clearTimeout(timer);
     }
   }, [currentUser, fetchProjects]);
 

@@ -1,5 +1,6 @@
-import { Vector2d } from '../../types';
+import { Vector2d, RoomObject } from '../../types';
 import { getSignedArea, rotatePoint } from './mathUtils';
+import { getRoomVertices } from './topology';
 
 /**
  * Gets the outward normal vector for a segment of a polygon.
@@ -37,13 +38,19 @@ export const getFurnitureVertices = (f: { x: number; y: number; width: number; h
 
 /**
  * Gets the wall segments of a room.
+ * 
+ * NOTE: The interior polygon is derived from the room's topology graph.
+ * Wall geometry is rendered along these segments, representing
+ * the boundary of that interior space.
  */
-export const getWallSegments = (room: { points: Vector2d[]; isClosed: boolean; wallColors?: string[]; defaultWallColor?: string }) => {
+export const getWallSegments = (room: RoomObject) => {
   const segments = [];
-  const count = room.isClosed ? room.points.length : room.points.length - 1;
+  const points = getRoomVertices(room);
+  
+  const count = room.isClosed ? points.length : points.length - 1;
   for (let i = 0; i < count; i++) {
-    const p1 = room.points[i];
-    const p2 = room.points[(i + 1) % room.points.length];
+    const p1 = points[i];
+    const p2 = points[(i + 1) % points.length];
     const color = room.wallColors?.[i] || room.defaultWallColor || "#1e293b";
     segments.push({ p1, p2, index: i, color });
   }

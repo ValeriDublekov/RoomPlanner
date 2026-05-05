@@ -5,6 +5,7 @@ import { FLOOR_TEXTURES, WOOD_COLORS } from '../../../constants';
 import { cn } from '../../../lib/utils';
 import { useStore } from '../../../store';
 import { INTERIOR_THEMES } from '../../../lib/themes';
+import { getRoomVertices } from '../../../lib/geometry/topology';
 
 const WALL_PALETTES = {
   neutrals: [
@@ -304,7 +305,7 @@ export const RoomEditor: React.FC<RoomEditorProps> = ({
               <button
                 onClick={() => {
                   const newTypes = [...(selectedRoom.wallTypes || [])];
-                  while (newTypes.length < selectedRoom.points.length) newTypes.push('wall');
+                  while (newTypes.length < getRoomVertices(selectedRoom).length) newTypes.push('wall');
                   newTypes[selectedWallIndex] = 'wall';
                   updateRoom(selectedRoom.id, { wallTypes: newTypes });
                 }}
@@ -318,7 +319,7 @@ export const RoomEditor: React.FC<RoomEditorProps> = ({
               <button
                 onClick={() => {
                   const newTypes = [...(selectedRoom.wallTypes || [])];
-                  while (newTypes.length < selectedRoom.points.length) newTypes.push('wall');
+                  while (newTypes.length < getRoomVertices(selectedRoom).length) newTypes.push('wall');
                   newTypes[selectedWallIndex] = 'railing';
                   updateRoom(selectedRoom.id, { wallTypes: newTypes });
                 }}
@@ -346,7 +347,7 @@ export const RoomEditor: React.FC<RoomEditorProps> = ({
                     key={style.id}
                     onClick={() => {
                       const newStyles = [...(selectedRoom.railingStyles || [])];
-                      while (newStyles.length < selectedRoom.points.length) newStyles.push('metal-bars');
+                      while (newStyles.length < getRoomVertices(selectedRoom).length) newStyles.push('metal-bars');
                       newStyles[selectedWallIndex] = style.id as any;
                       updateRoom(selectedRoom.id, { railingStyles: newStyles });
                     }}
@@ -372,7 +373,7 @@ export const RoomEditor: React.FC<RoomEditorProps> = ({
                   key={color}
                   onClick={() => {
                     const newColors = [...(selectedRoom.wallColors || [])];
-                    while (newColors.length < selectedRoom.points.length) {
+                    while (newColors.length < getRoomVertices(selectedRoom).length) {
                       newColors.push('');
                     }
                     newColors[selectedWallIndex] = color;
@@ -390,7 +391,7 @@ export const RoomEditor: React.FC<RoomEditorProps> = ({
                 value={selectedRoom.wallColors?.[selectedWallIndex] || selectedRoom.defaultWallColor || '#f8fafc'} 
                 onChange={(e) => {
                   const newColors = [...(selectedRoom.wallColors || [])];
-                  while (newColors.length < selectedRoom.points.length) {
+                  while (newColors.length < getRoomVertices(selectedRoom).length) {
                     newColors.push('');
                   }
                   newColors[selectedWallIndex] = e.target.value;

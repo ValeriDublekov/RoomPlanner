@@ -1,6 +1,7 @@
 import { ToolHandler } from './types';
 import { getDistanceToSegment } from '../geometry/mathUtils';
 import { RoomObject, Vector2d, BeamObject } from '../../types';
+import { getRoomVertices } from '../geometry/topology';
 
 interface ClosestPointResult {
   point: Vector2d;
@@ -15,10 +16,11 @@ const getClosestPointOnWall = (point: Vector2d, rooms: RoomObject[]): ClosestPoi
   let bestResult: ClosestPointResult | null = null;
 
   for (const room of rooms) {
-    for (let i = 0; i < room.points.length; i++) {
-      const p1 = room.points[i];
-      const p2 = room.points[(i + 1) % room.points.length];
-      if (!room.isClosed && i === room.points.length - 1) continue;
+    const points = getRoomVertices(room);
+    for (let i = 0; i < points.length; i++) {
+      const p1 = points[i];
+      const p2 = points[(i + 1) % points.length];
+      if (!room.isClosed && i === points.length - 1) continue;
       
       const result = getDistanceToSegment(point, p1, p2);
       if (result.distance < minDistance && result.distance < threshold) {

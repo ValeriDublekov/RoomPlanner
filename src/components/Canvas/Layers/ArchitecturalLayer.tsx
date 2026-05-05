@@ -7,12 +7,14 @@ import { WallAttachmentItem } from '../WallAttachmentItem';
 import { BeamItem } from '../BeamItem';
 import { RoomEditor } from '../RoomEditor';
 import { RoomAreaLabel } from '../RoomAreaLabel';
+import { usePlanSnapshot } from '../../../hooks/usePlanSnapshot';
 
 interface ArchitecturalLayerProps {
   scale: number;
 }
 
 export const ArchitecturalLayer: React.FC<ArchitecturalLayerProps> = ({ scale }) => {
+  const planSnapshot = usePlanSnapshot();
   const {
     activeLayer,
     rooms,
@@ -43,19 +45,35 @@ export const ArchitecturalLayer: React.FC<ArchitecturalLayerProps> = ({ scale })
     console.log('ArchitecturalLayer: selectedBeamId changed to', selectedBeamId);
   }, [selectedBeamId]);
 
-  const roomElements = React.useMemo(() => rooms.map((room) => (
+  const roomFloorElements = React.useMemo(() => rooms.map((room) => (
     <RoomItem
-      key={room.id}
+      key={`floor-${room.id}`}
       room={room}
       isSelected={selectedRoomId === room.id}
       onSelect={() => {
-        console.log('ArchitecturalLayer: RoomItem onSelect triggered for room:', room.id);
         setSelectedRoomId(room.id);
       }}
       scale={scale}
       isLocked={false} 
+      planSnapshot={planSnapshot}
+      renderMode="floor"
     />
-  )), [rooms, selectedRoomId, scale, setSelectedRoomId]);
+  )), [rooms, selectedRoomId, scale, setSelectedRoomId, planSnapshot]);
+
+  const roomWallElements = React.useMemo(() => rooms.map((room) => (
+    <RoomItem
+      key={`walls-${room.id}`}
+      room={room}
+      isSelected={selectedRoomId === room.id}
+      onSelect={() => {
+        setSelectedRoomId(room.id);
+      }}
+      scale={scale}
+      isLocked={false} 
+      planSnapshot={planSnapshot}
+      renderMode="walls"
+    />
+  )), [rooms, selectedRoomId, scale, setSelectedRoomId, planSnapshot]);
 
   const beamElements = React.useMemo(() => beams.map((beam) => (
     <BeamItem
@@ -65,13 +83,13 @@ export const ArchitecturalLayer: React.FC<ArchitecturalLayerProps> = ({ scale })
       onSelect={() => {
         console.log('ArchitecturalLayer: onSelect beam triggered, id:', beam.id);
         setSelectedBeamId(beam.id);
-        console.log('ArchitecturalLayer: setSelectedBeamId called');
-        setMode('select');
+        if (mode !== 'select') setMode('select');
       }}
       scale={scale}
       mode={mode}
+      planSnapshot={planSnapshot}
     />
-  )), [beams, selectedBeamId, scale, setSelectedBeamId, setMode, mode]);
+  )), [beams, selectedBeamId, scale, setSelectedBeamId, setMode, mode, planSnapshot]);
 
   const furnitureElements = React.useMemo(() => [...furniture].sort((a, b) => (a.elevation || 0) - (b.elevation || 0)).map((item) => (
     <FurnitureItem
@@ -107,22 +125,27 @@ export const ArchitecturalLayer: React.FC<ArchitecturalLayerProps> = ({ scale })
       isSelected={selectedAttachmentId === attachment.id}
       onSelect={() => {
         setSelectedAttachmentId(attachment.id);
-        setMode('select');
+        if (mode !== 'select') setMode('select');
       }}
       scale={scale}
+      planSnapshot={planSnapshot}
     />
-  )), [wallAttachments, selectedAttachmentId, scale, setSelectedAttachmentId, setMode]);
+  )), [wallAttachments, selectedAttachmentId, scale, setSelectedAttachmentId, setMode, planSnapshot]);
 
   return (
     <Layer id="architectural-layer" visible={activeLayer !== 'blueprint'}>
-      {/* 1. Base Rooms (Floors & Walls) */}
-      {roomElements}
+      {/* 1. Base Rooms Floors */}
+      {roomFloorElements}
 
-      {/* 2. Room Editor (Handles & Drag Distances) - Below beams but above walls */}
+      {/* 2. Base Rooms Walls */}
+      {roomWallElements}
+
+      {/* 3. Room Editor (Handles & Drag Distances) - Below beams but above walls */}
       {selectedRoomId && rooms.find(r => r.id === selectedRoomId) && (
         <RoomEditor
           room={rooms.find(r => r.id === selectedRoomId)!}
           scale={scale}
+          planSnapshot={planSnapshot}
         />
       )}
 
@@ -139,6 +162,7 @@ export const ArchitecturalLayer: React.FC<ArchitecturalLayerProps> = ({ scale })
           key={`label-${room.id}`}
           room={room}
           scale={scale}
+          planSnapshot={planSnapshot}
         />
       ))}
 
