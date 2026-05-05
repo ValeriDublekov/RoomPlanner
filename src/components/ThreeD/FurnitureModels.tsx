@@ -1085,6 +1085,83 @@ export const WallPanel3D: React.FC<ModelProps & { panelStyle?: 'slats' | 'trelli
   );
 };
 
+export const Chest3D: React.FC<ModelProps & { slantAngle?: number, slantHeight?: number }> = ({ width, depth, height, color, slantAngle = 15, slantHeight = 40, materials }) => {
+  const woodBaseColor = getSlotColor(materials, 'woodBase', color);
+  const slantRad = (slantAngle * Math.PI) / 180;
+  
+  const h1 = Math.min(slantHeight, height);
+  const h2 = Math.max(0, height - h1);
+  const projection = Math.tan(slantRad) * h2; 
+  
+  const shape = new THREE.Shape();
+  shape.moveTo(0, 0);
+  shape.lineTo(depth, 0);
+  shape.lineTo(depth - projection, h2);
+  shape.lineTo(0, h2);
+  shape.closePath();
+
+  const extrudeSettings = {
+    steps: 1,
+    depth: width,
+    bevelEnabled: false
+  };
+
+  return (
+    <group>
+      {/* Bottom part (box) */}
+      <mesh position={[width / 2, h1 / 2, depth / 2]} castShadow receiveShadow>
+        <boxGeometry args={[width, h1, depth]} />
+        <WoodMaterial color={woodBaseColor} />
+      </mesh>
+      
+      {/* Top part (slanted trapezoid) */}
+      {h2 > 0 && (
+         <mesh castShadow receiveShadow>
+            <bufferGeometry>
+                <bufferAttribute attach="attributes-position" count={8} array={createPrismVertices(width, h2, depth, projection, h1)} itemSize={3} />
+                <bufferAttribute attach="index" count={36} array={new Uint16Array(getPrismIndices())} itemSize={1} />
+            </bufferGeometry>
+            <WoodMaterial color={woodBaseColor} />
+         </mesh>
+      )}
+    </group>
+  );
+};
+
+function createPrismVertices(width: number, height: number, depth: number, projection: number, baseHeight: number) {
+  return new Float32Array([
+    // Bottom level (Z=0 and Z=depth for base)
+    0, 0, 0,
+    width, 0, 0,
+    width, 0, depth,
+    0, 0, depth,
+
+    // Top level (Z=0 and Z=depth-projection)
+    0, height, 0,
+    width, height, 0,
+    width, height, depth - projection,
+    0, height, depth - projection
+  ].map((v, i) => i % 3 === 1 ? v + baseHeight : v));
+}
+
+function getPrismIndices() {
+  return [
+    // Bottom (Base of top part)
+    0, 1, 2, 0, 2, 3,
+    // Top
+    4, 6, 5, 4, 7, 6,
+    // Back (Z=0)
+    0, 4, 5, 0, 5, 1,
+    // Front (Slanted)
+    3, 6, 7, 3, 2, 6,
+    // Left
+    0, 3, 7, 0, 7, 4,
+    // Right
+    1, 5, 6, 1, 6, 2
+  ];
+}
+
+
 export const GenericFurniture3D: React.FC<ModelProps> = ({ width, depth, height, color, materials }) => {
   const woodBaseColor = getSlotColor(materials, 'woodBase', color);
   return (

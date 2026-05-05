@@ -556,8 +556,33 @@ export const FurnitureEditor: React.FC<FurnitureEditorProps> = ({
         })()}
       </div>
 
-      {(selectedFurniture.furnitureType === 'wardrobe' || selectedFurniture.furnitureType === 'dresser' || selectedFurniture.furnitureType === 'bed' || (selectedFurniture.furnitureType === 'shelf' && selectedFurniture.hasDoors) || selectedFurniture.catalogId === 'terrace-wall-panel') && (
+      {(selectedFurniture.furnitureType === 'wardrobe' || selectedFurniture.furnitureType === 'dresser' || selectedFurniture.furnitureType === 'chest' || selectedFurniture.furnitureType === 'bed' || (selectedFurniture.furnitureType === 'shelf' && selectedFurniture.hasDoors) || selectedFurniture.catalogId === 'terrace-wall-panel') && (
         <div className="space-y-3">
+          {selectedFurniture.furnitureType === 'chest' && (
+              <div className="space-y-3 p-3 bg-indigo-50/50 rounded-xl border border-indigo-100 mb-2">
+                <label className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest ml-1">Slant Configuration</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-bold text-slate-400 uppercase tracking-tight ml-1">Slant Angle (°)</label>
+                    <input
+                      type="number"
+                      value={selectedFurniture.slantAngle || 15}
+                      onChange={(e) => updateFurniture(selectedFurniture.id, { slantAngle: parseFloat(e.target.value) || 0 })}
+                      className="w-full bg-white border border-indigo-200 rounded-lg px-3 py-1.5 text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-sm"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-bold text-slate-400 uppercase tracking-tight ml-1">Slant Height (cm)</label>
+                    <input
+                      type="number"
+                      value={Math.round((selectedFurniture.slantHeight || 0) / pixelsPerCm)}
+                      onChange={(e) => updateFurniture(selectedFurniture.id, { slantHeight: parseFloat(e.target.value) * pixelsPerCm })}
+                      className="w-full bg-white border border-indigo-200 rounded-lg px-3 py-1.5 text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-sm"
+                    />
+                  </div>
+                </div>
+              </div>
+          )}
           {selectedFurniture.catalogId === 'terrace-wall-panel' && (
             <div className="space-y-1.5 p-3 bg-indigo-50/50 rounded-xl border border-indigo-100 mb-2">
               <label className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest ml-1">Panel Style</label>

@@ -10,7 +10,7 @@ import { usePlanSnapshot } from '@/src/hooks/usePlanSnapshot';
 import { FPVControls, WallSegments, Ceiling, Beam3D, Bed3D, Desk3D, Wardrobe3D, Dresser3D, Chair3D, FoldingChair3D,
   Shelf3D, Electronics3D, Table3D, GenericFurniture3D, Plant3D,
   Sofa3D, Nightstand3D, Toilet3D, Bathtub3D, Light3D,
-  Picture3D, AirConditioner3D, Rug3D, WallPanel3D } from './';
+  Picture3D, AirConditioner3D, Rug3D, WallPanel3D, Chest3D } from './';
 
 const SceneBackground = ({ isExporting }: { isExporting: boolean }) => {
   const { gl } = useThree();
@@ -86,6 +86,7 @@ const Furniture = ({ item, pixelsPerCm, isChild = false, parentWidth = 0, parent
       case 'desk': return <Desk3D {...props} />;
       case 'wardrobe': return <Wardrobe3D {...props} />;
       case 'dresser': return <Dresser3D {...props} drawerRows={item.drawerRows} drawerCols={item.drawerCols} />;
+      case 'chest': return <Chest3D {...props} slantAngle={item.slantAngle} slantHeight={item.slantHeight} />;
       case 'chair': 
         if (cid === 'terrace-chair-folding') return <FoldingChair3D {...props} />;
         return <Chair3D {...props} />;

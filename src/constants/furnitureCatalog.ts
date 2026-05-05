@@ -52,6 +52,7 @@ export const FURNITURE_CATALOG: CatalogItem[] = [
   {id: 'rug-round', name: 'Round Rug', furnitureType: 'rug', category: 'Living Room', type: 'circle', width: 150, depth: 150, height3d: 1, defaultElevation: 0, defaultColor: '#f1f5f9', svgPath: 'M 50, 50 m -45, 0 a 45,45 0 1,0 90,0 a 45,45 0 1,0 -90,0 M 50, 50 m -35, 0 a 35,35 0 1,0 70,0 a 35,35 0 1,0 -70,0 M 50, 50 m -25, 0 a 25,25 0 1,0 50,0 a 25,25 0 1,0 -50,0'},
  {id: 'dining-table-round', name: 'Round Dining Table', furnitureType: 'table', category: 'Kitchen', type: 'circle', width: 100, depth: 100, height3d: 75, defaultColor: '#f8fafc', svgPath: 'M 50, 50 m -50, 0 a 50,50 0 1,0 100,0 a 50,50 0 1,0 -100,0'}, 
  {id: 'dining-table-square', name: 'Square Dining Table', furnitureType: 'table', category: 'Kitchen', type: 'rectangle', width: 90, depth: 90, height3d: 75, defaultColor: '#f8fafc', svgPath: 'M0 0 H100 V100 H0 Z M10 10 H90 V90 H10 Z'},
+  {id: 'chest', name: 'Slanted Chest', furnitureType: 'chest', category: 'Bedroom', type: 'rectangle', width: 80, depth: 50, height3d: 80, defaultColor: '#f1f5f9', svgPath: 'M0 0 H100 V100 H0 Z'},
  
   // Bathroom
   { 
