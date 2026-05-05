@@ -266,8 +266,14 @@ const VisibilityWrapper: React.FC<{
           const mats = Array.isArray(child.material) ? child.material : [child.material];
           mats.forEach(m => {
             if (m && m.userData && m.userData.managed) {
-              m.transparent = m.userData.baseTransparent;
+              if (m.transparent !== m.userData.baseTransparent) {
+                m.transparent = m.userData.baseTransparent;
+                m.needsUpdate = true;
+              }
               m.opacity = m.userData.baseOpacity;
+              if (m.userData.baseDepthWrite !== undefined) {
+                m.depthWrite = m.userData.baseDepthWrite;
+              }
             }
           });
         }
@@ -294,18 +300,27 @@ const VisibilityWrapper: React.FC<{
           const mats = Array.isArray(child.material) ? child.material : [child.material];
           mats.forEach(m => {
             if (m) {
-              if (!m.userData.managed) {
-                m.userData.baseOpacity = m.opacity || 1;
-                m.userData.baseTransparent = m.transparent || false;
+              if (m.userData.managed === undefined) {
+                m.userData.baseOpacity = m.opacity !== undefined ? m.opacity : 1;
+                m.userData.baseTransparent = m.transparent !== undefined ? m.transparent : false;
+                m.userData.baseDepthWrite = m.depthWrite;
                 m.userData.managed = true;
               }
               
               if (isFront) {
-                m.transparent = true;
+                if (!m.transparent) {
+                  m.transparent = true;
+                  m.needsUpdate = true;
+                }
                 m.opacity = Math.min(m.userData.baseOpacity, 0.15);
+                m.depthWrite = false;
               } else {
-                m.transparent = m.userData.baseTransparent;
+                if (m.transparent !== m.userData.baseTransparent) {
+                  m.transparent = m.userData.baseTransparent;
+                  m.needsUpdate = true;
+                }
                 m.opacity = m.userData.baseOpacity;
+                m.depthWrite = m.userData.baseDepthWrite;
               }
             }
           });
