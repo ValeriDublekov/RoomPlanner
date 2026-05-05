@@ -3,6 +3,8 @@ import { AppState } from '../../store';
 import { AppMode, LayerType, EdgeMap, Vector2d, FurnitureObject } from '../../types';
 import { getRoomVertices } from '../../lib/geometry/topology';
 
+export type ThreeDWallMode = 'normal' | 'sims' | 'xray';
+
 export interface UISlice {
   scale: number;
   position: Vector2d;
@@ -19,6 +21,7 @@ export interface UISlice {
   edgeMap: EdgeMap | null;
   show3d: boolean;
   edgeMode3d: boolean;
+  threeDWallMode: ThreeDWallMode;
   isDraggingWall: boolean;
   isDraggingVertex: boolean;
   pasteImageTargetId: string | null;
@@ -46,6 +49,7 @@ export interface UISlice {
   setEdgeMap: (map: EdgeMap | null) => void;
   setShow3d: (show: boolean) => void;
   setEdgeMode3d: (enabled: boolean) => void;
+  setThreeDWallMode: (mode: ThreeDWallMode) => void;
   setIsDraggingWall: (isDragging: boolean) => void;
   setIsDraggingVertex: (isDragging: boolean) => void;
   setPasteImageTargetId: (id: string | null) => void;
@@ -88,6 +92,7 @@ export const createUISlice: StateCreator<AppState, [], [], UISlice> = (set, get)
   edgeMap: null,
   show3d: false,
   edgeMode3d: false,
+  threeDWallMode: 'normal',
   isDraggingWall: false,
   isDraggingVertex: false,
   pasteImageTargetId: null,
@@ -149,6 +154,7 @@ export const createUISlice: StateCreator<AppState, [], [], UISlice> = (set, get)
   setEdgeMap: (edgeMap) => set({ edgeMap }),
   setShow3d: (show3d) => set({ show3d }),
   setEdgeMode3d: (edgeMode3d) => set({ edgeMode3d }),
+  setThreeDWallMode: (threeDWallMode) => set({ threeDWallMode }),
   setIsDraggingWall: (isDraggingWall) => set({ isDraggingWall }),
   setIsDraggingVertex: (isDraggingVertex) => set({ isDraggingVertex }),
   setPasteImageTargetId: (pasteImageTargetId) => set({ pasteImageTargetId }),

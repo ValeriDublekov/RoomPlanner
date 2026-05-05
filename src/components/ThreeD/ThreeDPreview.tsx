@@ -149,7 +149,7 @@ const Furniture = ({ item, pixelsPerCm, isChild = false, parentWidth = 0, parent
 };
 
 export const ThreeDPreview: React.FC = () => {
-  const { rooms, furniture, beams, pixelsPerCm, setShow3d, wallThickness, wallHeight, setWallHeight, wallAttachments, edgeMode3d, setEdgeMode3d, setThreeScene, isReadOnly } = useStore();
+  const { rooms, furniture, beams, pixelsPerCm, setShow3d, wallThickness, wallHeight, setWallHeight, wallAttachments, edgeMode3d, setEdgeMode3d, threeDWallMode, setThreeDWallMode, setThreeScene, isReadOnly } = useStore();
   const [isExporting, setIsExporting] = useState(false);
   const [viewMode, setViewMode] = useState<'dollhouse' | 'first-person'>('dollhouse');
   
@@ -212,6 +212,39 @@ export const ThreeDPreview: React.FC = () => {
                 1st Person
               </button>
             </div>
+            
+            {viewMode === 'dollhouse' && (
+              <div className="flex bg-slate-700/50 p-1 rounded-xl border border-slate-600 mr-2">
+                <button
+                  onClick={() => setThreeDWallMode('normal')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                    threeDWallMode === 'normal' ? 'bg-slate-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
+                  }`}
+                  title="Show all walls"
+                >
+                  Normal
+                </button>
+                <button
+                  onClick={() => setThreeDWallMode('sims')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                    threeDWallMode === 'sims' ? 'bg-slate-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
+                  }`}
+                  title="Hide front walls"
+                >
+                  Sims
+                </button>
+                <button
+                  onClick={() => setThreeDWallMode('xray')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                    threeDWallMode === 'xray' ? 'bg-slate-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
+                  }`}
+                  title="Transparent front walls"
+                >
+                  X-Ray
+                </button>
+              </div>
+            )}
+
             <button 
               onClick={() => handleExport(false)}
               className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-bold transition-all flex items-center gap-2"

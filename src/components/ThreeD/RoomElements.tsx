@@ -1,6 +1,7 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { useTexture, Edges } from '@react-three/drei';
+import { useThree, useFrame } from '@react-three/fiber';
 import { RoomObject, WallAttachment, BeamObject, InteriorTheme, PlanSnapshot } from '../../types';
 import { FLOOR_TEXTURES, WOOD_GRAIN } from '../../constants';
 import { getOutwardNormal } from '../../lib/geometry';
@@ -246,6 +247,76 @@ const Curtain: React.FC<{
   );
 };
 
+const VisibilityWrapper: React.FC<{
+  position: [number, number, number];
+  roomCenter: THREE.Vector3;
+  children: React.ReactNode;
+}> = ({ position, roomCenter, children }) => {
+  const groupRef = useRef<THREE.Group>(null);
+  const threeDWallMode = useStore(state => state.threeDWallMode);
+  const { camera } = useThree();
+  
+  useFrame(() => {
+    if (!groupRef.current) return;
+    
+    if (threeDWallMode === 'normal') {
+      groupRef.current.visible = true;
+      groupRef.current.traverse((child: any) => {
+        if (child.isMesh || child.isLineSegments) {
+          const mats = Array.isArray(child.material) ? child.material : [child.material];
+          mats.forEach(m => {
+            if (m && m.userData && m.userData.managed) {
+              m.transparent = m.userData.baseTransparent;
+              m.opacity = m.userData.baseOpacity;
+            }
+          });
+        }
+      });
+      return;
+    }
+    
+    const pos = new THREE.Vector3(...position);
+    // Vector from center to wall
+    const toWall = new THREE.Vector3(pos.x - roomCenter.x, 0, pos.z - roomCenter.z).normalize();
+    // Vector from center to camera
+    const toCamera = new THREE.Vector3(camera.position.x - roomCenter.x, 0, camera.position.z - roomCenter.z).normalize();
+    
+    // Dot > 0 means vectors follow roughly the same direction (i.e. between center and camera)
+    const dot = toWall.dot(toCamera);
+    const isFront = dot > 0.4; // 0.4 threshold handles walls at typical viewing angles
+    
+    if (threeDWallMode === 'sims') {
+      groupRef.current.visible = !isFront;
+    } else if (threeDWallMode === 'xray') {
+      groupRef.current.visible = true;
+      groupRef.current.traverse((child: any) => {
+        if (child.isMesh || child.isLineSegments) {
+          const mats = Array.isArray(child.material) ? child.material : [child.material];
+          mats.forEach(m => {
+            if (m) {
+              if (!m.userData.managed) {
+                m.userData.baseOpacity = m.opacity || 1;
+                m.userData.baseTransparent = m.transparent || false;
+                m.userData.managed = true;
+              }
+              
+              if (isFront) {
+                m.transparent = true;
+                m.opacity = Math.min(m.userData.baseOpacity, 0.15);
+              } else {
+                m.transparent = m.userData.baseTransparent;
+                m.opacity = m.userData.baseOpacity;
+              }
+            }
+          });
+        }
+      });
+    }
+  });
+
+  return <group ref={groupRef}>{children}</group>;
+};
+
 export const WallSegments: React.FC<{ 
   room: RoomObject, 
   pixelsPerCm: number, 
@@ -259,6 +330,23 @@ export const WallSegments: React.FC<{
     if (!activeThemeId) return null;
     return INTERIOR_THEMES.find(t => t.id === activeThemeId);
   }, [activeThemeId]);
+
+  const roomCenter = useMemo(() => {
+    let cx = 0;
+    let cz = 0;
+    const pts = planSnapshot 
+      ? planSnapshot.walls.filter(w => w.roomId === room.id).map(w => w.referenceSegment.p1)
+      : getRoomVertices(room);
+    pts.forEach(p => {
+      cx += p.x / pixelsPerCm;
+      cz += p.y / pixelsPerCm;
+    });
+    if (pts.length > 0) {
+      cx /= pts.length;
+      cz /= pts.length;
+    }
+    return new THREE.Vector3(cx, 0, cz);
+  }, [room, pixelsPerCm, planSnapshot]);
 
   const segments = useMemo(() => {
     const segs: { 
@@ -522,41 +610,44 @@ export const WallSegments: React.FC<{
 
   return (
     <group>
-      {room.isClosed && <Floor room={room} pixelsPerCm={pixelsPerCm} />}
+      {room.isClosed && <Floor room={room} pixelsPerCm={pixelsPerCm} planSnapshot={planSnapshot} />}
       {segments.map((seg: any, i: number) => {
         if (seg.type === 'curtain') {
           return (
-            <group key={i} position={[seg.midX, seg.y, seg.midZ]} rotation={[0, -seg.angle, 0]}>
-              <Curtain 
-                length={seg.length} 
-                height={seg.height} 
-                color={seg.color} 
-                opacity={seg.opacity || 1} 
-                amplitude={seg.depth === 1 ? 2.5 : 4} 
-                frequency={seg.depth === 1 ? 0.8 : 0.4} 
-              />
-            </group>
+            <VisibilityWrapper key={i} position={[seg.midX, seg.y, seg.midZ]} roomCenter={roomCenter}>
+              <group position={[seg.midX, seg.y, seg.midZ]} rotation={[0, -seg.angle, 0]}>
+                <Curtain 
+                  length={seg.length} 
+                  height={seg.height} 
+                  color={seg.color} 
+                  opacity={seg.opacity || 1} 
+                  amplitude={seg.depth === 1 ? 2.5 : 4} 
+                  frequency={seg.depth === 1 ? 0.8 : 0.4} 
+                />
+              </group>
+            </VisibilityWrapper>
           );
         }
         return (
-          <mesh 
-            key={i} 
-            position={[seg.midX, seg.y, seg.midZ]} 
-            rotation={[0, -seg.angle, 0]}
-            castShadow={seg.type === 'wall'}
-            receiveShadow
-          >
-            <boxGeometry args={[seg.length, seg.height, seg.depth || wallThickness]} />
-            {seg.type === 'wall' ? (
-              <SmartMaterial color={seg.color} roughness={1} />
-            ) : seg.type === 'glass' ? (
-              <SmartMaterial color="#93c5fd" transparent opacity={0.4} roughness={0.1} metalness={0.5} />
-            ) : seg.type === 'frame' ? (
-              <SmartMaterial color={seg.color} roughness={0.5} />
-            ) : (
-              <SmartMaterial color={seg.color} transparent opacity={seg.opacity || 1} roughness={1} />
-            )}
-          </mesh>
+          <VisibilityWrapper key={i} position={[seg.midX, seg.y, seg.midZ]} roomCenter={roomCenter}>
+            <mesh 
+              position={[seg.midX, seg.y, seg.midZ]} 
+              rotation={[0, -seg.angle, 0]}
+              castShadow={seg.type === 'wall'}
+              receiveShadow
+            >
+              <boxGeometry args={[seg.length, seg.height, seg.depth || wallThickness]} />
+              {seg.type === 'wall' ? (
+                <SmartMaterial color={seg.color} roughness={1} />
+              ) : seg.type === 'glass' ? (
+                <SmartMaterial color="#93c5fd" transparent opacity={0.4} roughness={0.1} metalness={0.5} />
+              ) : seg.type === 'frame' ? (
+                <SmartMaterial color={seg.color} roughness={0.5} />
+              ) : (
+                <SmartMaterial color={seg.color} transparent opacity={seg.opacity || 1} roughness={1} />
+              )}
+            </mesh>
+          </VisibilityWrapper>
         );
       })}
     </group>
