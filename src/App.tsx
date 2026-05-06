@@ -6,7 +6,7 @@
 import { useEffect } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from './firebase';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useStore } from '@/src/store';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { DesktopLayout } from './components/DesktopLayout';
@@ -37,7 +37,7 @@ export default function App() {
   // This can be expanded based on specific requirements
 
   return (
-    <BrowserRouter>
+    <HashRouter>
       <Routes>
         {/* Desktop Route */}
         <Route 
@@ -52,7 +52,7 @@ export default function App() {
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-    </BrowserRouter>
+    </HashRouter>
   );
 }
 
