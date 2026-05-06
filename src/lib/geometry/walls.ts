@@ -41,8 +41,8 @@ export const offsetPoints = (points: Vector2d[], thickness: number | number[], i
 
     const det = n1.x * n2.y - n1.y * n2.x;
 
-    let dX = 0;
-    let dY = 0;
+    let dX: number;
+    let dY: number;
 
     if (Math.abs(det) < 0.0001) {
       // Parallel or opposite segments

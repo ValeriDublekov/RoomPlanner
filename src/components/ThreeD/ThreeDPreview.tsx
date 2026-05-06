@@ -3,11 +3,11 @@ import { Canvas, useThree, useFrame } from '@react-three/fiber';
 import { OrbitControls, Environment, ContactShadows } from '@react-three/drei';
 import * as THREE from 'three';
 import { useStore } from '@/src/store';
-import { FurnitureObject, PlanSnapshot } from '@/src/types';
-import { Camera, MousePointer2, Box } from 'lucide-react';
+import { FurnitureObject } from '@/src/types';
+import { Camera, Box } from 'lucide-react';
 import { getRoomVertices } from '@/src/lib/geometry/topology';
 import { usePlanSnapshot } from '@/src/hooks/usePlanSnapshot';
-import { FPVControls, WallSegments, Ceiling, Beam3D, Bed3D, Desk3D, Wardrobe3D, Dresser3D, Chair3D, FoldingChair3D,
+import { FPVControls, WallSegments, Ceiling, Beam3D, Bed3D, Desk3D, Wardrobe3D, Dresser3D, Chair3D, OfficeChair3D, FoldingChair3D,
   Shelf3D, Electronics3D, Table3D, GenericFurniture3D, Plant3D,
   Sofa3D, Nightstand3D, Toilet3D, Bathtub3D, Light3D,
   Picture3D, AirConditioner3D, Rug3D, WallPanel3D, Chest3D } from './';
@@ -76,7 +76,10 @@ const Furniture = ({ item, pixelsPerCm, isChild = false, parentWidth = 0, parent
       color: item.color || "#f8fafc",
       secondaryColor: item.secondaryColor,
       materials: item.materials,
-      furnitureType: item.furnitureType
+      furnitureType: item.furnitureType,
+      hasLaptop: item.hasLaptop,
+      monitorCount: item.monitorCount,
+      hasPeripherals: item.hasPeripherals
     };
     
     const cid = item.catalogId || '';
@@ -89,6 +92,7 @@ const Furniture = ({ item, pixelsPerCm, isChild = false, parentWidth = 0, parent
       case 'chest': return <Chest3D {...props} slantAngle={item.slantAngle} slantHeight={item.slantHeight} />;
       case 'chair': 
         if (cid === 'terrace-chair-folding') return <FoldingChair3D {...props} />;
+        if (cid === 'office-chair') return <OfficeChair3D {...props} />;
         return <Chair3D {...props} />;
       case 'shelf': return <Shelf3D {...props} hasDoors={item.hasDoors} />;
       case 'electronics': return <Electronics3D {...props} hideStand={item.hideStand} />;

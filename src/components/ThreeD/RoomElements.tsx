@@ -264,7 +264,7 @@ const VisibilityWrapper: React.FC<{
       groupRef.current.traverse((child: any) => {
         if (child.isMesh || child.isLineSegments) {
           const mats = Array.isArray(child.material) ? child.material : [child.material];
-          mats.forEach(m => {
+          mats.forEach((m: any) => {
             if (m && m.userData && m.userData.managed) {
               if (m.transparent !== m.userData.baseTransparent) {
                 m.transparent = m.userData.baseTransparent;
@@ -298,7 +298,7 @@ const VisibilityWrapper: React.FC<{
       groupRef.current.traverse((child: any) => {
         if (child.isMesh || child.isLineSegments) {
           const mats = Array.isArray(child.material) ? child.material : [child.material];
-          mats.forEach(m => {
+          mats.forEach((m: any) => {
             if (m) {
               if (m.userData.managed === undefined) {
                 m.userData.baseOpacity = m.opacity !== undefined ? m.opacity : 1;

@@ -1,5 +1,5 @@
 import React from 'react';
-import { useTexture, Edges } from '@react-three/drei';
+import { useTexture, Edges, RoundedBox } from '@react-three/drei';
 import * as THREE from 'three';
 import { WOOD_GRAIN } from '../../constants';
 import { useStore } from '../../store';
@@ -14,6 +14,9 @@ interface ModelProps {
   imageUrl?: string;
   materials?: import('../../types').ObjectMaterials;
   furnitureType?: string;
+  hasLaptop?: boolean;
+  monitorCount?: number;
+  hasPeripherals?: boolean;
 }
 
 const getSlotColor = (materials: import('../../types').ObjectMaterials | undefined, slot: keyof import('../../types').ObjectMaterials, fallback: string) => {
@@ -228,7 +231,7 @@ export const Bathtub3D: React.FC<ModelProps> = ({ width, depth, height, color })
   </group>
 );
 
-export const Desk3D: React.FC<ModelProps> = ({ width, depth, height, color, materials }) => {
+export const Desk3D: React.FC<ModelProps> = ({ width, depth, height, color, materials, hasLaptop, monitorCount, hasPeripherals }) => {
   const topThickness = 4; // 4cm
   const legRadius = 2; // 2cm
   
@@ -254,6 +257,89 @@ export const Desk3D: React.FC<ModelProps> = ({ width, depth, height, color, mate
           <SmartMaterial color="#334155" roughness={0.5} />
         </mesh>
       ))}
+
+      {/* Accessories */}
+      <group position={[width / 2, height, depth / 2]}>
+        {/* Laptop */}
+        {hasLaptop && (
+          <group position={[0, 0, depth * 0.1]}>
+            {/* Base */}
+            <mesh position={[0, 0.5, 0]} castShadow>
+              <boxGeometry args={[35, 1, 24]} />
+              <SmartMaterial color="#334155" />
+            </mesh>
+            {/* Screen */}
+            <group position={[0, 0.5, -12]} rotation={[-Math.PI * 0.65, 0, 0]}>
+              <mesh position={[0, 12, 0]} castShadow>
+                <boxGeometry args={[35, 24, 1]} />
+                <SmartMaterial color="#0f172a" roughness={0.1} />
+              </mesh>
+            </group>
+            {/* Laptop Mouse */}
+            <mesh position={[25, 0.8, 0]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+              <capsuleGeometry args={[2.5, 4, 4, 8]} />
+              <SmartMaterial color="#1e293b" />
+            </mesh>
+          </group>
+        )}
+
+        {/* Monitors */}
+        {!hasLaptop && monitorCount !== undefined && monitorCount > 0 && (
+          <group position={[0, 0, -depth * 0.2]}>
+            {Array.from({ length: monitorCount }).map((_, i) => {
+              const count = monitorCount || 0;
+              const monitorWidth = 55;
+              const monitorHeight = 32;
+              const spacing = 5;
+              const totalWidth = (count * monitorWidth) + ((count - 1) * spacing);
+              const startX = -(totalWidth / 2) + (monitorWidth / 2);
+              const x = startX + i * (monitorWidth + spacing);
+              
+              let rotation = 0;
+              if (count === 2) {
+                rotation = i === 0 ? 0.2 : -0.2;
+              } else if (count === 3) {
+                rotation = i === 0 ? 0.4 : (i === 2 ? -0.4 : 0);
+              }
+
+              return (
+                <group key={i} position={[x, 0, 0]} rotation={[0, rotation, 0]}>
+                  {/* Stand */}
+                  <mesh position={[0, 10, 0]} castShadow>
+                    <boxGeometry args={[4, 20, 4]} />
+                    <SmartMaterial color="#1e293b" />
+                  </mesh>
+                  <mesh position={[0, 1, 0]} castShadow>
+                    <boxGeometry args={[20, 2, 15]} />
+                    <SmartMaterial color="#1e293b" />
+                  </mesh>
+                  {/* Panel */}
+                  <mesh position={[0, 25, 2]} castShadow>
+                    <boxGeometry args={[monitorWidth, monitorHeight, 2]} />
+                    <SmartMaterial color="#0f172a" roughness={0.1} />
+                  </mesh>
+                </group>
+              );
+            })}
+          </group>
+        )}
+
+        {/* Peripherals */}
+        {((!hasLaptop && monitorCount !== undefined && monitorCount > 0) || hasPeripherals) && (
+          <group position={[0, 0, depth * 0.2]}>
+            {/* Keyboard */}
+            <mesh position={[0, 1, 0]} castShadow>
+              <boxGeometry args={[45, 1, 15]} />
+              <SmartMaterial color="#1e293b" />
+            </mesh>
+            {/* Mouse */}
+            <mesh position={[30, 0.8, 0]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+              <capsuleGeometry args={[3, 5, 4, 8]} />
+              <SmartMaterial color="#1e293b" />
+            </mesh>
+          </group>
+        )}
+      </group>
     </group>
   );
 };
@@ -570,6 +656,92 @@ export const Chair3D: React.FC<ModelProps> = ({ width, depth, height, color, mat
         <boxGeometry args={[width, backrestHeight, 5]} />
         <SmartMaterial color={chairColor} roughness={0.6} />
       </mesh>
+    </group>
+  );
+};
+
+export const OfficeChair3D: React.FC<ModelProps> = ({ width, depth, height, color, materials }) => {
+  const seatHeight = 45;
+  const textileMainColor = getSlotColor(materials, 'textileMain', color);
+  
+  // Adjusted dimensions for a more professional "office" feel
+  const chairWidth = width * 0.8; // More narrow
+  const chairDepth = depth * 0.85;
+  const backrestHeight = (height - seatHeight) * 1.35; // Significantly higher
+  const radius = 2; // Subtle rounding
+
+  return (
+    <group>
+      {/* Base - 5-star swivel */}
+      <group position={[width / 2, 2, depth / 2]}>
+        {/* Central Pole */}
+        <mesh position={[0, (seatHeight - 10) / 2, 0]} castShadow>
+          <cylinderGeometry args={[2, 2.5, seatHeight - 10, 16]} />
+          <SmartMaterial color="#1e293b" metalness={0.8} roughness={0.2} />
+        </mesh>
+        
+        {/* 5-star legs */}
+        {[0, 1, 2, 3, 4].map((i) => (
+          <group key={i} rotation={[0, (i * Math.PI * 2) / 5, 0]}>
+            <mesh position={[0, -1, 10]} rotation={[0.1, 0, 0]} castShadow>
+              <boxGeometry args={[4, 2, 20]} />
+              <SmartMaterial color="#1e293b" />
+            </mesh>
+            {/* Wheel */}
+            <mesh position={[0, -2, 20]} rotation={[0, 0, Math.PI / 2]} castShadow>
+              <cylinderGeometry args={[2.5, 2.5, 2, 12]} />
+              <SmartMaterial color="#0f172a" />
+            </mesh>
+          </group>
+        ))}
+      </group>
+
+      {/* Seat - Replaced Capsules with RoundedBox */}
+      <group position={[width / 2, seatHeight, depth / 2]}>
+        <RoundedBox args={[chairWidth, 5, chairDepth]} radius={radius} smoothness={4} castShadow receiveShadow>
+          <SmartMaterial color={textileMainColor} roughness={0.8} />
+        </RoundedBox>
+        
+        {/* Subtle cushion effect */}
+        <RoundedBox position={[0, 3, 0]} args={[chairWidth - 4, 2, chairDepth - 4]} radius={1} smoothness={4} castShadow>
+          <SmartMaterial color={textileMainColor} roughness={0.8} />
+        </RoundedBox>
+      </group>
+
+      {/* Backrest support and frame */}
+      <group position={[width / 2, seatHeight + 2, 5]}>
+        {/* Connection to seat */}
+        <mesh position={[0, -2, 5]} rotation={[0.2, 0, 0]} castShadow>
+          <boxGeometry args={[8, 3, 12]} />
+          <SmartMaterial color="#1e293b" />
+        </mesh>
+        
+        {/* Backrest Panel (Narrower and Higher) */}
+        <group position={[0, backrestHeight / 2, -2]} rotation={[-0.05, 0, 0]}>
+            <RoundedBox args={[chairWidth, backrestHeight, 3]} radius={radius} smoothness={4} castShadow receiveShadow>
+                <SmartMaterial color={textileMainColor} roughness={0.9} />
+            </RoundedBox>
+            {/* Mesh look edge effect */}
+            <Edges color="#0f172a" threshold={30} />
+        </group>
+      </group>
+
+      {/* Armrests - Refined */}
+      {[-(chairWidth / 2 + 3), chairWidth / 2 + 3].map((x, i) => (
+        <group key={i} position={[width / 2 + x, seatHeight + 10, depth / 2]}>
+          {/* Vertical support */}
+          <mesh position={[0, 0, 0]} castShadow>
+            <cylinderGeometry args={[1, 1.2, 15, 16]} />
+            <SmartMaterial color="#1e293b" />
+          </mesh>
+          {/* Top pad */}
+          <group position={[0, 7.5, -2]}>
+            <RoundedBox args={[6, 2, 20]} radius={1} smoothness={4} castShadow>
+              <SmartMaterial color="#0f172a" roughness={0.5} />
+            </RoundedBox>
+          </group>
+        </group>
+      ))}
     </group>
   );
 };
@@ -1118,8 +1290,8 @@ export const Chest3D: React.FC<ModelProps & { slantAngle?: number, slantHeight?:
       {h2 > 0 && (
          <mesh castShadow receiveShadow>
             <bufferGeometry>
-                <bufferAttribute attach="attributes-position" count={8} array={createPrismVertices(width, h2, depth, projection, h1)} itemSize={3} />
-                <bufferAttribute attach="index" count={36} array={new Uint16Array(getPrismIndices())} itemSize={1} />
+                <bufferAttribute attach="attributes-position" args={[createPrismVertices(width, h2, depth, projection, h1), 3]} />
+                <bufferAttribute attach="index" args={[new Uint16Array(getPrismIndices()), 1]} />
             </bufferGeometry>
             <WoodMaterial color={woodBaseColor} />
          </mesh>

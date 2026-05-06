@@ -102,6 +102,9 @@ export interface FurnitureObject {
   headboardTilt?: number;
   mattressWidth?: number;
   mattressDepth?: number;
+  hasLaptop?: boolean;
+  monitorCount?: number;
+  hasPeripherals?: boolean;
   slantAngle?: number;
   slantHeight?: number;
   panelStyle?: 'slats' | 'trellis' | 'green' | 'stone' | 'plain';

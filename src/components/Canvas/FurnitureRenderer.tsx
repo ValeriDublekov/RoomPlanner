@@ -478,6 +478,119 @@ export const FurnitureRenderer: React.FC<FurnitureRendererProps> = ({
         </Group>
       )}
 
+      {/* Desk Accessories */}
+      {shape.furnitureType === 'desk' && (
+        <Group listening={false}>
+          {shape.hasLaptop && (
+            <Group x={shape.width / 2} y={shape.height * 0.4} rotation={0}>
+              {/* Laptop base */}
+              <Rect
+                x={-15 * pixelsPerCm * 0.5}
+                y={-10 * pixelsPerCm * 0.5}
+                width={15 * pixelsPerCm}
+                height={10 * pixelsPerCm}
+                fill="#334155"
+                cornerRadius={1 / scale}
+              />
+              {/* Keyboard area detail */}
+              <Rect
+                x={-13 * pixelsPerCm * 0.5}
+                y={-4 * pixelsPerCm * 0.5}
+                width={13 * pixelsPerCm}
+                height={6 * pixelsPerCm}
+                fill="#1e293b"
+                opacity={0.5}
+              />
+              {/* Open Screen (projected flat for top-down) */}
+              <Rect
+                x={-15 * pixelsPerCm * 0.5}
+                y={-8 * pixelsPerCm}
+                width={15 * pixelsPerCm}
+                height={3 * pixelsPerCm}
+                fill="#0f172a"
+                stroke="#475569"
+                strokeWidth={1 / scale}
+              />
+              {/* Laptop Mouse */}
+              <Ellipse
+                x={12 * pixelsPerCm}
+                y={0}
+                radiusX={1.5 * pixelsPerCm}
+                radiusY={2.5 * pixelsPerCm}
+                fill="#1e293b"
+              />
+            </Group>
+          )}
+
+          {shape.monitorCount !== undefined && shape.monitorCount > 0 && (
+            <Group x={shape.width / 2} y={shape.height * 0.2}>
+              {Array.from({ length: shape.monitorCount }).map((_, i) => {
+                const count = shape.monitorCount || 0;
+                const monitorWidth = 25 * pixelsPerCm;
+                const spacing = 2 * pixelsPerCm;
+                const totalWidth = (count * monitorWidth) + ((count - 1) * spacing);
+                const startX = -(totalWidth / 2) + (monitorWidth / 2);
+                const x = startX + i * (monitorWidth + spacing);
+                
+                // Rotation for side monitors
+                let rotation = 0;
+                if (count === 2) {
+                  rotation = i === 0 ? 10 : -10;
+                } else if (count === 3) {
+                  rotation = i === 0 ? 20 : (i === 2 ? -20 : 0);
+                }
+
+                return (
+                  <Group key={i} x={x} rotation={rotation}>
+                    {/* Monitor Stand */}
+                    <Rect
+                      x={-4 * pixelsPerCm * 0.5}
+                      y={2 * pixelsPerCm}
+                      width={4 * pixelsPerCm}
+                      height={3 * pixelsPerCm}
+                      fill="#1e293b"
+                    />
+                    {/* Monitor Panel */}
+                    <Rect
+                      x={-monitorWidth * 0.5}
+                      y={0}
+                      width={monitorWidth}
+                      height={3 * pixelsPerCm}
+                      fill="#0f172a"
+                      stroke="#334155"
+                      strokeWidth={1 / scale}
+                      cornerRadius={1 / scale}
+                    />
+                  </Group>
+                );
+              })}
+            </Group>
+          )}
+
+          {((shape.monitorCount !== undefined && shape.monitorCount > 0) || shape.hasPeripherals) && (
+            <Group x={shape.width / 2} y={shape.height * 0.7}>
+              {/* Keyboard */}
+              <Rect
+                x={-18 * pixelsPerCm * 0.5}
+                y={0}
+                width={18 * pixelsPerCm}
+                height={6 * pixelsPerCm}
+                fill="#1e293b"
+                cornerRadius={1 / scale}
+              />
+              {/* Mouse */}
+              <Ellipse
+                x={12 * pixelsPerCm}
+                y={3 * pixelsPerCm}
+                radiusX={2 * pixelsPerCm}
+                radiusY={3 * pixelsPerCm}
+                fill="#1e293b"
+              />
+            </Group>
+          )}
+        </Group>
+      )}
+
       {/* Shelf Dividers */}
       {shape.furnitureType === 'shelf' && !shape.svgPath && (
         <Group listening={false}>

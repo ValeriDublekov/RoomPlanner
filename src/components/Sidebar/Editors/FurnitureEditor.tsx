@@ -731,6 +731,67 @@ export const FurnitureEditor: React.FC<FurnitureEditorProps> = ({
         </div>
       )}
 
+      {selectedFurniture.furnitureType === 'desk' && (
+        <div className="space-y-3 p-3 bg-indigo-50/50 rounded-xl border border-indigo-100 mb-2">
+          <label className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest ml-1">Desk Accessories</label>
+          
+          <div className="space-y-3">
+            <label className="flex items-center gap-3 cursor-pointer group">
+              <input
+                type="checkbox"
+                checked={selectedFurniture.hasLaptop || false}
+                onChange={(e) => {
+                  saveHistory();
+                  updateFurniture(selectedFurniture.id, { 
+                    hasLaptop: e.target.checked,
+                    monitorCount: e.target.checked ? 0 : selectedFurniture.monitorCount
+                  });
+                }}
+                className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+              />
+              <div className="flex flex-col">
+                <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Laptop + Mouse</span>
+                <span className="text-[9px] text-indigo-500 font-medium">Open lid setup</span>
+              </div>
+            </label>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Monitors</span>
+                <span className="text-[10px] font-bold text-indigo-500">{selectedFurniture.monitorCount || 0}</span>
+              </div>
+              <div className="flex gap-1.5">
+                {[0, 1, 2, 3].map(count => (
+                  <button
+                    key={count}
+                    disabled={selectedFurniture.hasLaptop}
+                    onClick={() => {
+                      saveHistory();
+                      updateFurniture(selectedFurniture.id, { monitorCount: count });
+                    }}
+                    className={cn(
+                      "flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all border",
+                      selectedFurniture.monitorCount === count 
+                        ? "bg-indigo-600 text-white border-indigo-600 shadow-sm shadow-indigo-200" 
+                        : "bg-white text-slate-600 border-slate-200 hover:border-indigo-300",
+                      selectedFurniture.hasLaptop && "opacity-40 cursor-not-allowed"
+                    )}
+                  >
+                    {count}
+                  </button>
+                ))}
+              </div>
+              {selectedFurniture.monitorCount !== 0 && (
+                <div className="flex items-center gap-1.5 ml-1">
+                  <div className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
+                  <span className="text-[9px] text-indigo-500 font-bold uppercase tracking-tight">+ KB & Mouse</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="space-y-1.5">
         <div className="flex justify-between items-center ml-1">
           <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Rotation</label>
