@@ -2,6 +2,8 @@ import React from 'react';
 import { X, FlipHorizontal, FlipVertical } from 'lucide-react';
 import { WallAttachment } from '../../../types';
 import { cn } from '../../../lib/utils';
+import { useStore } from '../../../store';
+import { INTERIOR_THEMES } from '../../../lib/themes';
 
 interface AttachmentEditorProps {
   selectedAttachment: WallAttachment;
@@ -16,6 +18,9 @@ export const AttachmentEditor: React.FC<AttachmentEditorProps> = ({
   deleteAttachment,
   saveHistory,
 }) => {
+  const activeThemeId = useStore((state) => state.activeThemeId);
+  const activeTheme = INTERIOR_THEMES.find(t => t.id === activeThemeId);
+
   return (
     <>
       <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">
@@ -84,6 +89,28 @@ export const AttachmentEditor: React.FC<AttachmentEditorProps> = ({
                 </button>
               ))}
             </div>
+            
+            {selectedAttachment.curtainType && selectedAttachment.curtainType !== 'none' && (
+              <div className="space-y-1.5 mt-2">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Mounting</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {(['ceiling', 'wall'] as const).map(mount => (
+                    <button
+                      key={mount}
+                      onClick={() => { saveHistory(); updateAttachment(selectedAttachment.id, { curtainMountType: mount }); }}
+                      className={cn(
+                        "px-3 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all border text-center",
+                        (selectedAttachment.curtainMountType || 'wall') === mount
+                          ? "bg-indigo-50 text-indigo-600 border-indigo-200 shadow-sm"
+                          : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
+                      )}
+                    >
+                      {mount}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {selectedAttachment.curtainType && selectedAttachment.curtainType !== 'none' && (
@@ -92,7 +119,7 @@ export const AttachmentEditor: React.FC<AttachmentEditorProps> = ({
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Thin Curtain Color</label>
                   <div className="flex gap-2 flex-wrap">
-                    {['#ffffff', '#f8fafc', '#f1f5f9', '#e2e8f0', '#cbd5e1', '#fff7ed', '#fef2f2', '#f0fdf4'].map(color => (
+                    {['#ffffff', '#f8fafc', '#f1f5f9', '#e2e8f0', '#cbd5e1'].map(color => (
                       <button
                         key={color}
                         onClick={() => { saveHistory(); updateAttachment(selectedAttachment.id, { thinCurtainColor: color }); }}
@@ -116,8 +143,8 @@ export const AttachmentEditor: React.FC<AttachmentEditorProps> = ({
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Thick Curtain Color</label>
                   <div className="flex gap-2 flex-wrap">
-                    {['#f1f5f9', '#94a3b8', '#475569', '#334155', '#1e293b', '#4338ca', '#b91c1c', '#15803d'].map(color => (
-                      <button
+                    {[activeTheme?.textileColors.main || '#f1f5f9', activeTheme?.textileColors.secondary || '#94a3b8', activeTheme?.textileColors.accent || '#475569', '#334155', '#1e293b'].map(color => (
+                        <button
                         key={color}
                         onClick={() => { saveHistory(); updateAttachment(selectedAttachment.id, { thickCurtainColor: color }); }}
                         className={cn(

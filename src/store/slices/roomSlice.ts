@@ -729,6 +729,7 @@ export const createRoomSlice: StateCreator<AppState, [], [], RoomSlice> = (set, 
       id: Math.random().toString(36).substr(2, 9),
       flipY: true,
       curtainType: 'none',
+      curtainMountType: 'wall', // Default to wall mounting
       frameColor: '#ffffff',
       thinCurtainColor: '#ffffff',
       thickCurtainColor: '#f1f5f9'

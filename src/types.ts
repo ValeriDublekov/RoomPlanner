@@ -150,6 +150,7 @@ export interface WallAttachment {
   flipX?: boolean; // For door swing side
   flipY?: boolean; // For door swing direction (inside/outside)
   curtainType?: 'none' | 'thin' | 'thick' | 'both';
+  curtainMountType?: 'ceiling' | 'wall';
   frameColor?: string;
   thinCurtainColor?: string;
   thickCurtainColor?: string;

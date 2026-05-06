@@ -502,10 +502,30 @@ export const WallSegments: React.FC<{
             }
 
             if (att.type === 'window' && att.curtainType && att.curtainType !== 'none') {
-                const curtainOffset = wallThickness / 2 + 5;
+                const mountOffset = att.curtainMountType === 'wall' ? 25 : 15;
+                const curtainOffset = wallThickness / 2 + mountOffset;                
                 const cMidX = midX - normal.x * (curtainOffset / pixelsPerCm);
                 const cMidZ = midZ - normal.y * (curtainOffset / pixelsPerCm);
                 
+              // Render wall mount rod if needed
+                if (att.curtainMountType === 'wall') {
+                  segs.push({
+                    type: 'frame',
+                    length: attWidth + 40,
+                    angle,
+                    midX: cMidX + normal.x * (10 / pixelsPerCm), // Rod offset from curtain
+                    midZ: cMidZ + normal.y * (10 / pixelsPerCm),
+                    height: 4,
+                    y: sillHeight + openingHeight + 5, // Just above window
+                    color: '#475569',
+                    depth: 4
+                  });
+                }
+                
+                const curtainY = att.curtainMountType === 'ceiling' 
+                  ? (wallHeight / 2) // Roughly center of room height
+                  : (sillHeight + openingHeight / 2);
+
                 if (att.curtainType === 'thin' || att.curtainType === 'both') {
                   segs.push({ 
                     type: 'curtain', 
@@ -513,29 +533,29 @@ export const WallSegments: React.FC<{
                     angle, 
                     midX: cMidX, 
                     midZ: cMidZ, 
-                    height: openingHeight + 10, 
-                    y: sillHeight + openingHeight / 2, 
-                    color: att.thinCurtainColor || '#ffffff', 
+                    height: att.curtainMountType === 'ceiling' ? wallHeight - 10 : openingHeight + 10, 
+                    y: curtainY, 
+                    color: '#ffffff', 
                     opacity: 0.6, 
                     depth: 1 
                   });
                 }
                 
                 if (att.curtainType === 'thick' || att.curtainType === 'both') {
-                  const thickOffset = (att.curtainType === 'both' ? 2 : 0) / pixelsPerCm;
-                  const thickColor = att.thickCurtainColor || '#f1f5f9';
+                  const thickOffset = (att.curtainType === 'both' ? 12 : 0) / pixelsPerCm;
+                  const thickColor = att.thickCurtainColor || activeTheme?.textileColors.main || '#f1f5f9';
                   
                   if (att.curtainType === 'both') {
                     const sideWidth = (attWidth + 40) * 0.25;
                     const offsetFromCenter = (attWidth + 40) / 2 - sideWidth / 2;
                     const lx = cMidX - (Math.cos(angle) * offsetFromCenter) - normal.x * thickOffset;
                     const lz = cMidZ - (Math.sin(angle) * offsetFromCenter) - normal.y * thickOffset;
-                    segs.push({ type: 'curtain', length: sideWidth, angle, midX: lx, midZ: lz, height: openingHeight + 20, y: sillHeight + openingHeight / 2 + 5, color: thickColor, opacity: 0.9, depth: 2 });
+                    segs.push({ type: 'curtain', length: sideWidth, angle, midX: lx, midZ: lz, height: att.curtainMountType === 'ceiling' ? wallHeight - 10 : openingHeight + 20, y: curtainY, color: thickColor, opacity: 0.9, depth: 2 });
                     const rx = cMidX + (Math.cos(angle) * offsetFromCenter) - normal.x * thickOffset;
                     const rz = cMidZ + (Math.sin(angle) * offsetFromCenter) - normal.y * thickOffset;
-                    segs.push({ type: 'curtain', length: sideWidth, angle, midX: rx, midZ: rz, height: openingHeight + 20, y: sillHeight + openingHeight / 2 + 5, color: thickColor, opacity: 0.9, depth: 2 });
+                    segs.push({ type: 'curtain', length: sideWidth, angle, midX: rx, midZ: rz, height: att.curtainMountType === 'ceiling' ? wallHeight - 10 : openingHeight + 20, y: curtainY, color: thickColor, opacity: 0.9, depth: 2 });
                   } else {
-                    segs.push({ type: 'curtain', length: attWidth + 40, angle, midX: cMidX - normal.x * thickOffset, midZ: cMidZ - normal.y * thickOffset, height: openingHeight + 20, y: sillHeight + openingHeight / 2 + 5, color: thickColor, opacity: 0.9, depth: 2 });
+                    segs.push({ type: 'curtain', length: attWidth + 40, angle, midX: cMidX - normal.x * thickOffset, midZ: cMidZ - normal.y * thickOffset, height: att.curtainMountType === 'ceiling' ? wallHeight - 10 : openingHeight + 20, y: curtainY, color: thickColor, opacity: 0.9, depth: 2 });
                   }
                 }
               }
