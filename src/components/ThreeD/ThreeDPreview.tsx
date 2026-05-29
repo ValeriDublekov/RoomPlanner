@@ -4,9 +4,11 @@ import { OrbitControls, Environment, ContactShadows } from '@react-three/drei';
 import * as THREE from 'three';
 import { useStore } from '@/src/store';
 import { FurnitureObject } from '@/src/types';
-import { Camera, Box } from 'lucide-react';
+import { Camera, Box, Palette, Check } from 'lucide-react';
 import { getRoomVertices } from '@/src/lib/geometry/topology';
 import { usePlanSnapshot } from '@/src/hooks/usePlanSnapshot';
+import { INTERIOR_THEMES } from '@/src/lib/themes';
+import { cn } from '@/src/lib/utils';
 import { FPVControls, WallSegments, Ceiling, Beam3D, Bed3D, Desk3D, Wardrobe3D, Dresser3D, Chair3D, OfficeChair3D, FoldingChair3D,
   Shelf3D, Electronics3D, Table3D, GenericFurniture3D, Plant3D,
   Sofa3D, Nightstand3D, Toilet3D, Bathtub3D, Light3D,
@@ -153,9 +155,30 @@ const Furniture = ({ item, pixelsPerCm, isChild = false, parentWidth = 0, parent
 };
 
 export const ThreeDPreview: React.FC = () => {
-  const { rooms, furniture, beams, pixelsPerCm, setShow3d, wallThickness, wallHeight, setWallHeight, wallAttachments, edgeMode3d, setEdgeMode3d, threeDWallMode, setThreeDWallMode, setThreeScene, isReadOnly } = useStore();
+  const { 
+    rooms, 
+    furniture, 
+    beams, 
+    pixelsPerCm, 
+    setShow3d, 
+    wallThickness, 
+    wallHeight, 
+    setWallHeight, 
+    wallAttachments, 
+    edgeMode3d, 
+    setEdgeMode3d, 
+    threeDWallMode, 
+    setThreeDWallMode, 
+    setThreeScene, 
+    isReadOnly,
+    activeThemeId,
+    setActiveTheme,
+    applyThemeToScene
+  } = useStore();
+  
   const [isExporting, setIsExporting] = useState(false);
   const [viewMode, setViewMode] = useState<'dollhouse' | 'first-person'>('dollhouse');
+  const [showThemePicker, setShowThemePicker] = useState(false);
   
   const planSnapshot = usePlanSnapshot();
 
@@ -249,6 +272,16 @@ export const ThreeDPreview: React.FC = () => {
               </div>
             )}
 
+            <button 
+              onClick={() => setShowThemePicker(!showThemePicker)}
+              className={cn(
+                "px-4 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2",
+                showThemePicker ? "bg-indigo-600 text-white shadow-lg" : "bg-slate-700 hover:bg-slate-600 text-white"
+              )}
+            >
+              <Palette size={16} />
+              Themes
+            </button>
             <button 
               onClick={() => handleExport(false)}
               className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-bold transition-all flex items-center gap-2"
@@ -428,6 +461,62 @@ export const ThreeDPreview: React.FC = () => {
             </div>
           )}
         </div>
+        {showThemePicker && !isReadOnly && (
+          <div className="absolute top-4 right-4 z-10 w-72 max-h-[80vh] overflow-y-auto bg-slate-800/95 backdrop-blur-xl border border-slate-700 rounded-2xl shadow-2xl p-4 flex flex-col gap-4 animate-in slide-in-from-right-4 fade-in duration-200">
+            <div className="flex items-center justify-between">
+              <h3 className="text-white font-bold text-sm flex items-center gap-2">
+                <Palette size={16} className="text-indigo-400" />
+                Select Theme
+              </h3>
+              <button 
+                onClick={() => setShowThemePicker(false)}
+                className="text-slate-400 hover:text-white transition-colors"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+              </button>
+            </div>
+            
+            <div className="grid grid-cols-1 gap-2">
+              {INTERIOR_THEMES.map(theme => {
+                const isSelected = activeThemeId === theme.id;
+                return (
+                  <button
+                    key={theme.id}
+                    onClick={() => {
+                      setActiveTheme(theme.id);
+                      applyThemeToScene();
+                    }}
+                    className={cn(
+                      "flex items-center gap-3 p-3 rounded-xl border-2 transition-all text-left group",
+                      isSelected 
+                        ? "border-indigo-500 bg-indigo-500/10" 
+                        : "border-slate-700 bg-slate-800/50 hover:border-slate-600 hover:bg-slate-700/50"
+                    )}
+                  >
+                    <div className="flex -space-x-1.5 flex-shrink-0">
+                      {[theme.wallColors.base, theme.woodColors.base, theme.textileColors.main].map((c, i) => (
+                        <div 
+                          key={i} 
+                          className="w-4 h-4 rounded-full border border-slate-800 shadow-sm" 
+                          style={{ backgroundColor: c, zIndex: 3 - i }} 
+                        />
+                      ))}
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-white text-xs font-bold leading-tight">{theme.name}</div>
+                      <div className="text-slate-400 text-[10px] leading-tight">Apply global style</div>
+                    </div>
+                    {isSelected && (
+                      <div className="w-5 h-5 bg-indigo-500 rounded-full flex items-center justify-center">
+                        <Check size={12} className="text-white" />
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

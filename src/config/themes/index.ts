@@ -7,6 +7,8 @@ import scandiWarm from './scandi_warm.json';
 import japandiLight from './japandi_light.json';
 import modernSoft from './modern_soft.json';
 import coastalLight from './coastal_light.json';
+import mediterraneanVilla from './mediterranean_villa.json';
+import midCenturyModern from './mid_century_modern.json';
 
 export const INTERIOR_THEMES: InteriorTheme[] = [
   scandi as InteriorTheme,
@@ -16,7 +18,9 @@ export const INTERIOR_THEMES: InteriorTheme[] = [
   scandiWarm as InteriorTheme,
   japandiLight as InteriorTheme,
   modernSoft as InteriorTheme,
-  coastalLight as InteriorTheme
+  coastalLight as InteriorTheme,
+  mediterraneanVilla as InteriorTheme,
+  midCenturyModern as InteriorTheme
 ];
 
 export default INTERIOR_THEMES;

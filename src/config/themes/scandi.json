@@ -2,9 +2,9 @@
   "id": "scandi_light_1",
   "name": "Scandinavian Light (Soft Yellow)",
   "wallColors": {
-    "base": "#64748B",
-    "secondary": "#94A3B8",
-    "accent": "#475569"
+    "base": "#FCFAED",
+    "secondary": "#F2ECD9",
+    "accent": "#E4D6B8"
   },
   "woodColors": {
     "base": "#D1BFAE",

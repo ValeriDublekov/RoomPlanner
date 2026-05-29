@@ -1,0 +1,18 @@
+{
+  "id": "mid_century_modern",
+  "name": "Mid-Century Modern",
+  "wallColors": {
+    "base": "#F4EFEA",
+    "secondary": "#E5DCCF",
+    "accent": "#2F5061"
+  },
+  "woodColors": {
+    "base": "#935E38",
+    "front": "#AA7A50"
+  },
+  "textileColors": {
+    "main": "#F8F8F8",
+    "secondary": "#D99A4E",
+    "accent": "#427670"
+  }
+}

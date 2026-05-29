@@ -203,21 +203,35 @@ export const FurnitureItem: React.FC<FurnitureItemProps> = ({
           listening={true}
         />
 
+        {/* Robust transparent background for hit detection across the entire bounding box */}
+        <Rect
+          name="drag-background"
+          x={0}
+          y={isSelected ? -50 / scale : 0}
+          width={shape.width}
+          height={isSelected ? shape.height + 50 / scale : shape.height}
+          fill="rgba(255,255,255,0.005)" 
+          listening={true}
+        />
+
         {/* Quick Rotation Buttons */}
         {isSelected && !isGroup && (
-          <Group y={-35 / scale} x={shape.width / 2 - 25 / scale}>
+          <Group y={-35 / scale} x={shape.width / 2 - 24 / scale}>
             <Group 
               onClick={(e) => {
                 if (isReadOnly) return;
                 e.cancelBubble = true;
                 onStartChange();
-                onChange({ rotation: (shape.rotation - 90) % 360 });
+                // Ensure rotation stays clean
+                const newRotation = (shape.rotation - 90 + 360) % 360;
+                onChange({ rotation: newRotation });
               }}
               onTap={(e) => {
                 if (isReadOnly) return;
                 e.cancelBubble = true;
                 onStartChange();
-                onChange({ rotation: (shape.rotation - 90) % 360 });
+                const newRotation = (shape.rotation - 90 + 360) % 360;
+                onChange({ rotation: newRotation });
               }}
             >
               <Ellipse
@@ -244,13 +258,15 @@ export const FurnitureItem: React.FC<FurnitureItemProps> = ({
                 if (isReadOnly) return;
                 e.cancelBubble = true;
                 onStartChange();
-                onChange({ rotation: (shape.rotation + 90) % 360 });
+                const newRotation = (shape.rotation + 90) % 360;
+                onChange({ rotation: newRotation });
               }}
               onTap={(e) => {
                 if (isReadOnly) return;
                 e.cancelBubble = true;
                 onStartChange();
-                onChange({ rotation: (shape.rotation + 90) % 360 });
+                const newRotation = (shape.rotation + 90) % 360;
+                onChange({ rotation: newRotation });
               }}
             >
               <Ellipse
@@ -273,17 +289,6 @@ export const FurnitureItem: React.FC<FurnitureItemProps> = ({
             </Group>
           </Group>
         )}
-
-        {/* Robust transparent background for hit detection across the entire bounding box */}
-        <Rect
-          name="drag-background"
-          x={0}
-          y={isSelected ? -50 / scale : 0}
-          width={shape.width}
-          height={isSelected ? shape.height + 50 / scale : shape.height}
-          fill="rgba(255,255,255,0.005)" 
-          listening={true}
-        />
       </Group>
       {isSelected && (
         <Transformer

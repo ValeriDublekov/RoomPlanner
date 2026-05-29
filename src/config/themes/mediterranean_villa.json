@@ -1,0 +1,18 @@
+{
+  "id": "mediterranean_villa",
+  "name": "Mediterranean Villa",
+  "wallColors": {
+    "base": "#FAF6F0",
+    "secondary": "#EAE0D5",
+    "accent": "#C67D63"
+  },
+  "woodColors": {
+    "base": "#8C6A53",
+    "front": "#D9C8B8"
+  },
+  "textileColors": {
+    "main": "#FFFFFF",
+    "secondary": "#C1B19B",
+    "accent": "#738A70"
+  }
+}

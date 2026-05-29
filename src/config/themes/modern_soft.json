@@ -2,9 +2,9 @@
   "id": "modern_soft",
   "name": "Soft Minimalist",
   "wallColors": {
-    "base": "#475569",
-    "secondary": "#64748B",
-    "accent": "#334155"
+    "base": "#FAFAFA",
+    "secondary": "#F0F0F0",
+    "accent": "#D1D5DB"
   },
   "woodColors": {
     "base": "#DFD8CD",
