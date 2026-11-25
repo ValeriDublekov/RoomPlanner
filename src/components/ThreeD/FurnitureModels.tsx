@@ -3,6 +3,7 @@ import { useTexture, Edges, RoundedBox } from '@react-three/drei';
 import * as THREE from 'three';
 import { WOOD_GRAIN } from '../../constants';
 import { useStore } from '../../store';
+import { calculateRackLayout } from '../../lib/rackUtils';
 
 interface ModelProps {
   width: number;
@@ -826,6 +827,104 @@ export const Shelf3D: React.FC<ModelProps> = ({ width, depth, height, color, sec
           })}
         </group>
       )}
+    </group>
+  );
+};
+
+export const Rack3D: React.FC<ModelProps & { shelfCount?: number }> = ({
+  width,
+  depth,
+  height,
+  color,
+  secondaryColor,
+  materials,
+  shelfCount = 5,
+}) => {
+  const frameColor = getSlotColor(materials, 'woodBase', color || '#475569');
+  const shelfColor = getSlotColor(materials, 'woodFront', secondaryColor || '#d1bfae');
+
+  const layout = calculateRackLayout(height, shelfCount);
+  const postSize = Math.min(4, width * 0.12, depth * 0.12);
+  const beamHeight = Math.max(1, layout.shelfThicknessCm * 0.75);
+  const deckHeight = Math.max(0.5, layout.shelfThicknessCm * 0.6);
+  const hasMidPosts = width > 200;
+
+  const postXPositions = hasMidPosts
+    ? [postSize / 2, width / 2, width - postSize / 2]
+    : [postSize / 2, width - postSize / 2];
+  const postZPositions = [postSize / 2, depth - postSize / 2];
+
+  const firstY = layout.shelfCentersCm[0];
+  const lastY = layout.shelfCentersCm[layout.shelfCentersCm.length - 1];
+  const braceSpanY = Math.max(0, lastY - firstY);
+  const braceSpanZ = Math.max(1, depth - postSize);
+  const diagLen = Math.sqrt(braceSpanY * braceSpanY + braceSpanZ * braceSpanZ);
+  const diagAngle = Math.atan2(braceSpanY, braceSpanZ);
+
+  return (
+    <group>
+      {/* Vertical Corner (and optional mid) Upright Posts + Foot Pads */}
+      {postXPositions.map((px, xi) =>
+        postZPositions.map((pz, zi) => (
+          <group key={`upright-${xi}-${zi}`} position={[px, 0, pz]}>
+            {/* Grounded base foot pad */}
+            <mesh position={[0, 0.5, 0]} castShadow receiveShadow>
+              <boxGeometry args={[postSize + 1.2, 1, postSize + 1.2]} />
+              <SmartMaterial color="#1e293b" roughness={0.7} metalness={0.35} />
+            </mesh>
+            {/* Vertical upright post */}
+            <mesh position={[0, height / 2, 0]} castShadow receiveShadow>
+              <boxGeometry args={[postSize, height, postSize]} />
+              <SmartMaterial color={frameColor} roughness={0.35} metalness={0.65} />
+            </mesh>
+          </group>
+        ))
+      )}
+
+      {/* Side Diagonal Cross-Bracing on Left & Right Ends */}
+      {layout.shelfCount >= 2 && braceSpanY > 10 && [postSize / 2, width - postSize / 2].map((sx, sideIdx) => (
+        <mesh
+          key={`diag-${sideIdx}`}
+          position={[sx, firstY + braceSpanY / 2, depth / 2]}
+          rotation={[sideIdx === 0 ? diagAngle : -diagAngle, 0, 0]}
+          castShadow
+          receiveShadow
+        >
+          <boxGeometry args={[postSize * 0.45, postSize * 0.45, diagLen]} />
+          <SmartMaterial color={frameColor} roughness={0.4} metalness={0.6} />
+        </mesh>
+      ))}
+
+      {/* Shelves & Support Beams at Calculated Heights */}
+      {layout.shelfCentersCm.map((yCenter, idx) => (
+        <group key={`tier-${idx}`} position={[0, yCenter, 0]}>
+          {/* Front & Back Horizontal Support Beams */}
+          <mesh position={[width / 2, -deckHeight * 0.2, postSize / 2]} castShadow receiveShadow>
+            <boxGeometry args={[Math.max(1, width - postSize * 2), beamHeight, postSize * 0.7]} />
+            <SmartMaterial color={frameColor} roughness={0.35} metalness={0.65} />
+          </mesh>
+          <mesh position={[width / 2, -deckHeight * 0.2, depth - postSize / 2]} castShadow receiveShadow>
+            <boxGeometry args={[Math.max(1, width - postSize * 2), beamHeight, postSize * 0.7]} />
+            <SmartMaterial color={frameColor} roughness={0.35} metalness={0.65} />
+          </mesh>
+
+          {/* Left & Right Side Cross-Bars */}
+          <mesh position={[postSize / 2, -deckHeight * 0.2, depth / 2]} castShadow receiveShadow>
+            <boxGeometry args={[postSize * 0.7, beamHeight * 0.9, Math.max(1, depth - postSize * 2)]} />
+            <SmartMaterial color={frameColor} roughness={0.35} metalness={0.65} />
+          </mesh>
+          <mesh position={[width - postSize / 2, -deckHeight * 0.2, depth / 2]} castShadow receiveShadow>
+            <boxGeometry args={[postSize * 0.7, beamHeight * 0.9, Math.max(1, depth - postSize * 2)]} />
+            <SmartMaterial color={frameColor} roughness={0.35} metalness={0.65} />
+          </mesh>
+
+          {/* Shelf Deck / Board */}
+          <mesh position={[width / 2, beamHeight * 0.25, depth / 2]} castShadow receiveShadow>
+            <boxGeometry args={[Math.max(1, width - postSize * 0.6), deckHeight, Math.max(1, depth - postSize * 0.6)]} />
+            <WoodMaterial color={shelfColor} />
+          </mesh>
+        </group>
+      ))}
     </group>
   );
 };

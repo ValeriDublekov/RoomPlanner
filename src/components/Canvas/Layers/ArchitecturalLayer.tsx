@@ -51,6 +51,7 @@ export const ArchitecturalLayer: React.FC<ArchitecturalLayerProps> = ({ scale })
       room={room}
       isSelected={selectedRoomId === room.id}
       onSelect={() => {
+        if (mode !== 'select') return;
         setSelectedRoomId(room.id);
       }}
       scale={scale}
@@ -58,7 +59,7 @@ export const ArchitecturalLayer: React.FC<ArchitecturalLayerProps> = ({ scale })
       planSnapshot={planSnapshot}
       renderMode="floor"
     />
-  )), [rooms, selectedRoomId, scale, setSelectedRoomId, planSnapshot]);
+  )), [rooms, selectedRoomId, scale, setSelectedRoomId, mode, planSnapshot]);
 
   const roomWallElements = React.useMemo(() => rooms.map((room) => (
     <RoomItem
@@ -66,6 +67,7 @@ export const ArchitecturalLayer: React.FC<ArchitecturalLayerProps> = ({ scale })
       room={room}
       isSelected={selectedRoomId === room.id}
       onSelect={() => {
+        if (mode !== 'select') return;
         setSelectedRoomId(room.id);
       }}
       scale={scale}
@@ -73,7 +75,7 @@ export const ArchitecturalLayer: React.FC<ArchitecturalLayerProps> = ({ scale })
       planSnapshot={planSnapshot}
       renderMode="walls"
     />
-  )), [rooms, selectedRoomId, scale, setSelectedRoomId, planSnapshot]);
+  )), [rooms, selectedRoomId, scale, setSelectedRoomId, mode, planSnapshot]);
 
   const beamElements = React.useMemo(() => beams.map((beam) => (
     <BeamItem
@@ -81,15 +83,14 @@ export const ArchitecturalLayer: React.FC<ArchitecturalLayerProps> = ({ scale })
       beam={beam}
       isSelected={selectedBeamId === beam.id}
       onSelect={() => {
-        console.log('ArchitecturalLayer: onSelect beam triggered, id:', beam.id);
+        if (mode !== 'select') return;
         setSelectedBeamId(beam.id);
-        if (mode !== 'select') setMode('select');
       }}
       scale={scale}
       mode={mode}
       planSnapshot={planSnapshot}
     />
-  )), [beams, selectedBeamId, scale, setSelectedBeamId, setMode, mode, planSnapshot]);
+  )), [beams, selectedBeamId, scale, setSelectedBeamId, mode, planSnapshot]);
 
   const furnitureElements = React.useMemo(() => [...furniture].sort((a, b) => (a.elevation || 0) - (b.elevation || 0)).map((item) => (
     <FurnitureItem
@@ -124,13 +125,13 @@ export const ArchitecturalLayer: React.FC<ArchitecturalLayerProps> = ({ scale })
       attachment={attachment}
       isSelected={selectedAttachmentId === attachment.id}
       onSelect={() => {
+        if (mode !== 'select') return;
         setSelectedAttachmentId(attachment.id);
-        if (mode !== 'select') setMode('select');
       }}
       scale={scale}
       planSnapshot={planSnapshot}
     />
-  )), [wallAttachments, selectedAttachmentId, scale, setSelectedAttachmentId, setMode, planSnapshot]);
+  )), [wallAttachments, selectedAttachmentId, scale, setSelectedAttachmentId, mode, planSnapshot]);
 
   return (
     <Layer id="architectural-layer" visible={activeLayer !== 'blueprint'}>

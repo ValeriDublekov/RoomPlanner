@@ -73,8 +73,9 @@ export const FurnitureRenderer: React.FC<FurnitureRendererProps> = ({
   let mainFill = woodBaseColor;
   if (shape.furnitureType === 'bed') mainFill = textileMainColor;
   if (shape.furnitureType === 'rug') mainFill = textileMainColor;
+  if (shape.furnitureType === 'rack') mainFill = woodFrontColor;
   if (isColliding) mainFill = "rgba(239, 68, 68, 0.2)";
-  if (shape.svgPath && shape.furnitureType !== 'rug') {
+  if (shape.svgPath && shape.furnitureType !== 'rug' && shape.furnitureType !== 'rack') {
     mainFill = isSelected ? "rgba(79, 70, 229, 0.15)" : "rgba(0,0,0,0.02)";
   }
   
@@ -138,7 +139,7 @@ export const FurnitureRenderer: React.FC<FurnitureRendererProps> = ({
         />
       )}
 
-      {shape.svgPath && (() => {
+      {shape.svgPath && shape.furnitureType !== 'rack' && (() => {
         const tempPath = new Konva.Path({ data: shape.svgPath });
         const pathRect = tempPath.getSelfRect();
         const sX = shape.width / (pathRect.width || 100);
@@ -408,7 +409,9 @@ export const FurnitureRenderer: React.FC<FurnitureRendererProps> = ({
           textRotation = 180;
         }
 
-        const labelText = `${shape.name}\n${(shape.width / pixelsPerCm).toFixed(0)} x ${(shape.height / pixelsPerCm).toFixed(0)} cm`;
+        const labelText = shape.furnitureType === 'rack'
+          ? `${shape.name}\n${(shape.width / pixelsPerCm).toFixed(0)} x ${(shape.height / pixelsPerCm).toFixed(0)} x ${((shape.height3d || 200 * pixelsPerCm) / pixelsPerCm).toFixed(0)} cm (${shape.shelfCount || 5} shelves)`
+          : `${shape.name}\n${(shape.width / pixelsPerCm).toFixed(0)} x ${(shape.height / pixelsPerCm).toFixed(0)} cm`;
         const fontSize = 10 / scale;
         const padding = 4 / scale;
         
@@ -590,6 +593,65 @@ export const FurnitureRenderer: React.FC<FurnitureRendererProps> = ({
           )}
         </Group>
       )}
+
+      {/* Rack (Shelving Unit) Top-Down Detail */}
+      {shape.furnitureType === 'rack' && (() => {
+        const postSize = Math.max(2 / scale, Math.min(4 * pixelsPerCm, shape.width * 0.15, shape.height * 0.15));
+        const lengthCm = shape.width / pixelsPerCm;
+        const hasMidPosts = lengthCm > 200;
+        const ribCount = Math.max(2, Math.floor(lengthCm / 35));
+        const ribSpacing = shape.width / (ribCount + 1);
+
+        const postPositions: Array<[number, number]> = [
+          [0, 0],
+          [shape.width - postSize, 0],
+          [0, shape.height - postSize],
+          [shape.width - postSize, shape.height - postSize],
+        ];
+        if (hasMidPosts) {
+          postPositions.push(
+            [shape.width / 2 - postSize / 2, 0],
+            [shape.width / 2 - postSize / 2, shape.height - postSize]
+          );
+        }
+
+        return (
+          <Group listening={false}>
+            {/* Perimeter steel frame outline */}
+            <Rect
+              x={postSize * 0.25}
+              y={postSize * 0.25}
+              width={Math.max(1, shape.width - postSize * 0.5)}
+              height={Math.max(1, shape.height - postSize * 0.5)}
+              stroke={isColliding ? '#ef4444' : woodBaseColor}
+              strokeWidth={Math.max(1.5 / scale, postSize * 0.35)}
+              fill="transparent"
+            />
+            {/* Subtle deck rib lines */}
+            {Array.from({ length: ribCount }).map((_, i) => (
+              <KonvaLine
+                key={`rib-${i}`}
+                points={[(i + 1) * ribSpacing, postSize * 0.5, (i + 1) * ribSpacing, shape.height - postSize * 0.5]}
+                stroke={woodBaseColor}
+                strokeWidth={0.8 / scale}
+                opacity={0.3}
+              />
+            ))}
+            {/* Corner & intermediate upright posts */}
+            {postPositions.map(([px, py], i) => (
+              <Rect
+                key={`post-${i}`}
+                x={px}
+                y={py}
+                width={postSize}
+                height={postSize}
+                fill={isColliding ? '#ef4444' : woodBaseColor}
+                cornerRadius={1 / scale}
+              />
+            ))}
+          </Group>
+        );
+      })()}
 
       {/* Shelf Dividers */}
       {shape.furnitureType === 'shelf' && !shape.svgPath && (

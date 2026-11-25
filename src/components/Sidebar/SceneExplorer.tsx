@@ -37,6 +37,7 @@ const FurnitureIcon = ({ type }: { type: FurnitureObject['furnitureType'] }) => 
     case 'dresser': return <Columns size={14} />;
     case 'chair': return <Armchair size={14} />;
     case 'shelf': return <Layers size={14} />;
+    case 'rack': return <Layers size={14} />;
     case 'electronics': return <Tv size={14} />;
     case 'table': return <Table size={14} />;
     case 'sofa': return <Armchair size={14} />;

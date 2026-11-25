@@ -274,29 +274,28 @@ export const WallAttachmentItem: React.FC<WallAttachmentItemProps> = ({
             y={y}
             rotation={angle}
             onMouseDown={(e) => {
-            if (isReadOnly || mode !== 'select') return;
-            e.cancelBubble = true;
+              if (isReadOnly || mode !== 'select' || activeLayer !== 'room') return;
+              e.cancelBubble = true;
             }}
             onClick={(e) => {
-            if (isReadOnly || e.evt.button !== 0 || activeLayer !== 'room') return;
-            e.cancelBubble = true;
-            onSelect();
+              if (isReadOnly || e.evt.button !== 0 || activeLayer !== 'room' || mode !== 'select') return;
+              e.cancelBubble = true;
+              onSelect();
             }}
             onTap={(e) => {
-            if (isReadOnly || activeLayer !== 'room') return;
-            e.cancelBubble = true;
-            onSelect();
+              if (isReadOnly || activeLayer !== 'room' || mode !== 'select') return;
+              e.cancelBubble = true;
+              onSelect();
             }}
-            draggable={!isReadOnly}
+            draggable={!isReadOnly && mode === 'select' && activeLayer === 'room'}
             onDragStart={(e) => {
-            if (isReadOnly) {
+              if (isReadOnly || mode !== 'select' || activeLayer !== 'room' || (e.evt && (e.evt as any).button !== 0)) {
                 e.target.stopDrag();
                 return;
-            }
-            if (e.evt.button !== 0 || activeLayer !== 'room') return;
-            onSelect();
-            saveHistory();
-            setIsInteracting(true);
+              }
+              onSelect();
+              saveHistory();
+              setIsInteracting(true);
             }}
             onDragMove={handleDragMove}
             onDragEnd={handleDragEnd}
@@ -330,7 +329,7 @@ export const WallAttachmentItem: React.FC<WallAttachmentItemProps> = ({
             height={thicknessPx}
             offsetX={widthPx / 2}
             offsetY={finalOffsetY}
-            listening={activeLayer === 'room' || true}
+            listening={!isReadOnly && mode === 'select' && activeLayer === 'room'}
         >
         {/* 
           The "Cutter" Rectangle 
@@ -387,7 +386,7 @@ export const WallAttachmentItem: React.FC<WallAttachmentItemProps> = ({
         )}
       </Group>
 
-      {isSelected && (
+      {isSelected && mode === 'select' && activeLayer === 'room' && (
         <Transformer
           ref={trRef}
           name="transformer"

@@ -10,7 +10,7 @@ import { usePlanSnapshot } from '@/src/hooks/usePlanSnapshot';
 import { INTERIOR_THEMES } from '@/src/lib/themes';
 import { cn } from '@/src/lib/utils';
 import { FPVControls, WallSegments, Ceiling, Beam3D, Bed3D, Desk3D, Wardrobe3D, Dresser3D, Chair3D, OfficeChair3D, FoldingChair3D,
-  Shelf3D, Electronics3D, Table3D, GenericFurniture3D, Plant3D,
+  Shelf3D, Rack3D, Electronics3D, Table3D, GenericFurniture3D, Plant3D,
   Sofa3D, Nightstand3D, Toilet3D, Bathtub3D, Light3D,
   Picture3D, AirConditioner3D, Rug3D, WallPanel3D, Chest3D } from './';
 
@@ -97,6 +97,7 @@ const Furniture = ({ item, pixelsPerCm, isChild = false, parentWidth = 0, parent
         if (cid === 'office-chair') return <OfficeChair3D {...props} />;
         return <Chair3D {...props} />;
       case 'shelf': return <Shelf3D {...props} hasDoors={item.hasDoors} />;
+      case 'rack': return <Rack3D {...props} shelfCount={item.shelfCount} />;
       case 'electronics': return <Electronics3D {...props} hideStand={item.hideStand} />;
       case 'table': return <Table3D {...props} isRound={item.type === 'circle'} />;
       case 'sofa': return <Sofa3D {...props} />;

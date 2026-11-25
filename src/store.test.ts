@@ -115,6 +115,114 @@ describe('AppState Store', () => {
       expect(getRoomVertices(state.rooms[0])).toHaveLength(3);
       expect(state.roomPoints).toHaveLength(0);
     });
+
+    it('synchronizes coincident vertices and walls when moving a shared wall segment', () => {
+      const roomA = {
+        id: 'room-a',
+        vertices: [
+          { id: 'va1', x: 0, y: 0 },
+          { id: 'va2', x: 50, y: 0 },
+          { id: 'va3', x: 50, y: 100 },
+          { id: 'va4', x: 0, y: 100 },
+        ],
+        edges: [
+          { id: 'ea1', startVertexId: 'va1', endVertexId: 'va2' },
+          { id: 'ea2', startVertexId: 'va2', endVertexId: 'va3' }, // dividing wall (index 1)
+          { id: 'ea3', startVertexId: 'va3', endVertexId: 'va4' },
+          { id: 'ea4', startVertexId: 'va4', endVertexId: 'va1' },
+        ],
+        isClosed: true,
+      };
+
+      const roomB = {
+        id: 'room-b',
+        vertices: [
+          { id: 'vb1', x: 50, y: 0 },
+          { id: 'vb2', x: 100, y: 0 },
+          { id: 'vb3', x: 100, y: 100 },
+          { id: 'vb4', x: 50, y: 100 },
+        ],
+        edges: [
+          { id: 'eb1', startVertexId: 'vb1', endVertexId: 'vb2' },
+          { id: 'eb2', startVertexId: 'vb2', endVertexId: 'vb3' },
+          { id: 'eb3', startVertexId: 'vb3', endVertexId: 'vb4' },
+          { id: 'eb4', startVertexId: 'vb4', endVertexId: 'vb1' }, // dividing wall (index 3)
+        ],
+        isClosed: true,
+      };
+
+      useStore.setState({ rooms: [roomA, roomB] });
+
+      // Move roomA's dividing wall segment (index 1) by delta dx=+10, dy=0
+      useStore.getState().moveWallSegment('room-a', 1, { x: 10, y: 0 });
+
+      const state = useStore.getState();
+      const updatedA = state.rooms.find(r => r.id === 'room-a')!;
+      const updatedB = state.rooms.find(r => r.id === 'room-b')!;
+
+      const va2 = updatedA.vertices.find(v => v.id === 'va2')!;
+      const va3 = updatedA.vertices.find(v => v.id === 'va3')!;
+      expect(va2.x).toBe(60);
+      expect(va3.x).toBe(60);
+
+      // Room B's matching vertices vb1 and vb4 MUST also have moved to x=60
+      const vb1 = updatedB.vertices.find(v => v.id === 'vb1')!;
+      const vb4 = updatedB.vertices.find(v => v.id === 'vb4')!;
+      expect(vb1.x).toBe(60);
+      expect(vb4.x).toBe(60);
+    });
+
+    it('synchronizes coincident corner vertices when dragging a shared corner with updateRoomPoint', () => {
+      const roomA = {
+        id: 'room-a',
+        vertices: [
+          { id: 'va1', x: 0, y: 0 },
+          { id: 'va2', x: 50, y: 0 },
+          { id: 'va3', x: 50, y: 100 },
+          { id: 'va4', x: 0, y: 100 },
+        ],
+        edges: [
+          { id: 'ea1', startVertexId: 'va1', endVertexId: 'va2' },
+          { id: 'ea2', startVertexId: 'va2', endVertexId: 'va3' },
+          { id: 'ea3', startVertexId: 'va3', endVertexId: 'va4' },
+          { id: 'ea4', startVertexId: 'va4', endVertexId: 'va1' },
+        ],
+        isClosed: true,
+      };
+
+      const roomB = {
+        id: 'room-b',
+        vertices: [
+          { id: 'vb1', x: 50, y: 0 },
+          { id: 'vb2', x: 100, y: 0 },
+          { id: 'vb3', x: 100, y: 100 },
+          { id: 'vb4', x: 50, y: 100 },
+        ],
+        edges: [
+          { id: 'eb1', startVertexId: 'vb1', endVertexId: 'vb2' },
+          { id: 'eb2', startVertexId: 'vb2', endVertexId: 'vb3' },
+          { id: 'eb3', startVertexId: 'vb3', endVertexId: 'vb4' },
+          { id: 'eb4', startVertexId: 'vb4', endVertexId: 'vb1' },
+        ],
+        isClosed: true,
+      };
+
+      useStore.setState({ rooms: [roomA, roomB] });
+
+      // Move point index 1 of roomA (va2 at 50, 0) to (55, 5)
+      useStore.getState().updateRoomPoint('room-a', 1, { x: 55, y: 5 });
+
+      const state = useStore.getState();
+      const updatedA = state.rooms.find(r => r.id === 'room-a')!;
+      const updatedB = state.rooms.find(r => r.id === 'room-b')!;
+
+      const va2 = updatedA.vertices.find(v => v.id === 'va2')!;
+      expect(va2).toEqual({ id: 'va2', x: 55, y: 5 });
+
+      // Room B's vb1 (which was at 50, 0) MUST also be updated to (55, 5)
+      const vb1 = updatedB.vertices.find(v => v.id === 'vb1')!;
+      expect(vb1).toEqual({ id: 'vb1', x: 55, y: 5 });
+    });
   });
 
   describe('furnitureSlice', () => {

@@ -7,6 +7,7 @@ import { Palette, Link, Link2Off, Pipette } from 'lucide-react';
 import { useStore } from '../../../store';
 import { INTERIOR_THEMES } from '../../../lib/themes';
 import { getDefaultMaterialsForType } from '../../../lib/materials';
+import { calculateRackLayout } from '../../../lib/rackUtils';
 
 const CURATED_PALETTES = {
   hard: {
@@ -284,6 +285,10 @@ export const FurnitureEditor: React.FC<FurnitureEditorProps> = ({
                 updates.elevation = 120 * pixelsPerCm; // Wall position
                 updates.color = '#1e293b'; // Frame color
               }
+
+              if (newType === 'rack') {
+                updates.shelfCount = selectedFurniture.shelfCount || 5;
+              }
               
               updateFurniture(selectedFurniture.id, updates);
             }}
@@ -296,6 +301,7 @@ export const FurnitureEditor: React.FC<FurnitureEditorProps> = ({
           <option value="dresser">Dresser</option>
           <option value="chair">Chair</option>
           <option value="shelf">Shelf / Unit</option>
+          <option value="rack">Rack / Shelving Unit</option>
           <option value="electronics">Electronics / TV</option>
           <option value="table">Table</option>
           <option value="sofa">Sofa</option>
@@ -312,7 +318,9 @@ export const FurnitureEditor: React.FC<FurnitureEditorProps> = ({
 
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
-          <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Width (cm)</label>
+          <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">
+            {selectedFurniture.furnitureType === 'rack' ? 'Length (cm)' : 'Width (cm)'}
+          </label>
           <input
             type="number"
             value={Math.round(selectedFurniture.width / pixelsPerCm)}
@@ -322,7 +330,9 @@ export const FurnitureEditor: React.FC<FurnitureEditorProps> = ({
           />
         </div>
         <div className="space-y-1.5">
-          <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Depth (cm)</label>
+          <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">
+            {selectedFurniture.furnitureType === 'rack' ? 'Width (cm)' : 'Depth (cm)'}
+          </label>
           <input
             type="number"
             value={Math.round(selectedFurniture.height / pixelsPerCm)}
@@ -458,16 +468,51 @@ export const FurnitureEditor: React.FC<FurnitureEditorProps> = ({
         </div>
       )}
 
+      {selectedFurniture.furnitureType === 'rack' && (() => {
+        const heightCm = (selectedFurniture.height3d || 200 * pixelsPerCm) / pixelsPerCm;
+        const shelfCount = selectedFurniture.shelfCount || 5;
+        const rackLayout = calculateRackLayout(heightCm, shelfCount);
+        return (
+          <div className="space-y-2.5 p-3 bg-indigo-50/50 rounded-xl border border-indigo-100">
+            <label className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest ml-1">Rack Configuration</label>
+            <div className="space-y-1">
+              <label className="text-[9px] font-bold text-slate-400 uppercase tracking-tight ml-1">Number of Shelves</label>
+              <input
+                type="number"
+                min={1}
+                max={30}
+                value={shelfCount}
+                onFocus={saveHistory}
+                onChange={(e) => updateFurniture(selectedFurniture.id, { shelfCount: Math.max(1, Math.min(30, parseInt(e.target.value, 10) || 1)) })}
+                className="w-full bg-white border border-indigo-200 rounded-lg px-3 py-1.5 text-xs font-mono outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-sm"
+              />
+            </div>
+            <div className="pt-1.5 border-t border-indigo-100/70 space-y-1">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-slate-600 font-medium">Shelf Spacing (clear)</span>
+                <span className="font-mono font-bold text-indigo-600">{rackLayout.clearSpacingCm.toFixed(1)} cm</span>
+              </div>
+              {rackLayout.shelfCount > 1 && (
+                <div className="flex items-center justify-between text-[10px] text-slate-500">
+                  <span>Step (center-to-center)</span>
+                  <span className="font-mono font-semibold">{rackLayout.pitchCm.toFixed(1)} cm</span>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
       <div className="space-y-4 pt-2">
         {/* Helper to check if a slot should be visible for this furniture type */}
         {(() => {
           const type = selectedFurniture.furnitureType || 'generic';
           const isWallPanel = selectedFurniture.catalogId === 'terrace-wall-panel';
           const showWoodBase = [
-            'generic', 'bed', 'desk', 'wardrobe', 'dresser', 'shelf', 'table', 'nightstand', 'electronics'
+            'generic', 'bed', 'desk', 'wardrobe', 'dresser', 'shelf', 'rack', 'table', 'nightstand', 'electronics'
           ].includes(type) || isWallPanel;
           const showWoodFront = [
-            'wardrobe', 'dresser'
+            'wardrobe', 'dresser', 'rack'
           ].includes(type) || (type === 'shelf' && selectedFurniture.hasDoors);
           const showTextileMain = [
             'bed', 'sofa', 'armchair', 'chair', 'rug'
@@ -480,7 +525,15 @@ export const FurnitureEditor: React.FC<FurnitureEditorProps> = ({
             <>
               {showWoodBase && (
                 <MaterialPicker 
-                  label={type === 'bed' ? "Bed Frame Material" : (type === 'generic' ? "Main Material" : "Body / Base Material")}
+                  label={
+                    type === 'bed'
+                      ? 'Bed Frame Material'
+                      : type === 'rack'
+                        ? 'Frame / Uprights Material'
+                        : type === 'generic'
+                          ? 'Main Material'
+                          : 'Body / Base Material'
+                  }
                   slot={materials.woodBase} 
                   slotType="woodBase"
                   activeTheme={activeTheme}
@@ -490,7 +543,7 @@ export const FurnitureEditor: React.FC<FurnitureEditorProps> = ({
               )}
               {showWoodFront && (
                 <MaterialPicker 
-                  label="Front / Doors Material" 
+                  label={type === 'rack' ? 'Shelves Material' : 'Front / Doors Material'} 
                   slot={materials.woodFront} 
                   slotType="woodFront"
                   activeTheme={activeTheme}

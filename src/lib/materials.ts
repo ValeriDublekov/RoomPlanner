@@ -14,6 +14,7 @@ export const getDefaultMaterialsForType = (type: FurnitureType | undefined, prim
     case 'wardrobe':
     case 'dresser':
     case 'shelf':
+    case 'rack':
       return {
         woodBase: pSlot,
         woodFront: sSlot,

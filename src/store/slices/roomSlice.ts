@@ -398,22 +398,38 @@ export const createRoomSlice: StateCreator<AppState, [], [], RoomSlice> = (set, 
   })),
 
   updateRoomPoint: (roomId, pointIndex, newPos) => set((state) => {
+    const room = state.rooms.find(r => r.id === roomId);
+    if (!room) return state;
+
+    const orderedIds = getOrderedVertexIds(room);
+    const vertexId = orderedIds[pointIndex];
+    if (!vertexId) return state;
+
+    const oldVertex = room.vertices?.find(v => v.id === vertexId);
+    if (!oldVertex) return state;
+
+    const delta = {
+      x: newPos.x - oldVertex.x,
+      y: newPos.y - oldVertex.y
+    };
+
+    if (Math.abs(delta.x) < 0.0001 && Math.abs(delta.y) < 0.0001) return state;
+
+    const EPSILON = 1.0;
     const newRooms = state.rooms.map(r => {
-      if (r.id !== roomId) return r;
-      
-      // Topology-first update
-      const orderedIds = getOrderedVertexIds(r);
-      const vertexId = orderedIds[pointIndex];
-      
-      if (vertexId) {
-        const updatedVertices = r.vertices.map(v => 
-          v.id === vertexId ? { ...v, x: newPos.x, y: newPos.y } : v
-        );
-        return { ...r, vertices: updatedVertices };
-      }
-      
-      return r;
+      let changed = false;
+      const updatedVertices = (r.vertices || []).map(v => {
+        const isTarget = r.id === roomId && v.id === vertexId;
+        const isCoincident = getDistance(v, oldVertex) < EPSILON;
+        if (isTarget || isCoincident) {
+          changed = true;
+          return { ...v, x: newPos.x, y: newPos.y };
+        }
+        return v;
+      });
+      return changed ? { ...r, vertices: updatedVertices } : r;
     });
+
     return {
       rooms: newRooms,
       beams: syncBeams(newRooms, state.beams)
@@ -437,124 +453,166 @@ export const createRoomSlice: StateCreator<AppState, [], [], RoomSlice> = (set, 
     const v2 = vertices.find(v => v.id === v2Id);
     if (!v1 || !v2) return state;
 
-    const d1 = getDistance(v1, pos);
-    const d2 = getDistance(pos, v2);
-    const tSplit = (d1 + d2) > 0.001 ? d1 / (d1 + d2) : 0.5;
+    const EPSILON = 1.0;
 
-    const newVertexId = Math.random().toString(36).substr(2, 9);
-    const newVertex: Vertex = { id: newVertexId, x: pos.x, y: pos.y };
+    // Identify all rooms and segments that share this wall segment
+    const splitTargets: { roomId: string; segmentIndex: number; v1Id: string; v2Id: string; v1: Vertex; v2: Vertex }[] = [
+      { roomId, segmentIndex, v1Id, v2Id, v1, v2 }
+    ];
 
-    const newEdge1: Edge = { id: Math.random().toString(36).substr(2, 9), startVertexId: v1Id, endVertexId: newVertexId };
-    const newEdge2: Edge = { id: Math.random().toString(36).substr(2, 9), startVertexId: newVertexId, endVertexId: v2Id };
-
-    const newRooms = state.rooms.map(r => {
-      if (r.id !== roomId) return r;
-      
-      const updatedVertices = [...r.vertices, newVertex];
-      // Replace the old edge connecting v1 and v2 with two new ones
-      const updatedEdges = r.edges.filter(e => !(e.startVertexId === v1Id && e.endVertexId === v2Id));
-      updatedEdges.push(newEdge1, newEdge2);
-
-      const splitArr = <T>(arr: T[] | undefined): T[] | undefined => {
-        if (!arr) return arr;
-        const result = [...arr];
-        if (result.length > segmentIndex) {
-          result.splice(segmentIndex + 1, 0, result[segmentIndex]);
+    state.rooms.forEach(otherRoom => {
+      if (otherRoom.id === roomId) return;
+      const otherOrderedIds = getOrderedVertexIds(otherRoom);
+      const m = otherOrderedIds.length;
+      const segCount = otherRoom.isClosed ? m : m - 1;
+      for (let k = 0; k < segCount; k++) {
+        const u1Id = otherOrderedIds[k];
+        const u2Id = otherOrderedIds[(k + 1) % m];
+        const u1 = otherRoom.vertices?.find(v => v.id === u1Id);
+        const u2 = otherRoom.vertices?.find(v => v.id === u2Id);
+        if (u1 && u2) {
+          const matchFwd = getDistance(u1, v1) < EPSILON && getDistance(u2, v2) < EPSILON;
+          const matchRev = getDistance(u1, v2) < EPSILON && getDistance(u2, v1) < EPSILON;
+          if (matchFwd || matchRev) {
+            splitTargets.push({ roomId: otherRoom.id, segmentIndex: k, v1Id: u1Id, v2Id: u2Id, v1: u1, v2: u2 });
+            break;
+          }
         }
-        return result;
+      }
+    });
+
+    let currentRooms = state.rooms;
+    let currentAttachments = state.wallAttachments;
+    let currentBeams = state.beams;
+
+    for (const target of splitTargets) {
+      const targetRoom = currentRooms.find(r => r.id === target.roomId);
+      if (!targetRoom) continue;
+
+      const d1 = getDistance(target.v1, pos);
+      const d2 = getDistance(pos, target.v2);
+      const tSplit = (d1 + d2) > 0.001 ? d1 / (d1 + d2) : 0.5;
+
+      const newVertexId = Math.random().toString(36).substr(2, 9);
+      const newVertex: Vertex = { id: newVertexId, x: pos.x, y: pos.y };
+
+      const newEdge1: Edge = { id: Math.random().toString(36).substr(2, 9), startVertexId: target.v1Id, endVertexId: newVertexId };
+      const newEdge2: Edge = { id: Math.random().toString(36).substr(2, 9), startVertexId: newVertexId, endVertexId: target.v2Id };
+
+      currentRooms = currentRooms.map(r => {
+        if (r.id !== target.roomId) return r;
+
+        const updatedVertices = [...r.vertices, newVertex];
+        const updatedEdges = r.edges.filter(e => !(e.startVertexId === target.v1Id && e.endVertexId === target.v2Id));
+        updatedEdges.push(newEdge1, newEdge2);
+
+        const splitArr = <T>(arr: T[] | undefined): T[] | undefined => {
+          if (!arr) return arr;
+          const result = [...arr];
+          if (result.length > target.segmentIndex) {
+            result.splice(target.segmentIndex + 1, 0, result[target.segmentIndex]);
+          }
+          return result;
+        };
+
+        return {
+          ...r,
+          vertices: updatedVertices,
+          edges: updatedEdges,
+          wallColors: splitArr(r.wallColors),
+          wallTypes: splitArr(r.wallTypes),
+          railingStyles: splitArr(r.railingStyles),
+          internalWalls: splitArr(r.internalWalls),
+        };
+      });
+
+      const remapT = (t: number): { offset: number, newT: number } => {
+        if (t < tSplit) {
+          return { offset: 0, newT: tSplit > 0.001 ? t / tSplit : 0 };
+        } else {
+          return { offset: 1, newT: (1 - tSplit) > 0.001 ? (t - tSplit) / (1 - tSplit) : 0 };
+        }
       };
 
-      const updated = {
-        ...r,
-        vertices: updatedVertices,
-        edges: updatedEdges,
-        wallColors: splitArr(r.wallColors),
-        wallTypes: splitArr(r.wallTypes),
-        railingStyles: splitArr(r.railingStyles),
-        internalWalls: splitArr(r.internalWalls),
-      };
-      return updated;
-    });
-
-    const remapT = (t: number): { offset: number, newT: number } => {
-      if (t < tSplit) {
-        return { offset: 0, newT: tSplit > 0.001 ? t / tSplit : 0 };
-      } else {
-        return { offset: 1, newT: (1 - tSplit) > 0.001 ? (t - tSplit) / (1 - tSplit) : 0 };
-      }
-    };
-
-    const newAttachments = state.wallAttachments.map(a => {
-      if (a.roomId !== roomId) return a;
-      if (a.wallSegmentIndex > segmentIndex) {
-        return { ...a, wallSegmentIndex: a.wallSegmentIndex + 1 };
-      }
-      if (a.wallSegmentIndex === segmentIndex) {
-        const { offset, newT } = remapT(a.positionAlongWall);
-        return { ...a, wallSegmentIndex: a.wallSegmentIndex + offset, positionAlongWall: newT };
-      }
-      return a;
-    });
-
-    const newBeams = state.beams.map(b => {
-      let updatedP1 = b.p1Attachment;
-      let updatedP2 = b.p2Attachment;
-
-      if (updatedP1 && updatedP1.roomId === roomId) {
-        if (updatedP1.wallIndex > segmentIndex) {
-          updatedP1 = { ...updatedP1, wallIndex: updatedP1.wallIndex + 1 };
-        } else if (updatedP1.wallIndex === segmentIndex) {
-          const { offset, newT } = remapT(updatedP1.t);
-          updatedP1 = { ...updatedP1, wallIndex: updatedP1.wallIndex + offset, t: newT };
+      currentAttachments = currentAttachments.map(a => {
+        if (a.roomId !== target.roomId) return a;
+        if (a.wallSegmentIndex > target.segmentIndex) {
+          return { ...a, wallSegmentIndex: a.wallSegmentIndex + 1 };
         }
-      }
-      if (updatedP2 && updatedP2.roomId === roomId) {
-        if (updatedP2.wallIndex > segmentIndex) {
-          updatedP2 = { ...updatedP2, wallIndex: updatedP2.wallIndex + 1 };
-        } else if (updatedP2.wallIndex === segmentIndex) {
-          const { offset, newT } = remapT(updatedP2.t);
-          updatedP2 = { ...updatedP2, wallIndex: updatedP2.wallIndex + offset, t: newT };
+        if (a.wallSegmentIndex === target.segmentIndex) {
+          const { offset, newT } = remapT(a.positionAlongWall);
+          return { ...a, wallSegmentIndex: a.wallSegmentIndex + offset, positionAlongWall: newT };
         }
-      }
+        return a;
+      });
 
-      if (updatedP1 !== b.p1Attachment || updatedP2 !== b.p2Attachment) {
-        return { ...b, p1Attachment: updatedP1, p2Attachment: updatedP2 };
-      }
-      return b;
-    });
+      currentBeams = currentBeams.map(b => {
+        let updatedP1 = b.p1Attachment;
+        let updatedP2 = b.p2Attachment;
+
+        if (updatedP1 && updatedP1.roomId === target.roomId) {
+          if (updatedP1.wallIndex > target.segmentIndex) {
+            updatedP1 = { ...updatedP1, wallIndex: updatedP1.wallIndex + 1 };
+          } else if (updatedP1.wallIndex === target.segmentIndex) {
+            const { offset, newT } = remapT(updatedP1.t);
+            updatedP1 = { ...updatedP1, wallIndex: updatedP1.wallIndex + offset, t: newT };
+          }
+        }
+        if (updatedP2 && updatedP2.roomId === target.roomId) {
+          if (updatedP2.wallIndex > target.segmentIndex) {
+            updatedP2 = { ...updatedP2, wallIndex: updatedP2.wallIndex + 1 };
+          } else if (updatedP2.wallIndex === target.segmentIndex) {
+            const { offset, newT } = remapT(updatedP2.t);
+            updatedP2 = { ...updatedP2, wallIndex: updatedP2.wallIndex + offset, t: newT };
+          }
+        }
+
+        if (updatedP1 !== b.p1Attachment || updatedP2 !== b.p2Attachment) {
+          return { ...b, p1Attachment: updatedP1, p2Attachment: updatedP2 };
+        }
+        return b;
+      });
+    }
 
     return { 
-      rooms: newRooms, 
-      wallAttachments: newAttachments,
-      beams: syncBeams(newRooms, newBeams)
+      rooms: currentRooms, 
+      wallAttachments: currentAttachments,
+      beams: syncBeams(currentRooms, currentBeams)
     };
   }),
 
   moveWallSegment: (roomId, segmentIndex, delta) => set((state) => {
+    const room = state.rooms.find(r => r.id === roomId);
+    if (!room) return state;
+
+    const orderedIds = getOrderedVertexIds(room);
+    const n = orderedIds.length;
+    if (n === 0) return state;
+
+    // If open room and moving last segment, only p1 move is valid for segmentIndex
+    // because segmentIndex i connects vertex i and i+1.
+    if (!room.isClosed && segmentIndex >= n - 1) return state;
+
+    const v1Id = orderedIds[segmentIndex];
+    const v2Id = orderedIds[(segmentIndex + 1) % n];
+
+    const v1 = room.vertices?.find(v => v.id === v1Id);
+    const v2 = room.vertices?.find(v => v.id === v2Id);
+    if (!v1 || !v2) return state;
+
+    const EPSILON = 1.0;
     const newRooms = state.rooms.map(r => {
-      if (r.id !== roomId) return r;
-      
-      const orderedIds = getOrderedVertexIds(r);
-      const n = orderedIds.length;
-      if (n === 0) return r;
-      
-      const p1Idx = segmentIndex;
-      const p2Idx = (segmentIndex + 1) % n;
-      
-      // If open room and moving last segment, only p1 move is valid for segmentIndex
-      // because segmentIndex i connects vertex i and i+1.
-      if (!r.isClosed && segmentIndex >= n - 1) return r;
-
-      const v1Id = orderedIds[p1Idx];
-      const v2Id = orderedIds[p2Idx];
-
-      const updatedVertices = r.vertices.map(v => {
-        if (v.id === v1Id || v.id === v2Id) {
+      let changed = false;
+      const updatedVertices = (r.vertices || []).map(v => {
+        const isV1 = (r.id === roomId && v.id === v1Id) || getDistance(v, v1) < EPSILON;
+        const isV2 = (r.id === roomId && v.id === v2Id) || getDistance(v, v2) < EPSILON;
+        if (isV1 || isV2) {
+          changed = true;
           return { ...v, x: v.x + delta.x, y: v.y + delta.y };
         }
         return v;
       });
-      return { ...r, vertices: updatedVertices };
+      return changed ? { ...r, vertices: updatedVertices } : r;
     });
 
     return {

@@ -40,7 +40,7 @@ export interface RoomObject {
   };
 }
 
-export type FurnitureType = 'bed' | 'desk' | 'wardrobe' | 'dresser' | 'chair' | 'shelf' | 'electronics' | 'table' | 'sofa' | 'armchair' | 'nightstand' | 'toilet' | 'bathtub' | 'light' | 'picture' | 'air-conditioner' | 'rug' | 'generic' | 'decoration' | 'chest';
+export type FurnitureType = 'bed' | 'desk' | 'wardrobe' | 'dresser' | 'chair' | 'shelf' | 'rack' | 'electronics' | 'table' | 'sofa' | 'armchair' | 'nightstand' | 'toilet' | 'bathtub' | 'light' | 'picture' | 'air-conditioner' | 'rug' | 'generic' | 'decoration' | 'chest';
 
 export interface MaterialSlot {
   source: 'theme' | 'custom';
@@ -108,7 +108,8 @@ export interface FurnitureObject {
   slantAngle?: number;
   slantHeight?: number;
   panelStyle?: 'slats' | 'trellis' | 'green' | 'stone' | 'plain';
-  category?: 'Bedroom' | 'Living Room' | 'Kitchen' | 'Bathroom' | 'Office' | 'Terrace';
+  shelfCount?: number;
+  category?: 'Bedroom' | 'Living Room' | 'Kitchen' | 'Bathroom' | 'Office' | 'Terrace' | 'Storage';
   children?: FurnitureObject[]; // For groups
 }
 
@@ -116,13 +117,15 @@ export interface CatalogItem {
   id: string;
   name: string;
   furnitureType?: FurnitureType;
-  category: 'Bedroom' | 'Living Room' | 'Kitchen' | 'Bathroom' | 'Office' | 'Terrace';
+  category: 'Bedroom' | 'Living Room' | 'Kitchen' | 'Bathroom' | 'Office' | 'Terrace' | 'Storage';
   type: 'rectangle' | 'circle';
   width: number; // in cm
   depth: number; // in cm
   height3d?: number; // in cm
   defaultElevation?: number; // in cm
   defaultColor: string;
+  defaultSecondaryColor?: string;
+  defaultShelfCount?: number;
   defaultHasDoors?: boolean;
   defaultImageUrl?: string;
   svgPath?: string;

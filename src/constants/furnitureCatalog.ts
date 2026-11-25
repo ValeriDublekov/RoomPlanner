@@ -192,4 +192,20 @@ export const FURNITURE_CATALOG: CatalogItem[] = [
     defaultColor: '#f59e0b', 
     svgPath: 'M0 0 H100 V100 H0 Z M10 10 H90 V90 H10 Z M20 20 H80 V80 H20 Z M0 0 L10 10 M100 0 L90 10 M100 100 L90 90 M0 100 L10 90' 
   },
+
+  // Storage
+  {
+    id: 'storage-rack',
+    name: 'Storage Rack',
+    furnitureType: 'rack',
+    category: 'Storage',
+    type: 'rectangle',
+    width: 120,
+    depth: 50,
+    height3d: 200,
+    defaultShelfCount: 5,
+    defaultColor: '#475569',
+    defaultSecondaryColor: '#d1bfae',
+    svgPath: 'M0 0 H100 V100 H0 Z M6 6 H94 V94 H6 Z M10 10 H22 V22 H10 Z M78 10 H90 V22 H78 Z M10 78 H22 V90 H10 Z M78 78 H90 V90 H78 Z M22 50 H78'
+  },
 ];

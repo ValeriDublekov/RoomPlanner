@@ -4,6 +4,7 @@ import { useStore } from '../../store';
 import { CatalogItem } from '../../types';
 import { X, Plus, Search, Info } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { calculateRackLayout } from '../../lib/rackUtils';
 
 interface CatalogModalProps {
   isOpen: boolean;
@@ -18,6 +19,7 @@ export const CatalogModal: React.FC<CatalogModalProps> = ({ isOpen, onClose }) =
   const [customDepth, setCustomDepth] = useState<number>(0);
   const [customHeight, setCustomHeight] = useState<number>(0);
   const [customElevation, setCustomElevation] = useState<number>(0);
+  const [customShelfCount, setCustomShelfCount] = useState<number>(5);
 
   if (!isOpen) return null;
 
@@ -27,6 +29,7 @@ export const CatalogModal: React.FC<CatalogModalProps> = ({ isOpen, onClose }) =
     setCustomDepth(item.depth);
     setCustomHeight(item.height3d || 75); // Default 75cm if not specified
     setCustomElevation(item.defaultElevation || 0);
+    setCustomShelfCount(item.defaultShelfCount || 5);
   };
 
   const handleAddItem = () => {
@@ -51,7 +54,9 @@ export const CatalogModal: React.FC<CatalogModalProps> = ({ isOpen, onClose }) =
       elevation: elevationPx,
       rotation: 0,
       color: selectedItem.defaultColor,
+      secondaryColor: selectedItem.defaultSecondaryColor,
       hasDoors: selectedItem.defaultHasDoors,
+      shelfCount: selectedItem.furnitureType === 'rack' ? Math.max(1, Math.round(customShelfCount || 1)) : undefined,
       imageUrl: selectedItem.defaultImageUrl,
       svgPath: selectedItem.svgPath
     });
@@ -86,7 +91,10 @@ export const CatalogModal: React.FC<CatalogModalProps> = ({ isOpen, onClose }) =
       elevation: elevationPx,
       rotation: 0,
       color: item.defaultColor,
+      secondaryColor: item.defaultSecondaryColor,
       hasDoors: item.defaultHasDoors,
+      shelfCount: item.furnitureType === 'rack' ? (item.defaultShelfCount || 5) : undefined,
+      imageUrl: item.defaultImageUrl,
       svgPath: item.svgPath
     });
     setMode('place-furniture');
@@ -205,9 +213,11 @@ export const CatalogModal: React.FC<CatalogModalProps> = ({ isOpen, onClose }) =
                   <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">{selectedItem.category}</p>
                 </div>
 
-                  <div className="space-y-4">
+                  <div className="space-y-3.5">
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Width (cm)</label>
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">
+                        {selectedItem.furnitureType === 'rack' ? 'Length (cm)' : 'Width (cm)'}
+                      </label>
                       <input 
                         type="number"
                         value={customWidth}
@@ -216,7 +226,9 @@ export const CatalogModal: React.FC<CatalogModalProps> = ({ isOpen, onClose }) =
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Depth (cm)</label>
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">
+                        {selectedItem.furnitureType === 'rack' ? 'Width (cm)' : 'Depth (cm)'}
+                      </label>
                       <input 
                         type="number"
                         value={customDepth}
@@ -233,6 +245,36 @@ export const CatalogModal: React.FC<CatalogModalProps> = ({ isOpen, onClose }) =
                         className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
                       />
                     </div>
+                    {selectedItem.furnitureType === 'rack' && (() => {
+                      const rackLayout = calculateRackLayout(customHeight, customShelfCount);
+                      return (
+                        <div className="space-y-2.5 p-3 bg-indigo-50/70 border border-indigo-100 rounded-2xl">
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] font-bold text-indigo-700 uppercase tracking-wider ml-0.5">Number of Shelves</label>
+                            <input
+                              type="number"
+                              min={1}
+                              max={30}
+                              value={customShelfCount}
+                              onChange={(e) => setCustomShelfCount(Math.max(1, Math.min(30, parseInt(e.target.value, 10) || 1)))}
+                              className="w-full bg-white border border-indigo-200 rounded-xl px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                            />
+                          </div>
+                          <div className="flex items-center justify-between text-xs pt-1 border-t border-indigo-100">
+                            <span className="text-slate-600 font-medium">Shelf Spacing</span>
+                            <span className="font-mono font-bold text-indigo-700">
+                              {rackLayout.clearSpacingCm.toFixed(1)} cm
+                            </span>
+                          </div>
+                          {rackLayout.shelfCount > 1 && (
+                            <div className="flex items-center justify-between text-[10px] text-slate-500">
+                              <span>Step (center-to-center)</span>
+                              <span className="font-mono font-semibold">{rackLayout.pitchCm.toFixed(1)} cm</span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
                     <div className="space-y-1.5">
                       <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Elevation (cm)</label>
                       <input 

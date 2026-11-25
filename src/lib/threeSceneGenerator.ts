@@ -173,8 +173,10 @@ export const generateProjectScene = (state: SceneData) => {
       width,
       height,
       depth,
-      color: item.color || '#f8fafc',
-      secondaryColor: item.secondaryColor
+      color: item.materials?.woodBase?.value || item.color || '#f8fafc',
+      secondaryColor: item.materials?.woodFront?.value || item.secondaryColor,
+      hasDoors: item.hasDoors,
+      shelfCount: item.shelfCount,
     });
 
     furnitureModel.position.set(centerX, elevation, centerZ);

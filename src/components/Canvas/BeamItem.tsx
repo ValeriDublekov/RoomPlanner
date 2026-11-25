@@ -252,6 +252,7 @@ export const BeamItem: React.FC<BeamItemProps> = ({
         y={beam.p1.y}
         draggable={!isReadOnly && isSelected && mode === 'select'}
         dragBoundFunc={dragBoundFunc}
+        listening={!isReadOnly && mode === 'select' && activeLayer === 'room'}
         onDragMove={handleDragMove}
         onDragEnd={handleDragEnd}
         onMouseDown={(e) => {

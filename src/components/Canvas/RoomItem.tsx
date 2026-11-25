@@ -54,6 +54,7 @@ export const RoomItem: React.FC<RoomItemProps> = ({
   const showAutoDimensions = useStore((state) => state.showAutoDimensions);
   const setSelectedWallIndex = useStore((state) => state.setSelectedWallIndex);
   const selectedWallIndex = useStore((state) => state.selectedWallIndex);
+  const selectedRoomId = useStore((state) => state.selectedRoomId);
   const isReadOnly = useStore((state) => state.isReadOnly);
   
   // Updated wall rendering: use snapshot geometry if available,
@@ -222,14 +223,16 @@ export const RoomItem: React.FC<RoomItemProps> = ({
       >
         {/* Individual Wall Rendering */}
         {wallsToRender.map((wall) => {
-            const isWallSelected = isSelected && selectedWallIndex === wall.segmentIndex;
-            
-            // Check if this is a shared wall to potentially alter its stroke
-            const otherRoomId = planSnapshot?.sharedWalls?.find(sw => sw.id === wall.sharedWallId)?.segments.find(s => s.roomId !== room.id)?.roomId;
-            const isSecondaryShared = wall.sharedWallId && otherRoomId && room.id > otherRoomId;
-
-            // If we hide secondary walls, miter corners with adjacent walls will be missing.
-            // So we must render both to ensure corner joints are filled.
+            const isDirectlySelected = isSelected && selectedWallIndex === wall.segmentIndex;
+            const isTwinOfSelected = Boolean(
+              wall.sharedWallId &&
+              selectedRoomId !== null &&
+              selectedWallIndex !== null &&
+              planSnapshot?.sharedWalls?.find(sw => sw.id === wall.sharedWallId)?.segments.some(
+                s => s.roomId === selectedRoomId && s.segmentIndex === selectedWallIndex
+              )
+            );
+            const isWallSelected = isDirectlySelected || isTwinOfSelected;
 
             let rawColor = room.wallColors?.[wall.segmentIndex] || room.materials?.wallBase?.value || room.defaultWallColor || "#1e293b";
             if (activeLayer === 'room') {
@@ -263,20 +266,42 @@ export const RoomItem: React.FC<RoomItemProps> = ({
         })}
 
         {/* Selected Wall Highlight */}
-        {isSelected && selectedWallIndex !== null && wallsToRender.find(w => w.segmentIndex === selectedWallIndex) && (
-          <Line
-            points={wallsToRender.find(w => w.segmentIndex === selectedWallIndex)!.wallBandPolygon.flatMap(p => [p.x, p.y])}
-            stroke="#818cf8"
-            fill="#818cf8"
-            opacity={0.3}
-            closed={true}
-            listening={false}
-          />
-        )}
+        {wallsToRender.map(w => {
+          const isDirect = isSelected && selectedWallIndex === w.segmentIndex;
+          const isTwin = Boolean(
+            w.sharedWallId &&
+            selectedRoomId !== null &&
+            selectedWallIndex !== null &&
+            planSnapshot?.sharedWalls?.find(sw => sw.id === w.sharedWallId)?.segments.some(
+              s => s.roomId === selectedRoomId && s.segmentIndex === selectedWallIndex
+            )
+          );
+          if (!isDirect && !isTwin) return null;
+          return (
+            <Line
+              key={`selected-wall-highlight-${w.id}`}
+              points={w.wallBandPolygon.flatMap(p => [p.x, p.y])}
+              stroke="#818cf8"
+              fill="#818cf8"
+              opacity={0.3}
+              closed={true}
+              listening={false}
+            />
+          );
+        })}
         
         {/* Draw outlines */}
         {wallsToRender.map(wall => {
-            const isWallSelected = isSelected && selectedWallIndex === wall.segmentIndex;
+            const isDirectlySelected = isSelected && selectedWallIndex === wall.segmentIndex;
+            const isTwinOfSelected = Boolean(
+              wall.sharedWallId &&
+              selectedRoomId !== null &&
+              selectedWallIndex !== null &&
+              planSnapshot?.sharedWalls?.find(sw => sw.id === wall.sharedWallId)?.segments.some(
+                s => s.roomId === selectedRoomId && s.segmentIndex === selectedWallIndex
+              )
+            );
+            const isWallSelected = isDirectlySelected || isTwinOfSelected;
             if (isWallSelected) return null; // Handled by standard render
             
             return (

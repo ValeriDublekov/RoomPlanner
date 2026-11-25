@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { calculateRackLayout } from './rackUtils';
 
 interface FurnitureParams {
   width: number;
@@ -7,6 +8,7 @@ interface FurnitureParams {
   color: string;
   secondaryColor?: string;
   hasDoors?: boolean;
+  shelfCount?: number;
   drawerRows?: number;
   drawerCols?: number;
   hasHeadboard?: boolean;
@@ -21,8 +23,9 @@ export const createFurnitureModel = (type: string, params: FurnitureParams): THR
   const { width, height, depth, color, secondaryColor } = params;
   const doorColor = secondaryColor || color;
 
-  const loader = new THREE.TextureLoader();
-  const woodTexture = loader.load(params.color.startsWith('#') ? 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0nNjQnIGhlaWdodD0nNjQnIHZpZXdCb3g9JzAgMCA2NCA2NCcgeG1sbnM9J2h0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnJz48cmVjdCB3aWR0aD0nNjQnIGhlaWdodD0nNjQnIGZpbGw9JyNmZmZmZmYnLz48ZyBvcGFjaXR5PScwLjA1Jz48cmVjdCB4PScwJyB5PScwJyB3aWR0aD0nMC41JyBoZWlnaHQ9JzY0JyBmaWxsPScjMDAwMDAwJy8+PHJlY3QgeD0nMTAnIHk9JzAnIHdpZHRoPScwLjUnIGhlaWdodD0nNjQnIGZpbGw9JyMwMDAwMDAnLz48cmVjdCB4PScyNScgeT0nMCcgd2lkdGg9JzAuNScgaGVpZ2h0PScMapJyBmaWxsPScjMDAwMDAwJy8+PHJlY3QgeD0nNDUnIHk9JzAnIHdpZHRoPScwLjUnIGhlaWdodD0nNjQnIGZpbGw9JyMwMDAwMDAnLz48cmVjdCB4PSc1NScgeT0nMCcgd2lkdGg9JzAuNScgaGVpZ2h0PSc2NCcgZmlsbD0nIzAwMDAwMCcvPjwvZz48L3N2Zz4=' : '');
+  const woodTexture = typeof document !== 'undefined' && params.color.startsWith('#')
+    ? new THREE.TextureLoader().load('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0nNjQnIGhlaWdodD0nNjQnIHZpZXdCb3g9JzAgMCA2NCA2NCcgeG1sbnM9J2h0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnJz48cmVjdCB3aWR0aD0nNjQnIGhlaWdodD0nNjQnIGZpbGw9JyNmZmZmZmYnLz48ZyBvcGFjaXR5PScwLjA1Jz48cmVjdCB4PScwJyB5PScwJyB3aWR0aD0nMC41JyBoZWlnaHQ9JzY0JyBmaWxsPScjMDAwMDAwJy8+PHJlY3QgeD0nMTAnIHk9JzAnIHdpZHRoPScwLjUnIGhlaWdodD0nNjQnIGZpbGw9JyMwMDAwMDAnLz48cmVjdCB4PScyNScgeT0nMCcgd2lkdGg9JzAuNScgaGVpZ2h0PScMapJyBmaWxsPScjMDAwMDAwJy8+PHJlY3QgeD0nNDUnIHk9JzAnIHdpZHRoPScwLjUnIGhlaWdodD0nNjQnIGZpbGw9JyMwMDAwMDAnLz48cmVjdCB4PSc1NScgeT0nMCcgd2lkdGg9JzAuNScgaGVpZ2h0PSc2NCcgZmlsbD0nIzAwMDAwMCcvPjwvZz48L3N2Zz4=')
+    : null;
   if (woodTexture) {
     woodTexture.wrapS = woodTexture.wrapT = THREE.RepeatWrapping;
     woodTexture.repeat.set(0.02, 0.02);
@@ -33,7 +36,7 @@ export const createFurnitureModel = (type: string, params: FurnitureParams): THR
     const mat = new THREE.MeshStandardMaterial({ 
       color: col, 
       roughness: 0.8,
-      map: (useWood && woodTexture.image) ? woodTexture : null
+      map: (useWood && woodTexture && woodTexture.image) ? woodTexture : null
     });
     const mesh = new THREE.Mesh(geo, mat);
     mesh.position.set(...pos);
@@ -290,6 +293,37 @@ export const createFurnitureModel = (type: string, params: FurnitureParams): THR
            group.add(createBox(1, 10, 1, '#94a3b8', [xPos + handleX, height / 2, depth / 2 + 1.5], `Handle_${i}`));
          }
       }
+      break;
+    }
+
+    case 'rack': {
+      const frameColor = color || '#475569';
+      const shelfColor = secondaryColor || '#d1bfae';
+      const layout = calculateRackLayout(height, params.shelfCount);
+      const postSize = Math.min(4, width * 0.12, depth * 0.12);
+      const beamHeight = Math.max(1, layout.shelfThicknessCm * 0.75);
+      const deckHeight = Math.max(0.5, layout.shelfThicknessCm * 0.6);
+      const hasMidPosts = width > 200;
+
+      const postXPositions = hasMidPosts
+        ? [-width / 2 + postSize / 2, 0, width / 2 - postSize / 2]
+        : [-width / 2 + postSize / 2, width / 2 - postSize / 2];
+      const postZPositions = [-depth / 2 + postSize / 2, depth / 2 - postSize / 2];
+
+      postXPositions.forEach((px, xi) => {
+        postZPositions.forEach((pz, zi) => {
+          group.add(createBox(postSize + 1.2, 1, postSize + 1.2, '#1e293b', [px, 0.5, pz], `Foot_${xi}_${zi}`, false));
+          group.add(createBox(postSize, height, postSize, frameColor, [px, height / 2, pz], `Post_${xi}_${zi}`, false));
+        });
+      });
+
+      layout.shelfCentersCm.forEach((yCenter, idx) => {
+        group.add(createBox(Math.max(1, width - postSize * 2), beamHeight, postSize * 0.7, frameColor, [0, yCenter - deckHeight * 0.2, -depth / 2 + postSize / 2], `BeamBack_${idx}`, false));
+        group.add(createBox(Math.max(1, width - postSize * 2), beamHeight, postSize * 0.7, frameColor, [0, yCenter - deckHeight * 0.2, depth / 2 - postSize / 2], `BeamFront_${idx}`, false));
+        group.add(createBox(postSize * 0.7, beamHeight * 0.9, Math.max(1, depth - postSize * 2), frameColor, [-width / 2 + postSize / 2, yCenter - deckHeight * 0.2, 0], `SideBarL_${idx}`, false));
+        group.add(createBox(postSize * 0.7, beamHeight * 0.9, Math.max(1, depth - postSize * 2), frameColor, [width / 2 - postSize / 2, yCenter - deckHeight * 0.2, 0], `SideBarR_${idx}`, false));
+        group.add(createBox(Math.max(1, width - postSize * 0.6), deckHeight, Math.max(1, depth - postSize * 0.6), shelfColor, [0, yCenter + beamHeight * 0.25, 0], `Shelf_${idx}`, true));
+      });
       break;
     }
 
