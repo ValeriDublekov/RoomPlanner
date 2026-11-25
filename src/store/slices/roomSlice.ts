@@ -368,6 +368,7 @@ export const createRoomSlice: StateCreator<AppState, [], [], RoomSlice> = (set, 
     return {
       rooms: [...state.rooms, newRoom],
       roomPoints: [],
+      roomPointsSnaps: [],
       dimensionInput: '',
       history: [...state.history, historyEntry].slice(-50)
     };

@@ -3,13 +3,17 @@ import { useStore } from './store';
 import { getRoomVertices } from './lib/geometry/topology';
 import { User } from 'firebase/auth';
 
+import { getDoc, setDoc, addDoc } from 'firebase/firestore';
+
 // Mock Firebase
 vi.mock('firebase/firestore', () => ({
-  doc: vi.fn(),
+  doc: vi.fn((_db, col, id) => ({ path: `${col}/${id}`, id })),
+  getDoc: vi.fn(),
+  getDocFromServer: vi.fn(),
   setDoc: vi.fn(),
   addDoc: vi.fn(),
-  collection: vi.fn(),
-  serverTimestamp: vi.fn(),
+  collection: vi.fn((_db, col) => ({ path: col })),
+  serverTimestamp: vi.fn(() => 'MOCK_TIMESTAMP'),
   query: vi.fn(),
   where: vi.fn(),
   getDocs: vi.fn(),
@@ -17,10 +21,26 @@ vi.mock('firebase/firestore', () => ({
 
 vi.mock('./firebase', () => ({
   db: {},
+  OperationType: {
+    CREATE: 'create',
+    UPDATE: 'update',
+    DELETE: 'delete',
+    LIST: 'list',
+    GET: 'get',
+    WRITE: 'write',
+  },
+  handleFirestoreError: (error: unknown, operationType: string, path: string | null) => {
+    throw new Error(JSON.stringify({
+      error: error instanceof Error ? error.message : String(error),
+      operationType,
+      path,
+    }));
+  },
 }));
 
 describe('AppState Store', () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     // Reset store to initial state if possible, 
     // or just assume it's fresh enough for these tests.
     // Zustand persist might keep state between tests in some environments.
@@ -293,6 +313,117 @@ describe('AppState Store', () => {
       expect(useStore.getState().history).toHaveLength(1);
       expect(useStore.getState().history[0].rooms).toHaveLength(1);
     });
+
+    it('creates a new cloud project and never triggers local download when saving to cloud', async () => {
+      const mockUser = { uid: 'user-1', email: 'test@example.com' } as User;
+      vi.mocked(addDoc).mockResolvedValueOnce({ id: 'new-cloud-id' } as any);
+
+      useStore.setState({
+        currentUser: mockUser,
+        projectId: null,
+        projectName: 'Cloud Plan',
+        cloudName: null,
+      });
+
+      const createObjectUrlSpy = vi.fn();
+      vi.stubGlobal('URL', { createObjectURL: createObjectUrlSpy, revokeObjectURL: vi.fn() });
+
+      await useStore.getState().saveProject(undefined, 'Cloud Plan', undefined, 'cloud');
+
+      expect(addDoc).toHaveBeenCalledTimes(1);
+      expect(createObjectUrlSpy).not.toHaveBeenCalled();
+      expect(useStore.getState().projectId).toBe('new-cloud-id');
+      expect(useStore.getState().cloudName).toBe('Cloud Plan');
+      expect(useStore.getState().isSaving).toBe(false);
+
+      vi.unstubAllGlobals();
+    });
+
+    it('throws error and does NOT download JSON when cloud save fails', async () => {
+      const mockUser = { uid: 'user-1', email: 'test@example.com' } as User;
+      vi.mocked(addDoc).mockRejectedValueOnce(new Error('Missing or insufficient permissions.'));
+
+      useStore.setState({
+        currentUser: mockUser,
+        projectId: null,
+        projectName: 'Failing Plan',
+      });
+
+      const createObjectUrlSpy = vi.fn();
+      vi.stubGlobal('URL', { createObjectURL: createObjectUrlSpy, revokeObjectURL: vi.fn() });
+
+      await expect(
+        useStore.getState().saveProject(undefined, 'Failing Plan', undefined, 'cloud')
+      ).rejects.toThrow('Missing or insufficient permissions.');
+
+      expect(createObjectUrlSpy).not.toHaveBeenCalled();
+      expect(useStore.getState().isSaving).toBe(false);
+
+      vi.unstubAllGlobals();
+    });
+
+    it('preserves existing projectId when saveProjectAs fails', async () => {
+      const mockUser = { uid: 'user-1', email: 'test@example.com' } as User;
+      vi.mocked(addDoc).mockRejectedValueOnce(new Error('Network error'));
+
+      useStore.setState({
+        currentUser: mockUser,
+        projectId: 'existing-id',
+        cloudName: 'Original Cloud',
+      });
+
+      await expect(
+        useStore.getState().saveProjectAs('Copy Name')
+      ).rejects.toThrow('Network error');
+
+      expect(useStore.getState().projectId).toBe('existing-id');
+      expect(useStore.getState().cloudName).toBe('Original Cloud');
+    });
+
+    it('falls back to creating a new cloud project if stale projectId in localStorage is inaccessible', async () => {
+      const mockUser = { uid: 'user-2', email: 'other@example.com' } as User;
+      vi.mocked(getDoc).mockRejectedValueOnce({ code: 'permission-denied', message: 'Missing or insufficient permissions' });
+      vi.mocked(addDoc).mockResolvedValueOnce({ id: 'fresh-id-for-user-2' } as any);
+
+      useStore.setState({
+        currentUser: mockUser,
+        projectId: 'stale-other-user-id',
+        projectName: 'My Plan',
+      });
+
+      await useStore.getState().saveProject(undefined, undefined, undefined, 'cloud');
+
+      expect(setDoc).not.toHaveBeenCalled();
+      expect(addDoc).toHaveBeenCalledTimes(1);
+      expect(useStore.getState().projectId).toBe('fresh-id-for-user-2');
+    });
+
+    it('downloads JSON locally when destination is local even if signed in', async () => {
+      const mockUser = { uid: 'user-1', email: 'test@example.com' } as User;
+      useStore.setState({
+        currentUser: mockUser,
+        projectId: 'existing-cloud-id',
+        projectName: 'Local Export',
+      });
+
+      const clickSpy = vi.fn();
+      const createElementSpy = vi.fn(() => ({ click: clickSpy, href: '', download: '' }));
+      const appendChildSpy = vi.fn();
+      const removeChildSpy = vi.fn();
+      vi.stubGlobal('URL', { createObjectURL: vi.fn(() => 'blob:mock'), revokeObjectURL: vi.fn() });
+      vi.stubGlobal('document', {
+        createElement: createElementSpy,
+        body: { appendChild: appendChildSpy, removeChild: removeChildSpy },
+      });
+
+      await useStore.getState().saveProject(undefined, 'My Backup', undefined, 'local');
+
+      expect(addDoc).not.toHaveBeenCalled();
+      expect(setDoc).not.toHaveBeenCalled();
+      expect(clickSpy).toHaveBeenCalledTimes(1);
+
+      vi.unstubAllGlobals();
+    });
   });
 
   describe('dimensionSlice', () => {
@@ -439,6 +570,50 @@ describe('AppState Store', () => {
 
       const state = useStore.getState();
       expect(state.wallAttachments[0].wallSegmentIndex).toBe(1);
+    });
+
+    it('preserves in-progress drawn room walls when switching to blueprint layer', () => {
+      useStore.setState({
+        activeLayer: 'room',
+        mode: 'draw-room',
+        rooms: [],
+        roomPoints: [
+          { x: 0, y: 0 },
+          { x: 100, y: 0 },
+          { x: 100, y: 80 },
+        ],
+      });
+
+      useStore.getState().setActiveLayer('blueprint');
+
+      const state = useStore.getState();
+      expect(state.activeLayer).toBe('blueprint');
+      expect(state.rooms).toHaveLength(1);
+      expect(state.rooms[0].isClosed).toBe(false);
+      expect(getRoomVertices(state.rooms[0])).toHaveLength(3);
+    });
+
+    it('keeps drawn rooms intact when blueprint is cropped, replaced, or removed', () => {
+      useStore.setState({
+        activeLayer: 'room',
+        mode: 'draw-room',
+        roomPoints: [
+          { x: 10, y: 10 },
+          { x: 110, y: 10 },
+          { x: 110, y: 110 },
+        ],
+        backgroundImage: 'data:image/jpeg;base64,OLD',
+      });
+      useStore.getState().closeRoom();
+      expect(useStore.getState().rooms).toHaveLength(1);
+
+      useStore.getState().setActiveLayer('blueprint');
+      useStore.getState().setBackgroundImage('data:image/jpeg;base64,CROPPED');
+      useStore.getState().setBackgroundTransform({ x: 500, y: 500, scale: 1.5 });
+      expect(useStore.getState().rooms).toHaveLength(1);
+
+      useStore.getState().setBackgroundImage(null);
+      expect(useStore.getState().rooms).toHaveLength(1);
     });
   });
 });

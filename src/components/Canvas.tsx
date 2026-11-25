@@ -109,6 +109,7 @@ export const Canvas: React.FC = () => {
   useEffect(() => {
     if (activeLayer === 'blueprint' && bgTrRef.current && bgRef.current) {
       bgTrRef.current.nodes([bgRef.current]);
+      bgTrRef.current.forceUpdate();
       bgTrRef.current.getLayer()?.batchDraw();
     }
   }, [activeLayer, bgImage]);
@@ -192,7 +193,7 @@ export const Canvas: React.FC = () => {
       )}
 
       <div ref={containerRef} className="flex-1 relative">
-        {gridVisible && activeLayer !== 'blueprint' && <GridLayer scale={scale} position={position} />}
+        {gridVisible && <GridLayer scale={scale} position={position} />}
         {dimensions.width > 0 && dimensions.height > 0 && (
           <CanvasStage
             stageRef={stageRef}

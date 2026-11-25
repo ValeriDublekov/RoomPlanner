@@ -83,6 +83,7 @@ export const MobileDashboard: React.FC = () => {
 
   const handleLogout = async () => {
     await signOut(auth);
+    useStore.setState({ projectId: null, cloudName: null });
     navigate('/mobile');
   };
 

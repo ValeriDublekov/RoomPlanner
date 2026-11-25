@@ -40,12 +40,20 @@ describe('Attachment Geometry', () => {
     if (transform) {
       expect(transform.position).toEqual({ x: 50, y: 0 });
       expect(transform.rotation).toBe(0);
-      // Top wall in clockwise (0,0)->(100,0) has normal (0,-1) if interior is (50,50)
-      // Wait, let's check normal expectation. Interior is center.
-      // (100-0, 0-0) = (100, 0). Tangent. 
-      // Normal should be (0, -1) or (0, 1).
       expect(Math.abs(transform.normal.y)).toBe(1);
       expect(transform.normal.x).toBe(0);
+    }
+  });
+
+  it('keeps attachment position on wall when flipY is false', () => {
+    const snapshot = derivePlanSnapshot(mockRooms, 20, 1);
+    const flippedAttachment: WallAttachment = { ...mockAttachment, flipY: false };
+    const transform = getAttachmentTransform(flippedAttachment, snapshot);
+    expect(transform).not.toBeNull();
+    if (transform) {
+      expect(transform.position).toEqual({ x: 50, y: 0 });
+      expect(transform.interiorPoint).toEqual({ x: 50, y: 0 });
+      expect(transform.exteriorPoint).toEqual({ x: 50, y: -20 });
     }
   });
 

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useStore } from '../store';
+import { formatFirestoreErrorMessage } from '../firebase';
 
 interface FileOperationsProps {
   getThumbnail?: () => Promise<string | null>;
@@ -20,6 +21,7 @@ export const useFileOperations = ({ getThumbnail }: FileOperationsProps) => {
   const [isCloudLoadOpen, setIsCloudLoadOpen] = useState(false);
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
   const [pendingThumbnail, setPendingThumbnail] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<{ title: string; message: string } | null>(null);
 
   const handleLoad = () => {
     if (currentUser) {
@@ -57,14 +59,20 @@ export const useFileOperations = ({ getThumbnail }: FileOperationsProps) => {
     
     if (currentUser) {
       if (projectId) {
-        // Already in cloud, save directly
-        saveProject(undefined, undefined, thumbnail || undefined);
+        try {
+          await saveProject(undefined, undefined, thumbnail || undefined, 'cloud');
+        } catch (error) {
+          setSaveError({
+            title: 'Cloud Save Failed',
+            message: formatFirestoreErrorMessage(error),
+          });
+        }
       } else {
         // New project, show options
         setIsSaveModalOpen(true);
       }
     } else {
-      saveProject();
+      await saveProject(undefined, undefined, undefined, 'local');
     }
   };
 
@@ -74,7 +82,7 @@ export const useFileOperations = ({ getThumbnail }: FileOperationsProps) => {
     if (currentUser) {
       setIsSaveModalOpen(true);
     } else {
-      saveProject();
+      await saveProject(undefined, undefined, undefined, 'local');
     }
   };
 
@@ -101,7 +109,10 @@ export const useFileOperations = ({ getThumbnail }: FileOperationsProps) => {
     setIsSaveModalOpen,
     pendingThumbnail,
     setPendingThumbnail,
+    saveError,
+    clearSaveError: () => setSaveError(null),
     isSaving,
     currentUser
   };
 };
+

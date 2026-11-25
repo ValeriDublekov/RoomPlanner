@@ -134,7 +134,7 @@ export const ArchitecturalLayer: React.FC<ArchitecturalLayerProps> = ({ scale })
   )), [wallAttachments, selectedAttachmentId, scale, setSelectedAttachmentId, mode, planSnapshot]);
 
   return (
-    <Layer id="architectural-layer" visible={activeLayer !== 'blueprint'}>
+    <Layer id="architectural-layer" listening={activeLayer !== 'blueprint'}>
       {/* 1. Base Rooms Floors */}
       {roomFloorElements}
 
@@ -151,11 +151,10 @@ export const ArchitecturalLayer: React.FC<ArchitecturalLayerProps> = ({ scale })
       )}
 
       {/* 3. Furniture */}
-      {activeLayer === 'room' && furnitureElements}
-      {activeLayer !== 'room' && furnitureElements}
+      {furnitureElements}
 
-      {/* 4. Beams - On top of walls and furniture in architecture mode */}
-      {activeLayer === 'room' && beamElements}
+      {/* 4. Beams - On top of walls and furniture in architecture/blueprint mode */}
+      {(activeLayer === 'room' || activeLayer === 'blueprint') && beamElements}
 
       {/* 5. Room Area Labels */}
       {rooms.map((room) => (

@@ -38,7 +38,7 @@ export const getAttachmentTransform = (
   const dy = p2.y - p1.y;
   const angle = Math.atan2(dy, dx) * (180 / Math.PI);
 
-  const position = attachment.flipY ? interiorPoint : exteriorPoint;
+  const position = interiorPoint;
 
   return {
     position,

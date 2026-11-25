@@ -42,7 +42,7 @@ export const AnnotationOverlay: React.FC<AnnotationOverlayProps> = ({
   )), [savedDimensions, pixelsPerCmVal, scale, selectedDimensionId, setSelectedDimensionId, setMode, mode, activeLayer]);
 
   return (
-    <Layer id="annotation-layer" visible={activeLayer !== 'blueprint'}>
+    <Layer id="annotation-layer" listening={activeLayer !== 'blueprint'}>
       {/* 7. Annotations */}
       {dimensionElements}
       {(mode === 'measure' || mode === 'dimension') && measurePoints.length === 1 && (

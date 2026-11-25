@@ -1,6 +1,7 @@
 import React, { useRef } from 'react';
-import { Download, Upload, Image as ImageIcon, Eye, EyeOff, FileCode } from 'lucide-react';
+import { Upload, Image as ImageIcon, Eye, EyeOff, FileCode, Crop } from 'lucide-react';
 import { useStore } from '@/src/store';
+import { formatBytes, getUtf8ByteLength } from '@/src/lib/imageUtils';
 
 interface FileActionsProps {
   onImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -10,6 +11,7 @@ interface FileActionsProps {
   backgroundOpacity: number;
   setBackgroundOpacity: (opacity: number) => void;
   removeBackgroundImage: () => void;
+  onOptimizeBlueprint?: () => void;
   hideImageActions?: boolean;
   onExportDXF?: () => void;
   canExportDXF?: boolean;
@@ -23,6 +25,7 @@ export const FileActions: React.FC<FileActionsProps> = ({
   backgroundOpacity,
   setBackgroundOpacity,
   removeBackgroundImage,
+  onOptimizeBlueprint,
   hideImageActions,
   onExportDXF,
   canExportDXF,
@@ -84,9 +87,24 @@ export const FileActions: React.FC<FileActionsProps> = ({
                 onChange={(e) => setBackgroundOpacity(parseFloat(e.target.value))}
                 className="w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-indigo-600"
               />
+              <div className="flex items-center justify-between pt-1">
+                <span className="text-[10px] font-mono tabular-nums text-slate-400">
+                  Size: {formatBytes(getUtf8ByteLength(backgroundImage))}
+                </span>
+                {onOptimizeBlueprint && (
+                  <button
+                    type="button"
+                    onClick={onOptimizeBlueprint}
+                    className="inline-flex items-center gap-1 text-[10px] font-bold text-indigo-600 uppercase tracking-wider hover:text-indigo-700 transition-colors"
+                  >
+                    <Crop size={12} />
+                    Crop / Compress
+                  </button>
+                )}
+              </div>
               <button 
                 onClick={removeBackgroundImage}
-                className="text-[10px] font-bold text-red-500 uppercase tracking-widest hover:text-red-600 transition-colors block w-full text-left"
+                className="text-[10px] font-bold text-red-500 uppercase tracking-widest hover:text-red-600 transition-colors block w-full text-left pt-1"
               >
                 Remove Image
               </button>

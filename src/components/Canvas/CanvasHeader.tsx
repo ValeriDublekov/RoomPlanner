@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useFileOperations } from '@/src/hooks';
 import { UserManualModal } from '@/src/components/UserManualModal';
 import { CloudLoadModal, SaveModal } from '@/src/components/Sidebar';
-import { ConfirmModal } from '@/src/components/Dialogs';
+import { ConfirmModal, AlertModal } from '@/src/components/Dialogs';
 import { ProjectTitle } from './HeaderComponents/ProjectTitle';
 import { ToolbarGroups } from './HeaderComponents/ToolbarGroups';
 import { QuickActions } from './HeaderComponents/QuickActions';
@@ -41,6 +41,8 @@ export const CanvasHeader: React.FC<CanvasHeaderProps> = ({
     setIsSaveModalOpen,
     pendingThumbnail,
     setPendingThumbnail,
+    saveError,
+    clearSaveError,
     isSaving,
     currentUser
   } = useFileOperations({ getThumbnail });
@@ -97,6 +99,12 @@ export const CanvasHeader: React.FC<CanvasHeaderProps> = ({
         onConfirm={confirmNewProject}
         onCancel={() => setShowNewConfirm(false)}
         variant="danger"
+      />
+      <AlertModal
+        isOpen={!!saveError}
+        title={saveError?.title || 'Save Error'}
+        message={saveError?.message || ''}
+        onClose={clearSaveError}
       />
     </header>
   );

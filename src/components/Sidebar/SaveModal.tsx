@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { X, Download, Monitor, Cloud, Save } from 'lucide-react';
 import { useStore } from '../../store';
 import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../../firebase';
+import { db, formatFirestoreErrorMessage, handleFirestoreError, OperationType } from '../../firebase';
 import { ConfirmModal } from '../Dialogs/ConfirmModal';
 import { PromptModal } from '../Dialogs/PromptModal';
 import { AlertModal } from '../Dialogs/AlertModal';
@@ -14,7 +14,7 @@ interface SaveModalProps {
 }
 
 export const SaveModal: React.FC<SaveModalProps> = ({ isOpen, onClose, thumbnail }) => {
-  const { currentUser, saveProject, saveProjectAs, isSaving, projectName, cloudName, projectId, setProjectName } = useStore();
+  const { currentUser, saveProject, saveProjectAs, isSaving, projectName, cloudName, projectId } = useStore();
   const [overwriteConfirm, setOverwriteConfirm] = useState<{ isOpen: boolean; existingId: string | null; pendingName?: string }>({ isOpen: false, existingId: null });
   const [namePrompt, setNamePrompt] = useState<{ isOpen: boolean; mode: 'cloud' | 'local' | 'cloud-as' }>({ isOpen: false, mode: 'cloud' });
   const [alertInfo, setAlertInfo] = useState<{ isOpen: boolean; title: string; message: string }>({ isOpen: false, title: '', message: '' });
@@ -25,11 +25,19 @@ export const SaveModal: React.FC<SaveModalProps> = ({ isOpen, onClose, thumbnail
     setNamePrompt({ isOpen: true, mode: 'local' });
   };
 
-  const handleSaveCloud = () => {
+  const handleSaveCloud = async () => {
     // If we already have a projectId, just save (update)
     if (projectId) {
-      saveProject(undefined, undefined, thumbnail || undefined);
-      onClose();
+      try {
+        await saveProject(undefined, undefined, thumbnail || undefined, 'cloud');
+        onClose();
+      } catch (error) {
+        setAlertInfo({
+          isOpen: true,
+          title: 'Cloud Save Failed',
+          message: formatFirestoreErrorMessage(error),
+        });
+      }
       return;
     }
     setNamePrompt({ isOpen: true, mode: 'cloud' });
@@ -40,55 +48,82 @@ export const SaveModal: React.FC<SaveModalProps> = ({ isOpen, onClose, thumbnail
   };
 
   const onNameConfirm = async (newName: string) => {
-    setNamePrompt({ isOpen: false, mode: namePrompt.mode });
+    const mode = namePrompt.mode;
+    setNamePrompt({ isOpen: false, mode });
 
-    if (namePrompt.mode === 'local') {
-      await saveProject(undefined, newName);
-      onClose();
+    if (mode === 'local') {
+      try {
+        await saveProject(undefined, newName, undefined, 'local');
+        onClose();
+      } catch (error) {
+        setAlertInfo({
+          isOpen: true,
+          title: 'Save Failed',
+          message: error instanceof Error ? error.message : 'Failed to export JSON file.',
+        });
+      }
       return;
     }
 
     // Cloud logic (Save or Save As)
     if (currentUser) {
       try {
-        const q = query(
-          collection(db, 'projects'),
-          where('userId', '==', currentUser.uid),
-          where('name', '==', newName)
-        );
-        const querySnapshot = await getDocs(q);
-        
+        let querySnapshot;
+        try {
+          const q = query(
+            collection(db, 'projects'),
+            where('userId', '==', currentUser.uid),
+            where('name', '==', newName)
+          );
+          querySnapshot = await getDocs(q);
+        } catch (queryError) {
+          handleFirestoreError(queryError, OperationType.LIST, 'projects');
+        }
+
         if (!querySnapshot.empty) {
           const existingDoc = querySnapshot.docs[0];
           // If it's the SAME project we are already working on, just save
-          if (projectId === existingDoc.id && namePrompt.mode === 'cloud') {
-            await saveProject(undefined, newName, thumbnail || undefined);
+          if (projectId === existingDoc.id && mode === 'cloud') {
+            await saveProject(undefined, newName, thumbnail || undefined, 'cloud');
             onClose();
           } else {
             // Collision with another project
             setOverwriteConfirm({ isOpen: true, existingId: existingDoc.id, pendingName: newName });
           }
         } else {
-          if (namePrompt.mode === 'cloud-as') {
+          if (mode === 'cloud-as') {
             await saveProjectAs(newName, thumbnail || undefined);
           } else {
-            await saveProject(undefined, newName, thumbnail || undefined);
+            await saveProject(undefined, newName, thumbnail || undefined, 'cloud');
           }
           onClose();
         }
       } catch (error) {
-        console.error('Error checking for existing project:', error);
-        setAlertInfo({ isOpen: true, title: 'Error', message: 'Failed to check project name.' });
+        setAlertInfo({
+          isOpen: true,
+          title: 'Cloud Save Failed',
+          message: formatFirestoreErrorMessage(error),
+        });
       }
     }
   };
 
   const confirmOverwrite = async () => {
-    if (overwriteConfirm.existingId) {
-      await saveProject(overwriteConfirm.existingId, overwriteConfirm.pendingName, thumbnail || undefined);
-    }
+    const existingId = overwriteConfirm.existingId;
+    const pendingName = overwriteConfirm.pendingName;
     setOverwriteConfirm({ isOpen: false, existingId: null });
-    onClose();
+    if (existingId) {
+      try {
+        await saveProject(existingId, pendingName, thumbnail || undefined, 'cloud');
+        onClose();
+      } catch (error) {
+        setAlertInfo({
+          isOpen: true,
+          title: 'Cloud Save Failed',
+          message: formatFirestoreErrorMessage(error),
+        });
+      }
+    }
   };
 
   return (

@@ -12,6 +12,11 @@ export const useKeyboardShortcuts = () => {
         return;
       }
 
+      // Do not trigger canvas shortcuts (like Delete/Backspace) while a modal dialog is open
+      if (typeof document !== 'undefined' && document.querySelector('[role="dialog"][aria-modal="true"]')) {
+        return;
+      }
+
       const state = useStore.getState();
       const { 
         mode, 

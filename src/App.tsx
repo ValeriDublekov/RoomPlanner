@@ -26,7 +26,12 @@ export default function App() {
   useKeyboardShortcuts();
 
   useEffect(() => {
+    let previousUid: string | null = null;
     const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (previousUid && user?.uid !== previousUid) {
+        useStore.setState({ projectId: null, cloudName: null });
+      }
+      previousUid = user?.uid ?? null;
       setCurrentUser(user);
       setIsAuthLoading(false);
     });

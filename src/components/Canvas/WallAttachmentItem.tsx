@@ -30,9 +30,10 @@ export const WallAttachmentItem: React.FC<WallAttachmentItemProps> = ({
   useEffect(() => {
     if (isSelected && trRef.current && groupRef.current) {
       trRef.current.nodes([groupRef.current]);
+      trRef.current.forceUpdate();
       trRef.current.getLayer()?.batchDraw();
     }
-  }, [isSelected]);
+  }, [isSelected, attachment.flipX, attachment.flipY, attachment.width]);
 
   const room = rooms.find(r => r.id === attachment.roomId);
   const transform = useMemo(() => {
@@ -81,10 +82,11 @@ export const WallAttachmentItem: React.FC<WallAttachmentItemProps> = ({
   const widthPx = attachment.width * pixelsPerCm;
   const thicknessPx = wallThickness * pixelsPerCm;
 
-  const localY = { x: -dy / length, y: dx / length };
+  const localY = length > 0 ? { x: -dy / length, y: dx / length } : { x: 0, y: 1 };
   const dot = localY.x * normal.x + localY.y * normal.y;
   const isLocalYOutside = dot > 0;
   const finalOffsetY = isLocalYOutside ? 0 : thicknessPx;
+  const swingsAlongLocalY = isLocalYOutside ? !attachment.flipY : Boolean(attachment.flipY);
 
   const handleTransform = (e: Konva.KonvaEventObject<Event>) => {
     const node = groupRef.current;
@@ -362,9 +364,9 @@ export const WallAttachmentItem: React.FC<WallAttachmentItemProps> = ({
           /* Door Detail: Swing Arc */
           <Group 
             x={attachment.flipX ? widthPx : 0} 
-            y={attachment.flipY ? 0 : thicknessPx}
+            y={swingsAlongLocalY ? thicknessPx : 0}
             scaleX={attachment.flipX ? -1 : 1}
-            scaleY={attachment.flipY ? 1 : -1}
+            scaleY={swingsAlongLocalY ? 1 : -1}
           >
             {/* Door Leaf */}
             <Rect

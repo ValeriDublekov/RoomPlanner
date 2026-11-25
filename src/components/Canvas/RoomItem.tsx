@@ -72,8 +72,22 @@ export const RoomItem: React.FC<RoomItemProps> = ({
     return walls.sort((a,b) => a.segmentIndex - b.segmentIndex);
   }, [planSnapshot, room, wallThicknessCm]);
 
-  const wallOpacity = activeLayer === 'room' ? 0.8 : (isDragging ? 0.4 : (isSelected ? 1 : 0.9));
-  const floorOpacity = activeLayer === 'room' ? 0 : (isDragging ? 0.1 : 1);
+  const wallOpacity =
+    activeLayer === 'room' || activeLayer === 'blueprint'
+      ? 0.85
+      : isDragging
+        ? 0.4
+        : isSelected
+          ? 1
+          : 0.9;
+  const floorOpacity =
+    activeLayer === 'room'
+      ? 0
+      : activeLayer === 'blueprint'
+        ? 0.1
+        : isDragging
+          ? 0.1
+          : 1;
 
   // Simplified: autoDimensions can use roomWalls or fallback to manual.
   // The roomWalls variable needs to be updated to match the original structure, 
@@ -235,7 +249,9 @@ export const RoomItem: React.FC<RoomItemProps> = ({
             const isWallSelected = isDirectlySelected || isTwinOfSelected;
 
             let rawColor = room.wallColors?.[wall.segmentIndex] || room.materials?.wallBase?.value || room.defaultWallColor || "#1e293b";
-            if (activeLayer === 'room') {
+            if (activeLayer === 'blueprint') {
+                rawColor = "#4f46e5"; // High-contrast indigo overlay while editing blueprint
+            } else if (activeLayer === 'room') {
                 rawColor = "#64748b"; // Darker color for architecture mode
             }
             const strokeColor = isWallSelected ? "#4f46e5" : rawColor;

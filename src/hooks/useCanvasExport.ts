@@ -232,70 +232,78 @@ export const useCanvasExport = (stageRef: React.RefObject<Konva.Stage | null>) =
     useStore.getState().setSelectedDimensionId(null);
     useStore.getState().setSelectedAttachmentId(null);
 
-    const { rooms, furniture, dimensions: savedDimensions } = useStore.getState();
-    const allPoints: { x: number; y: number }[] = [];
-    rooms.forEach(r => allPoints.push(...getRoomVertices(r)));
-    furniture.forEach(f => allPoints.push(...getFurnitureVertices(f)));
-    savedDimensions.forEach(d => { allPoints.push(d.p1); allPoints.push(d.p2); });
+    let whiteRect: Konva.Rect | null = null;
+    try {
+      const { rooms, furniture, dimensions: savedDimensions } = useStore.getState();
+      const allPoints: { x: number; y: number }[] = [];
+      rooms.forEach(r => allPoints.push(...getRoomVertices(r)));
+      furniture.forEach(f => allPoints.push(...getFurnitureVertices(f)));
+      savedDimensions.forEach(d => { allPoints.push(d.p1); allPoints.push(d.p2); });
 
-    if (allPoints.length === 0) {
-      useStore.getState().setGridVisible(wasGridVisible);
+      if (allPoints.length === 0) {
+        return null;
+      }
+
+      const minX = Math.min(...allPoints.map(p => p.x));
+      const minY = Math.min(...allPoints.map(p => p.y));
+      const maxX = Math.max(...allPoints.map(p => p.x));
+      const maxY = Math.max(...allPoints.map(p => p.y));
+
+      const padding = 20;
+      const exportArea = {
+        x: minX - padding,
+        y: minY - padding,
+        width: (maxX - minX) + padding * 2,
+        height: (maxY - minY) + padding * 2
+      };
+
+      const bgLayer = stage.findOne('#background-layer') as Konva.Layer;
+      whiteRect = new Konva.Rect({
+        x: exportArea.x,
+        y: exportArea.y,
+        width: exportArea.width,
+        height: exportArea.height,
+        fill: 'white',
+        listening: false,
+      });
+
+      if (bgLayer) {
+        bgLayer.add(whiteRect);
+        whiteRect.moveToBottom();
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 50));
+
+      const currentScale = stage.scaleX();
+      const currentPos = stage.position();
+      const stageWidth = Math.max(1, exportArea.width * currentScale);
+      const stageHeight = Math.max(1, exportArea.height * currentScale);
+      const maxThumbDim = 480;
+      const pixelRatio = Math.min(0.5, maxThumbDim / Math.max(stageWidth, stageHeight));
+
+      return stage.toDataURL({
+        x: exportArea.x * currentScale + currentPos.x,
+        y: exportArea.y * currentScale + currentPos.y,
+        width: stageWidth,
+        height: stageHeight,
+        mimeType: 'image/jpeg',
+        pixelRatio,
+        quality: 0.65,
+      });
+    } catch (error) {
+      console.warn('Could not generate project thumbnail:', error);
       return null;
+    } finally {
+      if (whiteRect) {
+        whiteRect.destroy();
+      }
+      useStore.getState().setGridVisible(wasGridVisible);
+      useStore.getState().setSelectedId(selectedId);
+      useStore.getState().setSelectedIds(selectedIds);
+      useStore.getState().setSelectedRoomId(selectedRoomId);
+      useStore.getState().setSelectedDimensionId(selectedDimensionId);
+      useStore.getState().setSelectedAttachmentId(selectedAttachmentId);
     }
-
-    const minX = Math.min(...allPoints.map(p => p.x));
-    const minY = Math.min(...allPoints.map(p => p.y));
-    const maxX = Math.max(...allPoints.map(p => p.x));
-    const maxY = Math.max(...allPoints.map(p => p.y));
-
-    const padding = 20;
-    const exportArea = {
-      x: minX - padding,
-      y: minY - padding,
-      width: (maxX - minX) + padding * 2,
-      height: (maxY - minY) + padding * 2
-    };
-
-    const bgLayer = stage.findOne('#background-layer') as Konva.Layer;
-    const whiteRect = new Konva.Rect({
-      x: exportArea.x,
-      y: exportArea.y,
-      width: exportArea.width,
-      height: exportArea.height,
-      fill: 'white',
-      listening: false,
-    });
-    
-    if (bgLayer) {
-      bgLayer.add(whiteRect);
-      whiteRect.moveToBottom();
-    }
-
-    // Short delay for batchDraw
-    await new Promise(resolve => setTimeout(resolve, 50));
-
-    const currentScale = stage.scaleX();
-    const currentPos = stage.position();
-
-    // Generate lower resolution thumbnail
-    const dataURL = stage.toDataURL({
-      x: exportArea.x * currentScale + currentPos.x,
-      y: exportArea.y * currentScale + currentPos.y,
-      width: exportArea.width * currentScale,
-      height: exportArea.height * currentScale,
-      pixelRatio: 0.5, // Reduced quality for thumbnail
-      quality: 0.5,
-    });
-
-    whiteRect.destroy();
-    useStore.getState().setGridVisible(wasGridVisible);
-    useStore.getState().setSelectedId(selectedId);
-    useStore.getState().setSelectedIds(selectedIds);
-    useStore.getState().setSelectedRoomId(selectedRoomId);
-    useStore.getState().setSelectedDimensionId(selectedDimensionId);
-    useStore.getState().setSelectedAttachmentId(selectedAttachmentId);
-
-    return dataURL;
   };
 
   const handleExportDXF = () => {

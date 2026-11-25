@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { MousePointer2, Pencil, Ruler, DoorOpen, Layout, BookPlus, LogIn, LogOut, User as UserIcon } from 'lucide-react';
 import { useStore } from '@/src/store';
 import { ToolButton, FileActions } from './Sidebar';
+import { BlueprintUploadModal } from './Dialogs';
 import { loginWithGoogle, logout } from '@/src/firebase';
+import { getUtf8ByteLength, computeCroppedBackgroundTransform } from '@/src/lib/imageUtils';
 
 const tools = [
   { id: 'select', icon: MousePointer2, label: 'Select (V)' },
@@ -35,16 +37,41 @@ export const Sidebar: React.FC = () => {
   const currentUser = useStore(state => state.currentUser);
   const isAuthLoading = useStore(state => state.isAuthLoading);
   const setIsCatalogOpen = useStore(state => state.setIsCatalogOpen);
+  const [pendingBlueprint, setPendingBlueprint] = useState<{
+    dataUrl: string;
+    fileName: string;
+    originalBytes: number;
+    isExisting: boolean;
+  } | null>(null);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
       reader.onload = (event) => {
-        setBackgroundImage(event.target?.result as string);
+        const result = event.target?.result;
+        if (typeof result === 'string') {
+          setPendingBlueprint({
+            dataUrl: result,
+            fileName: file.name,
+            originalBytes: file.size || getUtf8ByteLength(result),
+            isExisting: false,
+          });
+        }
       };
       reader.readAsDataURL(file);
     }
+    e.target.value = '';
+  };
+
+  const handleOptimizeExistingBlueprint = () => {
+    if (!backgroundImage) return;
+    setPendingBlueprint({
+      dataUrl: backgroundImage,
+      fileName: 'Current Blueprint',
+      originalBytes: getUtf8ByteLength(backgroundImage),
+      isExisting: true,
+    });
   };
 
   return (
@@ -117,7 +144,10 @@ export const Sidebar: React.FC = () => {
                 </div>
               </div>
               <button
-                onClick={() => logout()}
+                onClick={async () => {
+                  await logout();
+                  useStore.setState({ projectId: null, cloudName: null });
+                }}
                 className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-200 transition-colors border border-slate-200 bg-white"
               >
                 <LogOut size={14} />
@@ -143,6 +173,7 @@ export const Sidebar: React.FC = () => {
           backgroundOpacity={backgroundOpacity}
           setBackgroundOpacity={setBackgroundOpacity}
           removeBackgroundImage={() => setBackgroundImage(null)}
+          onOptimizeBlueprint={handleOptimizeExistingBlueprint}
           hideImageActions={activeLayer !== 'blueprint'}
         />
 
@@ -154,6 +185,44 @@ export const Sidebar: React.FC = () => {
           </div>
         )}
       </div>
+
+      {pendingBlueprint && (
+        <BlueprintUploadModal
+          key={pendingBlueprint.dataUrl}
+          isOpen
+          imageDataUrl={pendingBlueprint.dataUrl}
+          fileName={pendingBlueprint.fileName}
+          originalBytes={pendingBlueprint.originalBytes}
+          onConfirm={(processedDataUrl, meta) => {
+            setBackgroundImage(processedDataUrl);
+            if (pendingBlueprint.isExisting) {
+              const {
+                backgroundPosition,
+                backgroundScale,
+                backgroundRotation,
+                setBackgroundTransform,
+              } = useStore.getState();
+              const nextTransform = computeCroppedBackgroundTransform({
+                currentTransform: {
+                  x: backgroundPosition.x,
+                  y: backgroundPosition.y,
+                  scale: backgroundScale,
+                  rotation: backgroundRotation,
+                },
+                crop: meta.crop,
+                rotationDeg: meta.rotationDeg,
+                sourceWidth: meta.sourceWidth,
+                sourceHeight: meta.sourceHeight,
+                outputWidth: meta.outputWidth,
+                outputHeight: meta.outputHeight,
+              });
+              setBackgroundTransform(nextTransform);
+            }
+            setPendingBlueprint(null);
+          }}
+          onCancel={() => setPendingBlueprint(null)}
+        />
+      )}
     </aside>
   );
 };

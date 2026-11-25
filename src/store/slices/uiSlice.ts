@@ -127,10 +127,15 @@ export const createUISlice: StateCreator<AppState, [], [], UISlice> = (set, get)
   },
   setActiveLayer: (activeLayer) => {
     console.log('setActiveLayer called with:', activeLayer);
+    const state = get();
+    if (state.mode === 'draw-room' && state.roomPoints.length >= 2) {
+      state.finishRoom();
+    }
     set({ 
       activeLayer,
       mode: 'select',
       roomPoints: [], 
+      roomPointsSnaps: [],
       measurePoints: [], 
       dimensionInput: '',
       // Clear all selections when switching layers

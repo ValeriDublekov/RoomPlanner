@@ -4,8 +4,9 @@ import { PERSISTED_KEYS, PersistedState } from '../constants';
 import { HistoryEntry, Vector2d, FurnitureObject } from '../../types';
 import { rotatePoint } from '../../lib/geometry';
 import { migrateFurnitureMaterials } from '../../lib/materials';
-import { doc, setDoc, addDoc, collection, serverTimestamp, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../../firebase';
+import { doc, getDoc, setDoc, addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { db, handleFirestoreError, OperationType } from '../../firebase';
+import { compressDataUrl, getUtf8ByteLength } from '../../lib/imageUtils';
 
 export interface ProjectSlice {
   projectId: string | null;
@@ -33,7 +34,12 @@ export interface ProjectSlice {
   undo: () => void;
   saveHistory: () => void;
   loadState: (data: any) => void;
-  saveProject: (forceOverwriteId?: string, nameOverride?: string, thumbnailOverride?: string) => Promise<void>;
+  saveProject: (
+    forceOverwriteId?: string,
+    nameOverride?: string,
+    thumbnailOverride?: string,
+    destination?: 'cloud' | 'local'
+  ) => Promise<void>;
   saveProjectAs: (nameOverride?: string, thumbnailOverride?: string) => Promise<void>;
   newProject: () => void;
   isSaving: boolean;
@@ -210,9 +216,15 @@ export const createProjectSlice: StateCreator<AppState, [], [], ProjectSlice> = 
     });
   },
 
-  saveProject: async (forceOverwriteId?: string, nameOverride?: string, thumbnailOverride?: string) => {
+  saveProject: async (
+    forceOverwriteId?: string,
+    nameOverride?: string,
+    thumbnailOverride?: string,
+    destination?: 'cloud' | 'local'
+  ) => {
     const state = get();
     const { currentUser } = state;
+    const targetDestination: 'cloud' | 'local' = destination ?? (currentUser ? 'cloud' : 'local');
 
     const projectData = PERSISTED_KEYS.reduce((acc, key) => {
       // @ts-expect-error - Zustand standard pattern for accessing state in actions
@@ -220,83 +232,132 @@ export const createProjectSlice: StateCreator<AppState, [], [], ProjectSlice> = 
       return acc;
     }, { version: 4 } as PersistedState);
 
-    const jsonString = JSON.stringify(projectData);
-    
-    // Check if data is too large for Firestore (1MB limit)
-    // 1MB = 1,048,576 bytes. We'll use 1,000,000 as a safe limit.
-    if (currentUser && jsonString.length > 1000000) {
-      console.warn('Project data is too large for the cloud (limit 1MB). The blueprint image might be too big.');
-      // We still try to save, but let's see if we can strip the image as a fallback or just let it fail.
-      // For now, let it fail so the user sees the error in console, but in a real app we'd upload to storage.
+    let jsonString = JSON.stringify(projectData);
+
+    // Explicit local download (or not signed in without explicit cloud request)
+    if (targetDestination === 'local') {
+      try {
+        const blob = new Blob([jsonString], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const downloadName = (nameOverride || state.projectName || 'project').trim() || 'project';
+        a.download = `${downloadName}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } catch (err) {
+        console.error('Error during local save:', err);
+        throw err;
+      }
+      return;
     }
 
-    // If user is logged in, save to Firestore
-    if (currentUser) {
-      set({ isSaving: true });
-      try {
-        const targetId = forceOverwriteId || state.projectId;
-        const nameToSave = nameOverride || state.cloudName || state.projectName || 'Untitled Project';
+    // Cloud save path — never silently fall back to local download
+    if (!currentUser) {
+      throw new Error('You must be signed in to save to the cloud.');
+    }
 
-        const savePayload: any = {
-          userId: currentUser.uid,
-          name: nameToSave,
-          data: jsonString,
-          updatedAt: serverTimestamp(),
-        };
+    set({ isSaving: true });
+    let activeTargetId: string | null = null;
+    try {
+      // Ensure serialized JSON fits comfortably within Firestore's 1 MB document limit
+      const maxJsonBytes = 940000;
+      if (
+        getUtf8ByteLength(jsonString) > maxJsonBytes &&
+        typeof projectData.backgroundImage === 'string' &&
+        projectData.backgroundImage.startsWith('data:image/')
+      ) {
+        const compressedBg = await compressDataUrl(projectData.backgroundImage, 1200, 0.75);
+        projectData.backgroundImage = compressedBg;
+        jsonString = JSON.stringify(projectData);
 
-        if (thumbnailOverride) {
+        if (getUtf8ByteLength(jsonString) > maxJsonBytes) {
+          projectData.backgroundImage = await compressDataUrl(compressedBg, 800, 0.6);
+          jsonString = JSON.stringify(projectData);
+        }
+      }
+
+      const jsonBytes = getUtf8ByteLength(jsonString);
+      if (jsonBytes >= 1040000) {
+        throw new Error(
+          'Project data exceeds the 1 MB cloud storage limit. Please use a smaller blueprint image or choose "Save to Computer".'
+        );
+      }
+
+      const rawName = nameOverride || state.cloudName || state.projectName || 'Untitled Project';
+      const nameToSave = rawName.trim().slice(0, 199) || 'Untitled Project';
+
+      const savePayload: Record<string, any> = {
+        userId: currentUser.uid,
+        name: nameToSave,
+        data: jsonString,
+        updatedAt: serverTimestamp(),
+      };
+
+      if (thumbnailOverride) {
+        const thumbBytes = getUtf8ByteLength(thumbnailOverride);
+        if (thumbBytes < 350000 && jsonBytes + thumbBytes < 1000000) {
           savePayload.thumbnail = thumbnailOverride;
         }
-
-        if (targetId) {
-          // Update existing project
-          await setDoc(doc(db, 'projects', targetId), savePayload, { merge: true });
-          
-          set({ 
-            projectId: targetId, 
-            cloudName: nameToSave 
-          });
-          console.log('Project updated in Firestore');
-        } else {
-          // New project
-          savePayload.createdAt = serverTimestamp();
-          const docRef = await addDoc(collection(db, 'projects'), savePayload);
-          
-          set({ 
-            projectId: docRef.id, 
-            cloudName: nameToSave 
-          });
-          console.log('New project created in Firestore:', docRef.id);
-        }
-        set({ isSaving: false });
-        return;
-      } catch (error) {
-        console.error('Error saving to Firestore:', error);
-        set({ isSaving: false });
       }
-    }
 
-    // Fallback or not logged in: Local download
-    try {
-      const blob = new Blob([jsonString], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      const downloadName = nameOverride || state.projectName || 'project';
-      a.download = `${downloadName}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error('Error during local save:', err);
+      if (forceOverwriteId === '__NEW__') {
+        activeTargetId = null;
+      } else {
+        activeTargetId = forceOverwriteId || state.projectId;
+      }
+
+      // If auto-updating an existing projectId from state/localStorage, verify it still exists and belongs to this user
+      if (activeTargetId && !forceOverwriteId) {
+        try {
+          const existingSnap = await getDoc(doc(db, 'projects', activeTargetId));
+          if (existingSnap && typeof existingSnap.exists === 'function' && !existingSnap.exists()) {
+            activeTargetId = null;
+          }
+        } catch (lookupErr: any) {
+          const code = lookupErr?.code || '';
+          const msg = String(lookupErr?.message || '').toLowerCase();
+          if (code === 'permission-denied' || msg.includes('permission')) {
+            // Stale projectId in localStorage belonging to another account — save as new doc for current user
+            activeTargetId = null;
+          } else {
+            throw lookupErr;
+          }
+        }
+      }
+
+      if (activeTargetId) {
+        await setDoc(doc(db, 'projects', activeTargetId), savePayload, { merge: true });
+        set({
+          projectId: activeTargetId,
+          cloudName: nameToSave,
+        });
+      } else {
+        savePayload.createdAt = serverTimestamp();
+        const docRef = await addDoc(collection(db, 'projects'), savePayload);
+        set({
+          projectId: docRef.id,
+          cloudName: nameToSave,
+        });
+      }
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('1 MB cloud storage limit')) {
+        throw error;
+      }
+      handleFirestoreError(
+        error,
+        activeTargetId ? OperationType.UPDATE : OperationType.CREATE,
+        activeTargetId ? `projects/${activeTargetId}` : 'projects'
+      );
+    } finally {
+      set({ isSaving: false });
     }
   },
 
   saveProjectAs: async (nameOverride?: string, thumbnailOverride?: string) => {
-    // Clear projectId to force the "new project" logic in saveProject
-    set({ projectId: null });
-    await get().saveProject(undefined, nameOverride, thumbnailOverride);
+    await get().saveProject('__NEW__', nameOverride, thumbnailOverride, 'cloud');
   },
 
   newProject: () => {

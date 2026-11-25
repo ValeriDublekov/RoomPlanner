@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { collection, query, where, getDocs, orderBy, deleteDoc, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '../../firebase';
+import { db, formatFirestoreErrorMessage, handleFirestoreError, OperationType } from '../../firebase';
 import { useStore } from '../../store';
 import { X, Cloud, FileText, Calendar, Loader2, Upload, Monitor, Trash2, Edit2 } from 'lucide-react';
 import { ConfirmModal } from '../Dialogs/ConfirmModal';
@@ -54,7 +54,11 @@ export const CloudLoadModal: React.FC<CloudLoadModalProps> = ({ isOpen, onClose 
       });
       setProjects(fetchedProjects);
     } catch (error) {
-      console.error('Error fetching projects:', error);
+      try {
+        handleFirestoreError(error, OperationType.LIST, 'projects');
+      } catch (wrapped) {
+        setAlertInfo({ isOpen: true, title: 'Error', message: formatFirestoreErrorMessage(wrapped) });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -133,8 +137,11 @@ export const CloudLoadModal: React.FC<CloudLoadModalProps> = ({ isOpen, onClose 
       }
       fetchProjects();
     } catch (error) {
-      console.error('Error deleting project:', error);
-      setAlertInfo({ isOpen: true, title: 'Error', message: 'Failed to delete project.' });
+      try {
+        handleFirestoreError(error, OperationType.DELETE, `projects/${project.id}`);
+      } catch (wrapped) {
+        setAlertInfo({ isOpen: true, title: 'Error', message: formatFirestoreErrorMessage(wrapped) });
+      }
     } finally {
       setDeleteConfirm({ isOpen: false, project: null });
     }
@@ -175,8 +182,11 @@ export const CloudLoadModal: React.FC<CloudLoadModalProps> = ({ isOpen, onClose 
       fetchProjects();
       setRenamePrompt({ isOpen: false, project: null });
     } catch (error) {
-      console.error('Error renaming project:', error);
-      setAlertInfo({ isOpen: true, title: 'Error', message: 'Failed to rename project.' });
+      try {
+        handleFirestoreError(error, OperationType.UPDATE, `projects/${project.id}`);
+      } catch (wrapped) {
+        setAlertInfo({ isOpen: true, title: 'Error', message: formatFirestoreErrorMessage(wrapped) });
+      }
     }
   };
 
